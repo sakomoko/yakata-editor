@@ -5,6 +5,13 @@ export function createRoom(x: number, y: number, w: number, h: number, label = '
   return { id: crypto.randomUUID(), x, y, w, h, label };
 }
 
+export function calcAutoFontSize(room: Room): number {
+  const w = room.w * GRID;
+  const h = room.h * GRID;
+  const base = Math.min(w, h) * 0.25;
+  return Math.max(6, base / Math.max(1, room.label.length * 0.35));
+}
+
 export function getHandles(r: Room): Handle[] {
   const x = r.x * GRID,
     y = r.y * GRID,
@@ -42,8 +49,8 @@ export function drawRoom(
   ctx.strokeRect(x, y, w, h);
 
   if (room.label) {
-    const baseFontSize = Math.min(w, h) * 0.25;
-    const fontSize = Math.max(6, baseFontSize / Math.max(1, room.label.length * 0.35));
+    const autoSize = calcAutoFontSize(room);
+    const fontSize = room.fontSize ?? autoSize;
     ctx.fillStyle = '#222';
     ctx.font = `${fontSize}px system-ui, sans-serif`;
     ctx.textAlign = 'center';

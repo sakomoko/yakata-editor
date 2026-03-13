@@ -5,43 +5,7 @@
 }
 body {
   background: #888;
-  font-family: -apple-system, system-ui, sans-serif;
   overflow: hidden;
-}
-
-#toolbar {
-  height: 36px;
-  background: #2a2a2a;
-  display: flex;
-  align-items: center;
-  padding: 0 8px;
-  gap: 6px;
-  border-bottom: 1px solid #444;
-}
-#toolbar button {
-  background: #444;
-  color: #ccc;
-  border: 1px solid #555;
-  padding: 4px 10px;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 12px;
-  white-space: nowrap;
-}
-#toolbar button:hover {
-  background: #555;
-  color: #fff;
-}
-.sep {
-  width: 1px;
-  height: 20px;
-  background: #555;
-  margin: 0 4px;
-}
-.hint {
-  color: #777;
-  font-size: 11px;
-  margin-left: auto;
 }
 
 #container {
@@ -58,19 +22,6 @@ canvas {
   cursor: crosshair;
 }
 
-#status {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 24px;
-  background: #2a2a2a;
-  color: #999;
-  font-size: 11px;
-  line-height: 24px;
-  padding: 0 10px;
-  border-top: 1px solid #444;
-}
 #fileInput {
   display: none;
 }
