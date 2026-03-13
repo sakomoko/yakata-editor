@@ -1,6 +1,9 @@
 import type { Room } from './types.ts';
+import type { ViewportState } from './viewport.ts';
+import { clampZoom } from './viewport.ts';
 
 const STORAGE_KEY = 'madori_data';
+const VIEWPORT_KEY = 'madori_viewport';
 
 function ensureIds(rooms: unknown[]): Room[] {
   return rooms.map((r) => {
@@ -62,6 +65,33 @@ export function loadFromFile(file: File): Promise<Room[]> {
     reader.onerror = () => reject(reader.error);
     reader.readAsText(file);
   });
+}
+
+export function persistViewport(vp: ViewportState): void {
+  try {
+    localStorage.setItem(VIEWPORT_KEY, JSON.stringify(vp));
+  } catch {
+    // storage full or unavailable
+  }
+}
+
+export function loadViewport(): ViewportState | null {
+  try {
+    const data = localStorage.getItem(VIEWPORT_KEY);
+    if (!data) return null;
+    const parsed = JSON.parse(data) as Record<string, unknown>;
+    if (
+      typeof parsed.zoom === 'number' &&
+      typeof parsed.panX === 'number' &&
+      typeof parsed.panY === 'number'
+    ) {
+      if (!Number.isFinite(parsed.panX) || !Number.isFinite(parsed.panY)) return null;
+      return { zoom: clampZoom(parsed.zoom), panX: parsed.panX, panY: parsed.panY };
+    }
+  } catch {
+    // corrupt data
+  }
+  return null;
 }
 
 export function exportPng(canvas: HTMLCanvasElement): void {

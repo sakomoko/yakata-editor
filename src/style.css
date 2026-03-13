@@ -50,13 +50,12 @@ body {
   bottom: 24px;
   left: 0;
   right: 0;
-  overflow: auto;
+  overflow: hidden;
   background: #888;
 }
 canvas {
   display: block;
-  margin: 20px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  cursor: crosshair;
 }
 
 #status {

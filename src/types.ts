@@ -40,6 +40,13 @@ export type DragState =
       targetId: string;
       start: MouseCoord;
     }
+  | {
+      type: 'pan';
+      startScreenX: number;
+      startScreenY: number;
+      startPanX: number;
+      startPanY: number;
+    }
   | null;
 
 export interface EditorState {
