@@ -27,6 +27,7 @@ export function drawRoom(
   room: Room,
   isSelected: boolean,
   showHandles: boolean,
+  zoom = 1,
 ): void {
   const x = room.x * GRID,
     y = room.y * GRID;
@@ -37,26 +38,22 @@ export function drawRoom(
   ctx.fillRect(x, y, w, h);
 
   ctx.strokeStyle = isSelected ? '#2196F3' : '#000';
-  ctx.lineWidth = isSelected ? WALL_SEL : WALL;
+  ctx.lineWidth = (isSelected ? WALL_SEL : WALL) / zoom;
   ctx.strokeRect(x, y, w, h);
 
   if (room.label) {
     ctx.fillStyle = '#222';
-    ctx.font = '13px system-ui, sans-serif';
+    ctx.font = `${13 / zoom}px system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(room.label, x + w / 2, y + h / 2);
   }
 
   if (isSelected && showHandles) {
+    const size = HANDLE_SIZE / zoom;
     for (const handle of getHandles(room)) {
       ctx.fillStyle = '#2196F3';
-      ctx.fillRect(
-        handle.px - HANDLE_SIZE / 2,
-        handle.py - HANDLE_SIZE / 2,
-        HANDLE_SIZE,
-        HANDLE_SIZE,
-      );
+      ctx.fillRect(handle.px - size / 2, handle.py - size / 2, size, size);
     }
   }
 }
@@ -65,6 +62,7 @@ export function drawCreationPreview(
   ctx: CanvasRenderingContext2D,
   start: MouseCoord,
   cur: MouseCoord,
+  zoom = 1,
 ): void {
   const x = Math.min(start.gx, cur.gx);
   const y = Math.min(start.gy, cur.gy);
@@ -75,8 +73,8 @@ export function drawCreationPreview(
   ctx.fillStyle = 'rgba(33,150,243,0.08)';
   ctx.fillRect(x * GRID, y * GRID, w * GRID, h * GRID);
   ctx.strokeStyle = '#2196F3';
-  ctx.lineWidth = 1.5;
-  ctx.setLineDash([4, 3]);
+  ctx.lineWidth = 1.5 / zoom;
+  ctx.setLineDash([4 / zoom, 3 / zoom]);
   ctx.strokeRect(x * GRID, y * GRID, w * GRID, h * GRID);
   ctx.setLineDash([]);
 }
@@ -86,13 +84,15 @@ export function hitHandle(
   selection: Set<string>,
   px: number,
   py: number,
+  zoom = 1,
 ): { handle: Handle; room: Room } | null {
   if (selection.size !== 1) return null;
   const selId = [...selection][0];
   const room = rooms.find((r) => r.id === selId);
   if (!room) return null;
+  const tolerance = HANDLE_HIT / zoom;
   for (const h of getHandles(room)) {
-    if (Math.abs(px - h.px) < HANDLE_HIT && Math.abs(py - h.py) < HANDLE_HIT) {
+    if (Math.abs(px - h.px) < tolerance && Math.abs(py - h.py) < tolerance) {
       return { handle: h, room };
     }
   }

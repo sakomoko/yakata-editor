@@ -3,7 +3,21 @@ import { GRID, COLS, ROWS, drawGrid } from './grid.ts';
 import { drawRoom, drawCreationPreview, hitHandle, hitRoom, createRoom } from './room.ts';
 import { toggleSelection, selectSingle, clearSelection, getSingleSelected } from './selection.ts';
 import { pushUndo, popUndo } from './history.ts';
-import { persistToStorage, loadFromStorage, exportPng, saveAsJson } from './persistence.ts';
+import {
+  persistToStorage,
+  loadFromStorage,
+  exportPng,
+  saveAsJson,
+  persistViewport,
+  loadViewport,
+} from './persistence.ts';
+import {
+  screenToWorld,
+  zoomAtPoint,
+  zoomAtCenter as zoomAtCenterFn,
+  ZOOM_STEP,
+  type ViewportState,
+} from './viewport.ts';
 
 const state: EditorState = {
   rooms: [],
@@ -13,35 +27,50 @@ const state: EditorState = {
   mouse: { px: 0, py: 0, gx: 0, gy: 0 },
 };
 
+const viewport: ViewportState = { zoom: 1, panX: 0, panY: 0 };
+let isPanning = false;
+
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
 
 function mousePos(e: MouseEvent): MouseCoord {
   const rect = canvas.getBoundingClientRect();
-  const px = e.clientX - rect.left;
-  const py = e.clientY - rect.top;
+  const sx = e.clientX - rect.left;
+  const sy = e.clientY - rect.top;
+  const { px, py } = screenToWorld(sx, sy, viewport);
   return { px, py, gx: Math.round(px / GRID), gy: Math.round(py / GRID) };
 }
 
 function render(): void {
-  const W = canvas.width,
-    H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#888';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.setTransform(
+    viewport.zoom,
+    0,
+    0,
+    viewport.zoom,
+    -viewport.panX * viewport.zoom,
+    -viewport.panY * viewport.zoom,
+  );
 
   ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillRect(0, 0, COLS * GRID, ROWS * GRID);
 
   drawGrid(ctx);
 
   for (const r of state.rooms) {
     const isSelected = state.selection.has(r.id);
-    drawRoom(ctx, r, isSelected, isSelected && state.selection.size === 1);
+    drawRoom(ctx, r, isSelected, isSelected && state.selection.size === 1, viewport.zoom);
   }
 
   if (state.drag && state.drag.type === 'create') {
-    drawCreationPreview(ctx, state.drag.start, state.drag.cur);
+    drawCreationPreview(ctx, state.drag.start, state.drag.cur, viewport.zoom);
   }
 
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   updateStatus();
 }
 
@@ -49,7 +78,8 @@ function render(): void {
 function updateStatus(): void {
   const el = document.getElementById('status');
   if (!el) return;
-  let text = `(${state.mouse.gx}, ${state.mouse.gy})　部屋: ${state.rooms.length}`;
+  const zoomPct = Math.round(viewport.zoom * 100);
+  let text = `(${state.mouse.gx}, ${state.mouse.gy})　部屋: ${state.rooms.length}　|　${zoomPct}%`;
   if (state.selection.size === 1) {
     const sel = getSingleSelected(state.rooms, state.selection);
     if (sel) {
@@ -100,18 +130,49 @@ export function saveProject(): void {
 export function exportAsPng(): void {
   const prevSelection = new Set(state.selection);
   clearSelection(state.selection);
-  render();
-  exportPng(canvas);
-  for (const id of prevSelection) state.selection.add(id);
-  render();
+
+  const savedViewport = { ...viewport };
+  const savedW = canvas.width;
+  const savedH = canvas.height;
+
+  try {
+    viewport.zoom = 1;
+    viewport.panX = 0;
+    viewport.panY = 0;
+    canvas.width = COLS * GRID;
+    canvas.height = ROWS * GRID;
+
+    render();
+    exportPng(canvas);
+  } finally {
+    canvas.width = savedW;
+    canvas.height = savedH;
+    Object.assign(viewport, savedViewport);
+    for (const id of prevSelection) state.selection.add(id);
+    render();
+  }
 }
 
 function onMouseDown(e: MouseEvent): void {
+  if (e.button === 1 || (e.button === 0 && isPanning)) {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    state.drag = {
+      type: 'pan',
+      startScreenX: e.clientX - rect.left,
+      startScreenY: e.clientY - rect.top,
+      startPanX: viewport.panX,
+      startPanY: viewport.panY,
+    };
+    canvas.style.cursor = 'grabbing';
+    return;
+  }
+
   const m = mousePos(e);
   const shift = e.shiftKey;
 
   // Handle hit → resize
-  const handleHit = hitHandle(state.rooms, state.selection, m.px, m.py);
+  const handleHit = hitHandle(state.rooms, state.selection, m.px, m.py, viewport.zoom);
   if (handleHit) {
     pushUndo(state.history, state.rooms);
     const { handle, room } = handleHit;
@@ -158,11 +219,27 @@ function onMouseDown(e: MouseEvent): void {
 }
 
 function onMouseMove(e: MouseEvent): void {
+  if (state.drag && state.drag.type === 'pan') {
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+    viewport.panX = state.drag.startPanX - (sx - state.drag.startScreenX) / viewport.zoom;
+    viewport.panY = state.drag.startPanY - (sy - state.drag.startScreenY) / viewport.zoom;
+    state.mouse = mousePos(e);
+    render();
+    return;
+  }
+
   const m = mousePos(e);
   state.mouse = m;
 
   if (!state.drag) {
-    const h = hitHandle(state.rooms, state.selection, m.px, m.py);
+    if (isPanning) {
+      canvas.style.cursor = 'grab';
+      updateStatus();
+      return;
+    }
+    const h = hitHandle(state.rooms, state.selection, m.px, m.py, viewport.zoom);
     if (h) {
       canvas.style.cursor = h.handle.dir + '-resize';
     } else if (hitRoom(state.rooms, m.px, m.py)) {
@@ -215,6 +292,13 @@ function onMouseMove(e: MouseEvent): void {
 function onMouseUp(e: MouseEvent): void {
   if (!state.drag) return;
 
+  if (state.drag.type === 'pan') {
+    state.drag = null;
+    canvas.style.cursor = isPanning ? 'grab' : 'crosshair';
+    persistViewport(viewport);
+    return;
+  }
+
   if (state.drag.type === 'create') {
     const m = mousePos(e);
     const x = Math.min(state.drag.start.gx, m.gx);
@@ -249,6 +333,39 @@ function onDblClick(e: MouseEvent): void {
 }
 
 function onKeyDown(e: KeyboardEvent): void {
+  if (e.code === 'Space' && !isPanning && document.activeElement === document.body) {
+    e.preventDefault();
+    isPanning = true;
+    canvas.style.cursor = 'grab';
+    return;
+  }
+
+  if ((e.metaKey || e.ctrlKey) && (e.key === '=' || e.key === '+')) {
+    e.preventDefault();
+    const newVp = zoomAtCenterFn(viewport, canvas.width, canvas.height, viewport.zoom * 1.25);
+    Object.assign(viewport, newVp);
+    render();
+    persistViewport(viewport);
+    return;
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === '-') {
+    e.preventDefault();
+    const newVp = zoomAtCenterFn(viewport, canvas.width, canvas.height, viewport.zoom / 1.25);
+    Object.assign(viewport, newVp);
+    render();
+    persistViewport(viewport);
+    return;
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === '0') {
+    e.preventDefault();
+    viewport.zoom = 1;
+    viewport.panX = 0;
+    viewport.panY = 0;
+    render();
+    persistViewport(viewport);
+    return;
+  }
+
   if (
     (e.key === 'Delete' || e.key === 'Backspace') &&
     state.selection.size > 0 &&
@@ -266,19 +383,71 @@ function onKeyDown(e: KeyboardEvent): void {
   }
 }
 
+function onKeyUp(e: KeyboardEvent): void {
+  if (e.code === 'Space') {
+    isPanning = false;
+    if (!state.drag || state.drag.type !== 'pan') {
+      canvas.style.cursor = 'crosshair';
+    }
+  }
+}
+
+function onWheel(e: WheelEvent): void {
+  e.preventDefault();
+  if (state.drag && state.drag.type !== 'pan') return;
+
+  if (e.ctrlKey) {
+    // ピンチジェスチャー or Ctrl+ホイール → ズーム
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+
+    const factor = e.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP;
+    const newVp = zoomAtPoint(viewport, sx, sy, viewport.zoom * factor);
+
+    if (newVp.zoom === viewport.zoom) return;
+
+    Object.assign(viewport, newVp);
+  } else {
+    // 通常スクロール → パン
+    viewport.panX += e.deltaX / viewport.zoom;
+    viewport.panY += e.deltaY / viewport.zoom;
+  }
+
+  render();
+  persistViewport(viewport);
+}
+
+function resizeCanvas(): void {
+  const container = document.getElementById('container')!;
+  canvas.width = container.clientWidth;
+  canvas.height = container.clientHeight;
+  render();
+}
+
 export function initEditor(): void {
   canvas = document.getElementById('canvas') as HTMLCanvasElement;
   ctx = canvas.getContext('2d')!;
-  canvas.width = COLS * GRID;
-  canvas.height = ROWS * GRID;
+
+  resizeCanvas();
 
   state.rooms = loadFromStorage();
+
+  const saved = loadViewport();
+  if (saved) {
+    viewport.zoom = saved.zoom;
+    viewport.panX = saved.panX;
+    viewport.panY = saved.panY;
+  }
 
   canvas.addEventListener('mousedown', onMouseDown);
   canvas.addEventListener('mousemove', onMouseMove);
   document.addEventListener('mouseup', onMouseUp);
   canvas.addEventListener('dblclick', onDblClick);
   document.addEventListener('keydown', onKeyDown);
+  document.addEventListener('keyup', onKeyUp);
+  canvas.addEventListener('wheel', onWheel, { passive: false });
+  window.addEventListener('resize', resizeCanvas);
 
   render();
 }
