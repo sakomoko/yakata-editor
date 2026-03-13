@@ -42,11 +42,13 @@ export function drawRoom(
   ctx.strokeRect(x, y, w, h);
 
   if (room.label) {
+    const baseFontSize = Math.min(w, h) * 0.25;
+    const fontSize = Math.max(6, baseFontSize / Math.max(1, room.label.length * 0.35));
     ctx.fillStyle = '#222';
-    ctx.font = `${13 / zoom}px system-ui, sans-serif`;
+    ctx.font = `${fontSize}px system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(room.label, x + w / 2, y + h / 2);
+    ctx.fillText(room.label, x + w / 2, y + h / 2, w * 0.9);
   }
 
   if (isSelected && showHandles) {
