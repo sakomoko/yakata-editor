@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>間取り図エディタ</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#888; font-family:-apple-system,system-ui,sans-serif; overflow:hidden; }
+  #toolbar {
+    height:36px; background:#2a2a2a; display:flex; align-items:center;
+    padding:0 8px; gap:6px; border-bottom:1px solid #444;
+  }
+  #toolbar button {
+    background:#444; color:#ccc; border:1px solid #555; padding:4px 10px;
+    border-radius:3px; cursor:pointer; font-size:12px; white-space:nowrap;
+  }
+  #toolbar button:hover { background:#555; color:#fff; }
+  .sep { width:1px; height:20px; background:#555; margin:0 4px; }
+  .hint { color:#777; font-size:11px; margin-left:auto; }
+  #container {
+    position:absolute; top:36px; bottom:24px; left:0; right:0;
+    overflow:auto; background:#888;
+  }
+  canvas {
+    display:block; margin:20px;
+    box-shadow:0 2px 12px rgba(0,0,0,0.4);
+  }
+  #status {
+    position:fixed; bottom:0; left:0; right:0; height:24px;
+    background:#2a2a2a; color:#999; font-size:11px;
+    line-height:24px; padding:0 10px; border-top:1px solid #444;
+  }
+  #fileInput { display:none; }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <button id="btnNew">新規</button>
+  <div class="sep"></div>
+  <button id="btnSave">保存</button>
+  <button id="btnLoad">開く</button>
+  <button id="btnPng">PNG出力</button>
+  <div class="sep"></div>
+  <button id="btnUndo">戻す (⌘Z)</button>
+  <span class="hint">ドラッグ→部屋作成　クリック→選択　Shift+クリック→複数選択　ダブルクリック→名前　Delete→削除</span>
+</div>
+
+<div id="container">
+  <canvas id="canvas"></canvas>
+</div>
+
+<div id="status">準備完了</div>
+<input type="file" id="fileInput" accept=".json">
+
+<script>
+(() => {
+  'use strict';
+
+  // ============================================================
+  //  定数
+  // ============================================================
+  const GRID = 20;                     // 1マスのピクセル数
+  const COLS = 100, ROWS = 75;         // グリッドのマス数
+  const WALL  = 2;                     // 壁の太さ(px)
+  const WALL_SEL = 2.5;               // 選択中の壁の太さ(px)
+  const HANDLE = 8;                    // ハンドルの大きさ(px)
+  const HANDLE_HIT = 7;               // ハンドルの当たり判定(px)
+
+  // ============================================================
+  //  キャンバス初期化
+  // ============================================================
+  const canvas = document.getElementById('canvas');
+  const ctx    = canvas.getContext('2d');
+  canvas.width  = COLS * GRID;
+  canvas.height = ROWS * GRID;
+
+  // ============================================================
+  //  状態
+  // ============================================================
+  let rooms     = [];      // { x, y, w, h, label }（グリッド単位）
+  let selection = new Set(); // 選択中の部屋（複数対応）
+  let history   = [];      // Undo用
+  let drag      = null;    // ドラッグ操作の状態
+  let mouse     = { px:0, py:0, gx:0, gy:0 };
+
+  // ============================================================
+  //  Undo
+  // ============================================================
+  function pushUndo() {
+    history.push(JSON.stringify(rooms));
+    if (history.length > 50) history.shift();
+  }
+
+  function undo() {
+    if (!history.length) return;
+    rooms = JSON.parse(history.pop());
+    selection.clear();
+    render();
+    persist();
+  }
+
+  // ============================================================
+  //  描画
+  // ============================================================
+  function render() {
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    // 背景
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, W, H);
+
+    // グリッド（5マスごとに濃い線）
+    for (let i = 0; i <= COLS; i++) {
+      ctx.strokeStyle = i % 5 === 0 ? '#ccc' : '#eee';
+      ctx.lineWidth   = i % 5 === 0 ? 0.7  : 0.3;
+      ctx.beginPath(); ctx.moveTo(i*GRID, 0); ctx.lineTo(i*GRID, H); ctx.stroke();
+    }
+    for (let i = 0; i <= ROWS; i++) {
+      ctx.strokeStyle = i % 5 === 0 ? '#ccc' : '#eee';
+      ctx.lineWidth   = i % 5 === 0 ? 0.7  : 0.3;
+      ctx.beginPath(); ctx.moveTo(0, i*GRID); ctx.lineTo(W, i*GRID); ctx.stroke();
+    }
+
+    // 部屋
+    for (const r of rooms) {
+      const isSel = selection.has(r);
+      const x = r.x * GRID, y = r.y * GRID;
+      const w = r.w * GRID, h = r.h * GRID;
+
+      // 白で塗りつぶし（グリッドを消す）
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(x, y, w, h);
+
+      // 壁（黒い線）
+      ctx.strokeStyle = isSel ? '#2196F3' : '#000';
+      ctx.lineWidth   = isSel ? WALL_SEL  : WALL;
+      ctx.strokeRect(x, y, w, h);
+
+      // 部屋名ラベル
+      if (r.label) {
+        ctx.fillStyle   = '#222';
+        ctx.font        = '13px system-ui, sans-serif';
+        ctx.textAlign   = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(r.label, x + w/2, y + h/2);
+      }
+
+      // 選択ハンドル（単一選択時のみ）
+      if (isSel && selection.size === 1) {
+        for (const h of getHandles(r)) {
+          ctx.fillStyle = '#2196F3';
+          ctx.fillRect(h.px - HANDLE/2, h.py - HANDLE/2, HANDLE, HANDLE);
+        }
+      }
+    }
+
+    // 作成中プレビュー
+    if (drag && drag.type === 'create' && drag.cur) {
+      const x1 = Math.min(drag.start.gx, drag.cur.gx);
+      const y1 = Math.min(drag.start.gy, drag.cur.gy);
+      const w  = Math.abs(drag.cur.gx - drag.start.gx);
+      const h  = Math.abs(drag.cur.gy - drag.start.gy);
+      if (w > 0 && h > 0) {
+        ctx.fillStyle = 'rgba(33,150,243,0.08)';
+        ctx.fillRect(x1*GRID, y1*GRID, w*GRID, h*GRID);
+        ctx.strokeStyle = '#2196F3';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        ctx.strokeRect(x1*GRID, y1*GRID, w*GRID, h*GRID);
+        ctx.setLineDash([]);
+      }
+    }
+
+    updateStatus();
+  }
+
+  // ============================================================
+  //  ハンドル（8点：四隅＋辺の中点）
+  // ============================================================
+  function getHandles(r) {
+    const x = r.x*GRID, y = r.y*GRID, w = r.w*GRID, h = r.h*GRID;
+    return [
+      { px: x,       py: y,       dir: 'nw' },
+      { px: x+w/2,   py: y,       dir: 'n'  },
+      { px: x+w,     py: y,       dir: 'ne' },
+      { px: x+w,     py: y+h/2,   dir: 'e'  },
+      { px: x+w,     py: y+h,     dir: 'se' },
+      { px: x+w/2,   py: y+h,     dir: 's'  },
+      { px: x,       py: y+h,     dir: 'sw' },
+      { px: x,       py: y+h/2,   dir: 'w'  },
+    ];
+  }
+
+  // ============================================================
+  //  当たり判定
+  // ============================================================
+  function hitHandle(px, py) {
+    if (selection.size !== 1) return null;
+    const sel = [...selection][0];
+    for (const h of getHandles(sel)) {
+      if (Math.abs(px - h.px) < HANDLE_HIT && Math.abs(py - h.py) < HANDLE_HIT) return h;
+    }
+    return null;
+  }
+
+  function singleSelected() {
+    return selection.size === 1 ? [...selection][0] : null;
+  }
+
+  function hitRoom(px, py) {
+    for (let i = rooms.length - 1; i >= 0; i--) {
+      const r = rooms[i];
+      if (px >= r.x*GRID && px <= (r.x+r.w)*GRID &&
+          py >= r.y*GRID && py <= (r.y+r.h)*GRID) {
+        return r;
+      }
+    }
+    return null;
+  }
+
+  // ============================================================
+  //  マウス座標→グリッド座標
+  // ============================================================
+  function mousePos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top;
+    return { px, py, gx: Math.round(px / GRID), gy: Math.round(py / GRID) };
+  }
+
+  // ============================================================
+  //  マウスイベント
+  // ============================================================
+  canvas.addEventListener('mousedown', e => {
+    const m = mousePos(e);
+    const shift = e.shiftKey;
+
+    // ハンドルをつかんだ → リサイズ開始（単一選択時のみ）
+    const h = hitHandle(m.px, m.py);
+    if (h) {
+      pushUndo();
+      const sel = singleSelected();
+      drag = { type: 'resize', dir: h.dir, orig: {...sel}, target: sel, start: m };
+      return;
+    }
+
+    // 部屋をつかんだ
+    const r = hitRoom(m.px, m.py);
+    if (r) {
+      if (shift) {
+        // Shift+クリック → 選択をトグル
+        if (selection.has(r)) {
+          selection.delete(r);
+        } else {
+          selection.add(r);
+        }
+      } else {
+        // 通常クリック → すでに選択中ならそのまま、そうでなければ単一選択
+        if (!selection.has(r)) {
+          selection.clear();
+          selection.add(r);
+        }
+      }
+      pushUndo();
+      // 選択中の全部屋の初期位置を記録
+      const originals = new Map();
+      for (const s of selection) {
+        originals.set(s, { x: s.x, y: s.y });
+      }
+      drag = { type: 'move', originals, start: m };
+      render();
+      return;
+    }
+
+    // 空白をつかんだ → 新規作成開始
+    if (!shift) selection.clear();
+    drag = { type: 'create', start: m, cur: m };
+    render();
+  });
+
+  canvas.addEventListener('mousemove', e => {
+    const m = mousePos(e);
+    mouse = m;
+
+    // ドラッグ中でなければカーソル更新のみ
+    if (!drag) {
+      const h = hitHandle(m.px, m.py);
+      if (h) {
+        canvas.style.cursor = h.dir + '-resize';
+      } else if (hitRoom(m.px, m.py)) {
+        canvas.style.cursor = 'move';
+      } else {
+        canvas.style.cursor = 'crosshair';
+      }
+      updateStatus();
+      return;
+    }
+
+    // 作成中
+    if (drag.type === 'create') {
+      drag.cur = m;
+    }
+    // 移動中（選択中の全部屋をまとめて移動）
+    else if (drag.type === 'move') {
+      const dx = m.gx - drag.start.gx;
+      const dy = m.gy - drag.start.gy;
+      for (const [room, orig] of drag.originals) {
+        room.x = orig.x + dx;
+        room.y = orig.y + dy;
+      }
+    }
+    // リサイズ中
+    else if (drag.type === 'resize') {
+      const o = drag.orig;
+      const d = drag.dir;
+      const t = drag.target;
+      if (d.includes('w')) {
+        t.x = Math.min(m.gx, o.x + o.w - 1);
+        t.w = o.x + o.w - t.x;
+      }
+      if (d.includes('e')) {
+        t.w = Math.max(1, m.gx - o.x);
+      }
+      if (d.includes('n')) {
+        t.y = Math.min(m.gy, o.y + o.h - 1);
+        t.h = o.y + o.h - t.y;
+      }
+      if (d.includes('s')) {
+        t.h = Math.max(1, m.gy - o.y);
+      }
+    }
+
+    render();
+  });
+
+  canvas.addEventListener('mouseup', e => {
+    if (!drag) return;
+
+    if (drag.type === 'create') {
+      const m = mousePos(e);
+      const x = Math.min(drag.start.gx, m.gx);
+      const y = Math.min(drag.start.gy, m.gy);
+      const w = Math.abs(m.gx - drag.start.gx);
+      const h = Math.abs(m.gy - drag.start.gy);
+      if (w > 0 && h > 0) {
+        pushUndo();
+        const room = { x, y, w, h, label: '' };
+        rooms.push(room);
+        selection.clear();
+        selection.add(room);
+      }
+    }
+
+    drag = null;
+    render();
+    persist();
+  });
+
+  // ダブルクリック → 部屋名入力
+  canvas.addEventListener('dblclick', e => {
+    const m = mousePos(e);
+    const r = hitRoom(m.px, m.py);
+    if (r) {
+      const name = prompt('部屋名を入力:', r.label || '');
+      if (name !== null) {
+        pushUndo();
+        r.label = name;
+        render();
+        persist();
+      }
+    }
+  });
+
+  // ============================================================
+  //  キーボード
+  // ============================================================
+  document.addEventListener('keydown', e => {
+    // Delete / Backspace → 選択中の部屋をすべて削除
+    if ((e.key === 'Delete' || e.key === 'Backspace') && selection.size > 0 && document.activeElement === document.body) {
+      e.preventDefault();
+      pushUndo();
+      for (const r of selection) {
+        const idx = rooms.indexOf(r);
+        if (idx >= 0) rooms.splice(idx, 1);
+      }
+      selection.clear();
+      render();
+      persist();
+    }
+    // Cmd+Z / Ctrl+Z → 戻す
+    if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+      e.preventDefault();
+      undo();
+    }
+  });
+
+  // ============================================================
+  //  ステータスバー
+  // ============================================================
+  function updateStatus() {
+    const el = document.getElementById('status');
+    let text = `(${mouse.gx}, ${mouse.gy})　部屋: ${rooms.length}`;
+    if (selection.size === 1) {
+      const sel = [...selection][0];
+      text += `　|　${sel.label || '(名前なし)'}　${sel.w}×${sel.h}`;
+    } else if (selection.size > 1) {
+      text += `　|　${selection.size}個選択中`;
+    }
+    el.textContent = text;
+  }
+
+  // ============================================================
+  //  保存・読み込み（localStorage + JSON ファイル）
+  // ============================================================
+  function persist() {
+    try { localStorage.setItem('madori_data', JSON.stringify(rooms)); } catch(e) {}
+  }
+
+  function loadFromStorage() {
+    try {
+      const data = localStorage.getItem('madori_data');
+      if (data) rooms = JSON.parse(data);
+    } catch(e) {}
+  }
+
+  // 新規
+  document.getElementById('btnNew').addEventListener('click', () => {
+    if (rooms.length && !confirm('現在の間取り図をクリアしますか？')) return;
+    pushUndo();
+    rooms = [];
+    selection.clear();
+    render();
+    persist();
+  });
+
+  // 戻す
+  document.getElementById('btnUndo').addEventListener('click', undo);
+
+  // JSON保存
+  document.getElementById('btnSave').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(rooms, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '間取り図.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  // JSON読み込み
+  document.getElementById('btnLoad').addEventListener('click', () => {
+    document.getElementById('fileInput').click();
+  });
+
+  document.getElementById('fileInput').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        pushUndo();
+        rooms = JSON.parse(ev.target.result);
+        selection.clear();
+        render();
+        persist();
+      } catch (err) {
+        alert('ファイルを読み込めませんでした');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  // PNG出力
+  document.getElementById('btnPng').addEventListener('click', () => {
+    const prevSelection = new Set(selection);
+    selection.clear();
+    render();
+    const a = document.createElement('a');
+    a.download = '間取り図.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+    for (const r of prevSelection) selection.add(r);
+    render();
+  });
+
+  // ============================================================
+  //  初期化
+  // ============================================================
+  loadFromStorage();
+  render();
+
+})();
+</script>
+</body>
+</html>
