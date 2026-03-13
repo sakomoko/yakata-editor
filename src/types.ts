@@ -5,6 +5,7 @@ export interface Room {
   w: number;
   h: number;
   label: string;
+  fontSize?: number;
   floor?: number;
 }
 
