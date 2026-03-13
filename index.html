@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>間取り図エディタ</title>
+</head>
+<body>
+
+<div id="toolbar">
+  <button id="btnNew">新規</button>
+  <div class="sep"></div>
+  <button id="btnSave">保存</button>
+  <button id="btnLoad">開く</button>
+  <button id="btnPng">PNG出力</button>
+  <div class="sep"></div>
+  <button id="btnUndo">戻す (⌘Z)</button>
+  <span class="hint">ドラッグ→部屋作成　クリック→選択　Shift+クリック→複数選択　ダブルクリック→名前　Delete→削除</span>
+</div>
+
+<div id="container">
+  <canvas id="canvas"></canvas>
+</div>
+
+<div id="status">準備完了</div>
+<input type="file" id="fileInput" accept=".json">
+
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

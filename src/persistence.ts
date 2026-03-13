@@ -1,0 +1,77 @@
+import type { Room } from './types.ts';
+
+const STORAGE_KEY = 'madori_data';
+
+function ensureIds(rooms: unknown[]): Room[] {
+  return rooms.map((r) => {
+    const room = r as Record<string, unknown>;
+    return {
+      ...room,
+      id: typeof room.id === 'string' ? room.id : crypto.randomUUID(),
+      x: room.x as number,
+      y: room.y as number,
+      w: room.w as number,
+      h: room.h as number,
+      label: (room.label as string) ?? '',
+    } as Room;
+  });
+}
+
+export function persistToStorage(rooms: Room[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(rooms));
+  } catch {
+    // storage full or unavailable
+  }
+}
+
+export function loadFromStorage(): Room[] {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (!data) return [];
+    const parsed: unknown = JSON.parse(data);
+    if (Array.isArray(parsed)) {
+      return ensureIds(parsed);
+    }
+  } catch {
+    // corrupt data
+  }
+  return [];
+}
+
+export function saveAsJson(rooms: Room[]): void {
+  const blob = new Blob([JSON.stringify(rooms, null, 2)], { type: 'application/json' });
+  triggerDownload(URL.createObjectURL(blob), '間取り図.json');
+}
+
+export function loadFromFile(file: File): Promise<Room[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed: unknown = JSON.parse(ev.target!.result as string);
+        if (Array.isArray(parsed)) {
+          resolve(ensureIds(parsed));
+        } else {
+          reject(new Error('Invalid format'));
+        }
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file);
+  });
+}
+
+export function exportPng(canvas: HTMLCanvasElement): void {
+  triggerDownload(canvas.toDataURL('image/png'), '間取り図.png');
+}
+
+function triggerDownload(url: string, filename: string): void {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
