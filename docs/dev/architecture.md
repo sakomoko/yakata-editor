@@ -29,11 +29,13 @@ Canvas 再描画 + localStorage 保存
 ### コアモジュール
 
 - **editor.ts** — オーケストレーター。`EditorState` を保持し、Canvas描画（`render()`）とマウス/キーボードイベントを処理。外部向けAPI（`initEditor`, `undo`, `newProject`, `loadProject`, `saveProject`, `exportAsPng`）を提供
-- **types.ts** — 全型定義（`Room`, `Project`, `EditorState`, `DragState`, `MouseCoord`, `Handle`）
+- **types.ts** — 全型定義（`Room`, `WallObject`, `Project`, `EditorState`, `DragState`, `MouseCoord`, `Handle`）
 
 ### 機能モジュール
 
 - **room.ts** — 部屋の生成（`createRoom`）、Canvas描画（`drawRoom`）、ヒット判定（`hitRoom`, `hitHandle`）、リサイズハンドル計算（`getHandles`）
+- **wall-object.ts** — 壁オブジェクト（窓など）の生成（`createWallWindow`）、ヒット判定（`hitWallObject`, `hitWallObjectInRooms`）、ピクセル座標変換（`wallObjectToPixelRect`）、壁セグメント分割（`getWallSegments`）
+- **context-menu.ts** / **ContextMenu.tsx** — 壁の右クリックコンテキストメニュー（窓の追加・削除）。ReactコンポーネントとしてCanvas上にオーバーレイ表示
 - **selection.ts** — `Set<string>` ベースの選択状態管理
 - **history.ts** — Undoスタック（JSON snapshot方式、最大50件）
 - **grid.ts** — グリッド定数（`GRID=20px`, `COLS=100`, `ROWS=75`）と描画
@@ -47,9 +49,11 @@ main.ts
   │   ├─ types.ts
   │   ├─ grid.ts
   │   ├─ room.ts → types.ts, grid.ts
+  │   ├─ wall-object.ts → types.ts, grid.ts
   │   ├─ selection.ts → types.ts
   │   ├─ history.ts → types.ts
   │   └─ persistence.ts → types.ts
+  ├─ App.tsx → ContextMenu.tsx, context-menu.ts
   ├─ persistence.ts
   └─ style.css
 ```

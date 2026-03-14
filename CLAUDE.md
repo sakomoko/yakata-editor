@@ -25,9 +25,11 @@ Canvas上でのマウス操作 → editor.ts のイベントハンドラ → sta
 
 ### Module Structure
 
-- **types.ts** — 全型定義 (`Room`, `Project`, `EditorState`, `DragState` discriminated union, `MouseCoord`)
+- **types.ts** — 全型定義 (`Room`, `WallObject`, `Project`, `EditorState`, `DragState` discriminated union, `MouseCoord`)
 - **editor.ts** — オーケストレーター。EditorState保持、Canvas描画(`render()`)、マウス/キーボードイベント処理、公開API (`initEditor`, `undo`, `newProject`, `loadProject`, `saveProject`, `exportAsPng`)
 - **room.ts** — 部屋の生成(`createRoom`)、描画(`drawRoom`)、ヒット判定(`hitRoom`, `hitHandle`)、リサイズハンドル計算(`getHandles`)
+- **wall-object.ts** — 壁オブジェクト(窓など)の生成・ヒット判定・ピクセル座標変換・壁セグメント分割
+- **context-menu.ts** / **ContextMenu.tsx** — 壁の右クリックコンテキストメニュー(窓の追加・削除)
 - **selection.ts** — 選択状態管理 (Set\<string\>ベース)
 - **history.ts** — Undoスタック (JSON snapshot方式、最大50件、Redo無し)
 - **grid.ts** — グリッド定数 (`GRID=20px`, `COLS=100`, `ROWS=75`) と描画
