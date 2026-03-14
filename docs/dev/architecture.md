@@ -34,8 +34,8 @@ Canvas 再描画 + localStorage 保存
 ### 機能モジュール
 
 - **room.ts** — 部屋の生成（`createRoom`）、Canvas描画（`drawRoom`）、ヒット判定（`hitRoom`, `hitHandle`）、リサイズハンドル計算（`getHandles`）
-- **wall-object.ts** — 壁オブジェクト（窓など）の生成（`createWallWindow`）、ヒット判定（`hitWallObject`, `hitWallObjectInRooms`）、ピクセル座標変換（`wallObjectToPixelRect`）、壁セグメント分割（`getWallSegments`）
-- **context-menu.ts** / **ContextMenu.tsx** — 壁の右クリックコンテキストメニュー（窓の追加・削除）。ReactコンポーネントとしてCanvas上にオーバーレイ表示
+- **wall-object.ts** — 壁オブジェクト（窓・ドア）の生成（`createWallWindow`, `createWallDoor`）、描画（`drawWallObjects`）、ヒット判定（`hitWallObject`, `hitWallObjectInRooms`）、ピクセル座標変換（`wallObjectToPixelRect`）、壁セグメント分割（`getWallSegments`）。ドアはヒンジ点から弧を描くビジュアルで、扇形エリア全体がヒット対象
+- **context-menu.ts** / **ContextMenu.tsx** — 壁の右クリックコンテキストメニュー（窓・ドアの追加・削除・開き方向切替）。ReactコンポーネントとしてCanvas上にオーバーレイ表示
 - **selection.ts** — `Set<string>` ベースの選択状態管理
 - **history.ts** — Undoスタック（JSON snapshot方式、最大50件）
 - **grid.ts** — グリッド定数（`GRID=20px`, `COLS=100`, `ROWS=75`）と描画
