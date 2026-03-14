@@ -1,4 +1,4 @@
-import type { Room, WallSide, WallObject, WallWindow } from './types.ts';
+import type { Room, WallSide, WallObject, WallWindow, WallDoor } from './types.ts';
 import { GRID, WALL, WALL_SEL } from './grid.ts';
 
 const WINDOW_DRAW_OFFSET = 4;
@@ -6,6 +6,15 @@ const WINDOW_HIT_TOLERANCE = 6;
 
 export function createWallWindow(side: WallSide, offset: number, width = 1): WallWindow {
   return { id: crypto.randomUUID(), type: 'window', side, offset, width };
+}
+
+export function createWallDoor(
+  side: WallSide,
+  offset: number,
+  width = 1,
+  swing: 'inward' | 'outward' = 'inward',
+): WallDoor {
+  return { id: crypto.randomUUID(), type: 'door', side, offset, width, swing };
 }
 
 export function wallSideLength(room: Room, side: WallSide): number {
@@ -107,7 +116,53 @@ export function drawWallSegments(
   ctx.stroke();
 }
 
-/** Draw window symbols (double parallel lines) on wall objects. */
+/** Angle lookup table for door swing directions per wall side. */
+const DOOR_ANGLES: Record<
+  WallSide,
+  { closedAngle: number; inward: number; outward: number }
+> = {
+  n: { closedAngle: 0, inward: Math.PI / 2, outward: -Math.PI / 2 },
+  s: { closedAngle: 0, inward: -Math.PI / 2, outward: Math.PI / 2 },
+  w: { closedAngle: Math.PI / 2, inward: 0, outward: Math.PI },
+  e: { closedAngle: Math.PI / 2, inward: Math.PI, outward: 0 },
+};
+
+function drawDoor(
+  ctx: CanvasRenderingContext2D,
+  room: Room,
+  obj: WallDoor,
+  color: string,
+  lineWidth: number,
+): void {
+  const rect = wallObjectToPixelRect(room, obj);
+  const radius = rect.length;
+
+  // Hinge is at the start of the object along the wall
+  const hingeX = rect.horizontal ? rect.x : rect.x;
+  const hingeY = rect.horizontal ? rect.y : rect.y;
+
+  const angles = DOOR_ANGLES[obj.side];
+  const closedAngle = angles.closedAngle;
+  const openAngle = obj.swing === 'inward' ? angles.inward : angles.outward;
+
+  // Determine arc direction (counterclockwise if openAngle < closedAngle)
+  const anticlockwise = openAngle < closedAngle;
+
+  // Draw panel line (from hinge to open position)
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.beginPath();
+  ctx.moveTo(hingeX, hingeY);
+  ctx.lineTo(hingeX + Math.cos(openAngle) * radius, hingeY + Math.sin(openAngle) * radius);
+  ctx.stroke();
+
+  // Draw arc (from closed position to open position)
+  ctx.beginPath();
+  ctx.arc(hingeX, hingeY, radius, closedAngle, openAngle, anticlockwise);
+  ctx.stroke();
+}
+
+/** Draw wall object symbols (windows and doors) on wall objects. */
 export function drawWallObjects(
   ctx: CanvasRenderingContext2D,
   room: Room,
@@ -121,29 +176,98 @@ export function drawWallObjects(
   const drawOffset = WINDOW_DRAW_OFFSET / zoom;
 
   for (const obj of room.wallObjects) {
-    if (obj.type !== 'window') continue;
-
     const isActive = obj.id === activeObjectId;
     const color = isActive ? '#FF9800' : isSelected ? '#2196F3' : '#000';
+    const objLineWidth = isActive ? 2.5 / zoom : lineWidth;
 
-    const rect = wallObjectToPixelRect(room, obj);
-
-    ctx.strokeStyle = color;
-    ctx.lineWidth = isActive ? 2.5 / zoom : lineWidth;
-    ctx.beginPath();
-    if (rect.horizontal) {
-      ctx.moveTo(rect.x, rect.y - drawOffset);
-      ctx.lineTo(rect.x + rect.length, rect.y - drawOffset);
-      ctx.moveTo(rect.x, rect.y + drawOffset);
-      ctx.lineTo(rect.x + rect.length, rect.y + drawOffset);
-    } else {
-      ctx.moveTo(rect.x - drawOffset, rect.y);
-      ctx.lineTo(rect.x - drawOffset, rect.y + rect.length);
-      ctx.moveTo(rect.x + drawOffset, rect.y);
-      ctx.lineTo(rect.x + drawOffset, rect.y + rect.length);
+    switch (obj.type) {
+      case 'window': {
+        const rect = wallObjectToPixelRect(room, obj);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = objLineWidth;
+        ctx.beginPath();
+        if (rect.horizontal) {
+          ctx.moveTo(rect.x, rect.y - drawOffset);
+          ctx.lineTo(rect.x + rect.length, rect.y - drawOffset);
+          ctx.moveTo(rect.x, rect.y + drawOffset);
+          ctx.lineTo(rect.x + rect.length, rect.y + drawOffset);
+        } else {
+          ctx.moveTo(rect.x - drawOffset, rect.y);
+          ctx.lineTo(rect.x - drawOffset, rect.y + rect.length);
+          ctx.moveTo(rect.x + drawOffset, rect.y);
+          ctx.lineTo(rect.x + drawOffset, rect.y + rect.length);
+        }
+        ctx.stroke();
+        break;
+      }
+      case 'door': {
+        drawDoor(ctx, room, obj, color, objLineWidth);
+        break;
+      }
     }
-    ctx.stroke();
   }
+}
+
+/** Normalize angle to [0, 2π) */
+function normalizeAngle(a: number): number {
+  return ((a % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+}
+
+/** Check if angle is within the arc sweep from startAngle to endAngle (respecting direction). */
+function isAngleInSweep(
+  angle: number,
+  startAngle: number,
+  endAngle: number,
+  anticlockwise: boolean,
+): boolean {
+  const a = normalizeAngle(angle);
+  const s = normalizeAngle(startAngle);
+  const e = normalizeAngle(endAngle);
+
+  if (anticlockwise) {
+    // Sweep goes from start counterclockwise to end
+    // Angle is in sweep if going clockwise from end to start covers it
+    if (s >= e) {
+      return a <= s && a >= e;
+    } else {
+      return a >= e || a <= s;
+    }
+  } else {
+    // Sweep goes from start clockwise to end
+    if (e >= s) {
+      return a >= s && a <= e;
+    } else {
+      return a >= s || a <= e;
+    }
+  }
+}
+
+/** Hit test for a door's wedge area (the pie-shaped region bounded by the panel, wall, and arc). */
+function hitDoorShape(
+  room: Room,
+  obj: WallDoor,
+  px: number,
+  py: number,
+  tolerance: number,
+): boolean {
+  const rect = wallObjectToPixelRect(room, obj);
+  const hingeX = rect.x;
+  const hingeY = rect.y;
+  const radius = rect.length;
+
+  const angles = DOOR_ANGLES[obj.side];
+  const closedAngle = angles.closedAngle;
+  const openAngle = obj.swing === 'inward' ? angles.inward : angles.outward;
+  const anticlockwise = openAngle < closedAngle;
+
+  // Check if point is inside the wedge (pie shape) with tolerance:
+  // 1. Distance from hinge <= radius + tolerance
+  // 2. Angle is within the arc sweep
+  const dist = Math.hypot(px - hingeX, py - hingeY);
+  if (dist > radius + tolerance) return false;
+
+  const angle = Math.atan2(py - hingeY, px - hingeX);
+  return isAngleInSweep(angle, closedAngle, openAngle, anticlockwise);
 }
 
 export function hitWallObject(
@@ -159,13 +283,15 @@ export function hitWallObject(
     const obj = room.wallObjects[i];
     const rect = wallObjectToPixelRect(room, obj);
 
+    // Wall-line hit (shared by all wall object types)
+    let wallLineHit = false;
     if (rect.horizontal) {
       if (
         px >= rect.x &&
         px <= rect.x + rect.length &&
         Math.abs(py - rect.y) < tolerance
       ) {
-        return obj;
+        wallLineHit = true;
       }
     } else {
       if (
@@ -173,8 +299,15 @@ export function hitWallObject(
         py <= rect.y + rect.length &&
         Math.abs(px - rect.x) < tolerance
       ) {
-        return obj;
+        wallLineHit = true;
       }
+    }
+
+    if (wallLineHit) return obj;
+
+    // Door-specific: also check arc and panel line
+    if (obj.type === 'door' && hitDoorShape(room, obj, px, py, tolerance)) {
+      return obj;
     }
   }
   return null;

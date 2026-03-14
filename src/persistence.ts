@@ -6,7 +6,8 @@ const STORAGE_KEY = 'madori_data';
 const VIEWPORT_KEY = 'madori_viewport';
 
 const VALID_SIDES = new Set(['n', 'e', 's', 'w']);
-const VALID_WALL_OBJECT_TYPES = new Set(['window']);
+const VALID_WALL_OBJECT_TYPES = new Set(['window', 'door']);
+const VALID_DOOR_SWINGS = new Set(['inward', 'outward']);
 
 function ensureWallObjectIds(objects: unknown[]): WallObject[] {
   return objects
@@ -19,15 +20,24 @@ function ensureWallObjectIds(objects: unknown[]): WallObject[] {
         VALID_WALL_OBJECT_TYPES.has(obj.type as string)
       );
     })
+    .filter((o) => {
+      const obj = o as Record<string, unknown>;
+      if (obj.type === 'door' && !VALID_DOOR_SWINGS.has(obj.swing as string)) return false;
+      return true;
+    })
     .map((o) => {
       const obj = o as Record<string, unknown>;
-      return {
+      const base = {
         id: typeof obj.id === 'string' ? obj.id : crypto.randomUUID(),
         type: obj.type as WallObject['type'],
         side: obj.side as WallObject['side'],
         offset: obj.offset as number,
         width: obj.width as number,
-      } as WallObject;
+      };
+      if (base.type === 'door') {
+        return { ...base, swing: obj.swing as 'inward' | 'outward' } as WallObject;
+      }
+      return base as WallObject;
     });
 }
 

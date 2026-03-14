@@ -43,6 +43,15 @@ Canvas上でのマウス操作 → editor.ts のイベントハンドラ → sta
 - 部屋のヒット判定はz-order考慮(後に追加された部屋が優先)
 - Canvasサイズは固定 2000×1500px
 
+### 型拡張時の注意: persistence.ts の同期
+
+`WallObject` など discriminated union に新しい型を追加した場合、`persistence.ts` の以下を必ず更新すること:
+
+1. **バリデーション定数** — `VALID_WALL_OBJECT_TYPES` に新しい type 値を追加
+2. **復元ロジック** — `ensureWallObjectIds` で新しい型固有のプロパティ（例: `WallDoor.swing`）を復元する分岐を追加
+
+これを怠るとシリアライズは成功するがロード時にフィルタで除外され、リロードでデータが消失する。
+
 ## Code Style
 
 - Strict TypeScript (noUnusedLocals, noUnusedParameters有効)

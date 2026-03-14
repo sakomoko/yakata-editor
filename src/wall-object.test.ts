@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createRoom } from './room.ts';
 import {
   createWallWindow,
+  createWallDoor,
   wallSideLength,
   clampWallObjects,
   wallObjectToPixelRect,
@@ -308,5 +309,161 @@ describe('computeWallObjectPosition', () => {
     const result = computeWallObjectPosition(room, 12 * GRID, 10.1 * GRID, 1);
     expect(result.side).toBe('n');
     expect(result.offset).toBe(2);
+  });
+});
+
+describe('createWallDoor', () => {
+  it('デフォルト幅1・内開きのドアを生成する', () => {
+    const door = createWallDoor('n', 2);
+    expect(door.type).toBe('door');
+    expect(door.side).toBe('n');
+    expect(door.offset).toBe(2);
+    expect(door.width).toBe(1);
+    expect(door.swing).toBe('inward');
+    expect(door.id).toBeTruthy();
+  });
+
+  it('幅とswingを指定してドアを生成する', () => {
+    const door = createWallDoor('s', 1, 2, 'outward');
+    expect(door.width).toBe(2);
+    expect(door.swing).toBe('outward');
+  });
+});
+
+describe('ドアとwindowのオーバーラップ検出', () => {
+  it('同じ壁上でドアと窓が重なる場合を検出できる', () => {
+    const room = createRoom(0, 0, 10, 10);
+    const win = createWallWindow('n', 2, 1);
+    const door = createWallDoor('n', 2, 1);
+    room.wallObjects = [win];
+
+    const hasOverlap = room.wallObjects.some(
+      (o) =>
+        o.side === door.side &&
+        door.offset < o.offset + o.width &&
+        door.offset + door.width > o.offset,
+    );
+    expect(hasOverlap).toBe(true);
+  });
+
+  it('同じ壁上で重ならない場合はfalse', () => {
+    const room = createRoom(0, 0, 10, 10);
+    const win = createWallWindow('n', 0, 1);
+    const door = createWallDoor('n', 5, 1);
+    room.wallObjects = [win];
+
+    const hasOverlap = room.wallObjects.some(
+      (o) =>
+        o.side === door.side &&
+        door.offset < o.offset + o.width &&
+        door.offset + door.width > o.offset,
+    );
+    expect(hasOverlap).toBe(false);
+  });
+});
+
+describe('ドアのヒット判定', () => {
+  it('北壁のドアに壁線上でヒットする', () => {
+    const room = createRoom(0, 0, 5, 3);
+    const door = createWallDoor('n', 2, 1);
+    room.wallObjects = [door];
+    const hit = hitWallObject(room, 2.5 * GRID, 0, 1);
+    expect(hit).toBe(door);
+  });
+
+  it('西壁のドアに壁線上でヒットする', () => {
+    const room = createRoom(0, 0, 5, 5);
+    const door = createWallDoor('w', 2, 1);
+    room.wallObjects = [door];
+    const hit = hitWallObject(room, 0, 2.5 * GRID, 1);
+    expect(hit).toBe(door);
+  });
+
+  it('北壁・内開きドアの弧上でヒットする', () => {
+    // 北壁 offset=2, width=1 → ヒンジ=(2*GRID, 0), radius=GRID
+    // inward: openAngle=π/2 → 弧は右(0)から下(π/2)へ
+    // 弧上の点: ヒンジから角度π/4の位置 (右下45度)
+    const room = createRoom(0, 0, 5, 5);
+    const door = createWallDoor('n', 2, 1, 'inward');
+    room.wallObjects = [door];
+    const arcX = 2 * GRID + Math.cos(Math.PI / 4) * GRID;
+    const arcY = 0 + Math.sin(Math.PI / 4) * GRID;
+    const hit = hitWallObject(room, arcX, arcY, 1);
+    expect(hit).toBe(door);
+  });
+
+  it('北壁・外開きドアの弧上でヒットする', () => {
+    // outward: openAngle=-π/2 → 弧は右(0)から上(-π/2)へ
+    const room = createRoom(0, 0, 5, 5);
+    const door = createWallDoor('n', 2, 1, 'outward');
+    room.wallObjects = [door];
+    const arcX = 2 * GRID + Math.cos(-Math.PI / 4) * GRID;
+    const arcY = 0 + Math.sin(-Math.PI / 4) * GRID;
+    const hit = hitWallObject(room, arcX, arcY, 1);
+    expect(hit).toBe(door);
+  });
+
+  it('ドアのパネル線上でヒットする', () => {
+    // 北壁 inward: パネル線はヒンジ(2*GRID, 0)から(2*GRID, GRID)へ (openAngle=π/2)
+    const room = createRoom(0, 0, 5, 5);
+    const door = createWallDoor('n', 2, 1, 'inward');
+    room.wallObjects = [door];
+    // パネル線の中間点付近
+    const hit = hitWallObject(room, 2 * GRID, 0.5 * GRID, 1);
+    expect(hit).toBe(door);
+  });
+
+  it('扇形エリアの内側でヒットする', () => {
+    // 北壁 inward: 扇形は (2*GRID, 0) を中心に角度0〜π/2, 半径GRID
+    // 扇形内部の点 (半径の半分、角度π/4)
+    const room = createRoom(0, 0, 5, 5);
+    const door = createWallDoor('n', 2, 1, 'inward');
+    room.wallObjects = [door];
+    const innerX = 2 * GRID + Math.cos(Math.PI / 4) * GRID * 0.5;
+    const innerY = 0 + Math.sin(Math.PI / 4) * GRID * 0.5;
+    const hit = hitWallObject(room, innerX, innerY, 1);
+    expect(hit).toBe(door);
+  });
+
+  it('扇形エリアの外側ではヒットしない', () => {
+    const room = createRoom(0, 0, 5, 5);
+    const door = createWallDoor('n', 2, 1, 'inward');
+    room.wallObjects = [door];
+    // 半径外 (距離 > radius)
+    const hit = hitWallObject(room, 2 * GRID + GRID * 2, GRID * 2, 1);
+    expect(hit).toBeNull();
+  });
+
+  it('扇形の角度範囲外ではヒットしない', () => {
+    // 北壁 inward: 扇形は角度0〜π/2 (右下の象限)
+    // 角度3π/4の位置(左下)は範囲外
+    const room = createRoom(0, 0, 5, 5);
+    const door = createWallDoor('n', 2, 1, 'inward');
+    room.wallObjects = [door];
+    const outsideX = 2 * GRID + Math.cos((3 * Math.PI) / 4) * GRID * 0.5;
+    const outsideY = 0 + Math.sin((3 * Math.PI) / 4) * GRID * 0.5;
+    const hit = hitWallObject(room, outsideX, outsideY, 1);
+    expect(hit).toBeNull();
+  });
+
+  it('西壁・内開きドアの弧上でヒットする', () => {
+    // 西壁 offset=2, width=1 → ヒンジ=(0, 2*GRID), radius=GRID
+    // inward: openAngle=0 → 弧は下(π/2)から右(0)へ
+    const room = createRoom(0, 0, 5, 5);
+    const door = createWallDoor('w', 2, 1, 'inward');
+    room.wallObjects = [door];
+    const arcX = 0 + Math.cos(Math.PI / 4) * GRID;
+    const arcY = 2 * GRID + Math.sin(Math.PI / 4) * GRID;
+    const hit = hitWallObject(room, arcX, arcY, 1);
+    expect(hit).toBe(door);
+  });
+
+  it('ドアの壁セグメント分割が正しく機能する', () => {
+    const room = createRoom(0, 0, 5, 3);
+    room.wallObjects = [createWallDoor('n', 2, 1)];
+    expect(getWallSegments(room, 'n')).toEqual([
+      { start: 0, end: 2 * GRID },
+      { start: 3 * GRID, end: 5 * GRID },
+    ]);
   });
 });
