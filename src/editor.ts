@@ -25,6 +25,13 @@ import {
   ZOOM_STEP,
   type ViewportState,
 } from './viewport.ts';
+import {
+  createWallWindow,
+  hitWallObjectInRooms,
+  nearestWallSide,
+  clampWallObjects,
+} from './wall-object.ts';
+import type { ContextMenuItem } from './context-menu.ts';
 
 export interface RoomEditData {
   label: string;
@@ -32,9 +39,16 @@ export interface RoomEditData {
   autoFontSize: number;
 }
 
+export interface ContextMenuRequest {
+  screenX: number;
+  screenY: number;
+  items: ContextMenuItem[];
+}
+
 export interface EditorCallbacks {
   onStatusChange: (text: string) => void;
   onRoomEdit: (data: RoomEditData) => Promise<{ label: string; fontSize?: number } | null>;
+  onContextMenu: (request: ContextMenuRequest) => void;
 }
 
 export interface EditorAPI {
@@ -215,6 +229,23 @@ export function initEditor(
       return;
     }
 
+    // Check wall object hit (window drag)
+    const wallHit = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom);
+    if (wallHit) {
+      pushUndo(state.history, state.rooms);
+      selectSingle(state.selection, wallHit.room.id);
+      state.drag = {
+        type: 'moveWallObject',
+        roomId: wallHit.room.id,
+        objectId: wallHit.obj.id,
+        side: wallHit.obj.side,
+        start: m,
+        originalOffset: wallHit.obj.offset,
+      };
+      render();
+      return;
+    }
+
     const r = hitRoom(state.rooms, m.px, m.py);
     if (r) {
       if (shift) {
@@ -269,6 +300,8 @@ export function initEditor(
       const h = hitHandle(state.rooms, state.selection, m.px, m.py, viewport.zoom);
       if (h) {
         canvas.style.cursor = h.handle.dir + '-resize';
+      } else if (hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom)) {
+        canvas.style.cursor = 'pointer';
       } else if (hitRoom(state.rooms, m.px, m.py)) {
         canvas.style.cursor = 'move';
       } else {
@@ -310,6 +343,22 @@ export function initEditor(
         if (d.includes('s')) {
           target.h = Math.max(1, m.gy - o.y);
         }
+        clampWallObjects(target);
+      }
+    } else if (state.drag.type === 'moveWallObject') {
+      const drag = state.drag;
+      const targetRoom = state.rooms.find((r) => r.id === drag.roomId);
+      if (targetRoom) {
+        const obj = targetRoom.wallObjects?.find((o) => o.id === drag.objectId);
+        if (obj) {
+          const side = drag.side;
+          const deltaGrid =
+            side === 'n' || side === 's'
+              ? m.gx - drag.start.gx
+              : m.gy - drag.start.gy;
+          const sideLen = side === 'n' || side === 's' ? targetRoom.w : targetRoom.h;
+          obj.offset = Math.max(0, Math.min(drag.originalOffset + deltaGrid, sideLen - obj.width));
+        }
       }
     }
 
@@ -344,6 +393,55 @@ export function initEditor(
     state.drag = null;
     render();
     persistToStorage(state.rooms);
+  }
+
+  function onContextMenu(e: MouseEvent): void {
+    e.preventDefault();
+    const m = mousePos(e);
+    const items: ContextMenuItem[] = [];
+
+    // Check if right-clicking on a wall object
+    const wallHit = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom);
+    if (wallHit) {
+      const roomId = wallHit.room.id;
+      const objId = wallHit.obj.id;
+      items.push({
+        label: '窓を削除',
+        action: () => {
+          const room = state.rooms.find((r) => r.id === roomId);
+          if (!room) return;
+          commitChange(() => {
+            room.wallObjects = room.wallObjects?.filter((o) => o.id !== objId);
+            if (room.wallObjects?.length === 0) room.wallObjects = undefined;
+          });
+        },
+      });
+      callbacks.onContextMenu({ screenX: e.clientX, screenY: e.clientY, items });
+      return;
+    }
+
+    // Check if right-clicking on a room (offer to place window)
+    const hitR = hitRoom(state.rooms, m.px, m.py);
+    if (hitR) {
+      const roomId = hitR.id;
+      const { side, offset } = nearestWallSide(hitR, m.px, m.py);
+      const hasOverlap = hitR.wallObjects?.some(
+        (o) => o.side === side && offset < o.offset + o.width && offset + 1 > o.offset,
+      );
+      items.push({
+        label: '窓を配置',
+        disabled: hasOverlap ?? false,
+        action: () => {
+          const room = state.rooms.find((r) => r.id === roomId);
+          if (!room) return;
+          commitChange(() => {
+            if (!room.wallObjects) room.wallObjects = [];
+            room.wallObjects.push(createWallWindow(side, offset));
+          });
+        },
+      });
+      callbacks.onContextMenu({ screenX: e.clientX, screenY: e.clientY, items });
+    }
   }
 
   async function onDblClick(e: MouseEvent): Promise<void> {
@@ -469,6 +567,7 @@ export function initEditor(
   canvas.addEventListener('mousemove', onMouseMove);
   document.addEventListener('mouseup', onMouseUp);
   canvas.addEventListener('dblclick', onDblClick);
+  canvas.addEventListener('contextmenu', onContextMenu);
   document.addEventListener('keydown', onKeyDown);
   document.addEventListener('keyup', onKeyUp);
   canvas.addEventListener('wheel', onWheel, { passive: false });
@@ -487,6 +586,7 @@ export function initEditor(
       canvas.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
       canvas.removeEventListener('dblclick', onDblClick);
+      canvas.removeEventListener('contextmenu', onContextMenu);
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('keyup', onKeyUp);
       canvas.removeEventListener('wheel', onWheel);

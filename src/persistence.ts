@@ -1,14 +1,40 @@
-import type { Room } from './types.ts';
+import type { Room, WallObject } from './types.ts';
 import type { ViewportState } from './viewport.ts';
 import { clampZoom } from './viewport.ts';
 
 const STORAGE_KEY = 'madori_data';
 const VIEWPORT_KEY = 'madori_viewport';
 
+const VALID_SIDES = new Set(['n', 'e', 's', 'w']);
+const VALID_WALL_OBJECT_TYPES = new Set(['window']);
+
+function ensureWallObjectIds(objects: unknown[]): WallObject[] {
+  return objects
+    .filter((o) => {
+      const obj = o as Record<string, unknown>;
+      return (
+        typeof obj.offset === 'number' &&
+        typeof obj.width === 'number' &&
+        VALID_SIDES.has(obj.side as string) &&
+        VALID_WALL_OBJECT_TYPES.has(obj.type as string)
+      );
+    })
+    .map((o) => {
+      const obj = o as Record<string, unknown>;
+      return {
+        id: typeof obj.id === 'string' ? obj.id : crypto.randomUUID(),
+        type: obj.type as WallObject['type'],
+        side: obj.side as WallObject['side'],
+        offset: obj.offset as number,
+        width: obj.width as number,
+      } as WallObject;
+    });
+}
+
 function ensureIds(rooms: unknown[]): Room[] {
   return rooms.map((r) => {
     const room = r as Record<string, unknown>;
-    return {
+    const result: Room = {
       ...room,
       id: typeof room.id === 'string' ? room.id : crypto.randomUUID(),
       x: room.x as number,
@@ -17,6 +43,10 @@ function ensureIds(rooms: unknown[]): Room[] {
       h: room.h as number,
       label: (room.label as string) ?? '',
     } as Room;
+    if (Array.isArray(room.wallObjects) && room.wallObjects.length > 0) {
+      result.wallObjects = ensureWallObjectIds(room.wallObjects);
+    }
+    return result;
   });
 }
 

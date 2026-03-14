@@ -1,5 +1,6 @@
 import type { Room, Handle, MouseCoord } from './types.ts';
-import { GRID, WALL, WALL_SEL, HANDLE_SIZE, HANDLE_HIT } from './grid.ts';
+import { GRID, HANDLE_SIZE, HANDLE_HIT } from './grid.ts';
+import { drawWallSegments, drawWallObjects } from './wall-object.ts';
 
 export function createRoom(x: number, y: number, w: number, h: number, label = ''): Room {
   return { id: crypto.randomUUID(), x, y, w, h, label };
@@ -44,9 +45,7 @@ export function drawRoom(
   ctx.fillStyle = '#fff';
   ctx.fillRect(x, y, w, h);
 
-  ctx.strokeStyle = isSelected ? '#2196F3' : '#000';
-  ctx.lineWidth = (isSelected ? WALL_SEL : WALL) / zoom;
-  ctx.strokeRect(x, y, w, h);
+  drawWallSegments(ctx, room, isSelected, zoom);
 
   if (room.label) {
     const autoSize = calcAutoFontSize(room);
@@ -57,6 +56,8 @@ export function drawRoom(
     ctx.textBaseline = 'middle';
     ctx.fillText(room.label, x + w / 2, y + h / 2, w * 0.9);
   }
+
+  drawWallObjects(ctx, room, isSelected, zoom);
 
   if (isSelected && showHandles) {
     const size = HANDLE_SIZE / zoom;
