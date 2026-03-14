@@ -34,6 +34,7 @@ import {
   computeWallObjectPosition,
 } from './wall-object.ts';
 import type { ContextMenuItem } from './context-menu.ts';
+import { bringToFront, sendToBack, bringForward, sendBackward } from './z-order.ts';
 
 export interface RoomEditData {
   label: string;
@@ -146,6 +147,10 @@ export function initEditor(
     callbacks.onStatusChange(text);
   }
   /* eslint-enable no-irregular-whitespace */
+
+  function isInsideRoom(r: Room, px: number, py: number): boolean {
+    return px >= r.x * GRID && px <= (r.x + r.w) * GRID && py >= r.y * GRID && py <= (r.y + r.h) * GRID;
+  }
 
   function commitChange(fn: () => void): void {
     pushUndo(state.history, state.rooms);
@@ -455,11 +460,19 @@ export function initEditor(
     }
 
     // Check if right-clicking on a room (offer to place window)
+    // Prefer the selected room if the click is within it, so that
+    // the user can right-click on a room that is behind another one
+    // by selecting it first.
     const hitR = hitRoom(state.rooms, m.px, m.py);
-    if (hitR) {
-      const roomId = hitR.id;
-      const { side, offset } = nearestWallSide(hitR, m.px, m.py);
-      const hasOverlap = hitR.wallObjects?.some(
+    const singleSel = getSingleSelected(state.rooms, state.selection);
+    const contextRoom =
+      singleSel && hitR && singleSel.id !== hitR.id && isInsideRoom(singleSel, m.px, m.py)
+        ? singleSel
+        : hitR;
+    if (contextRoom) {
+      const roomId = contextRoom.id;
+      const { side, offset } = nearestWallSide(contextRoom, m.px, m.py);
+      const hasOverlap = contextRoom.wallObjects?.some(
         (o) => o.side === side && offset < o.offset + o.width && offset + 1 > o.offset,
       );
       const placeWallObject = (factory: () => WallObject) => {
@@ -480,6 +493,32 @@ export function initEditor(
         disabled: hasOverlap ?? false,
         action: () => placeWallObject(() => createWallDoor(side, offset)),
       });
+
+      const roomIdx = state.rooms.findIndex((r) => r.id === roomId);
+      const isFirst = roomIdx === 0;
+      const isLast = roomIdx === state.rooms.length - 1;
+      items.push({ label: '', separator: true, action: () => {} });
+      items.push({
+        label: '最前面へ移動',
+        disabled: isLast,
+        action: () => commitChange(() => bringToFront(state.rooms, roomId)),
+      });
+      items.push({
+        label: '1つ前面へ移動',
+        disabled: isLast,
+        action: () => commitChange(() => bringForward(state.rooms, roomId)),
+      });
+      items.push({
+        label: '1つ背面へ移動',
+        disabled: isFirst,
+        action: () => commitChange(() => sendBackward(state.rooms, roomId)),
+      });
+      items.push({
+        label: '最背面へ移動',
+        disabled: isFirst,
+        action: () => commitChange(() => sendToBack(state.rooms, roomId)),
+      });
+
       callbacks.onContextMenu({ screenX: e.clientX, screenY: e.clientY, items });
     }
   }
@@ -533,6 +572,22 @@ export function initEditor(
       viewport.panY = 0;
       render();
       persistViewport(viewport);
+      return;
+    }
+
+    if ((e.metaKey || e.ctrlKey) && (e.key === ']' || e.key === '[') && state.selection.size === 1) {
+      e.preventDefault();
+      const roomId = [...state.selection][0];
+      const fn = e.shiftKey
+        ? e.key === ']'
+          ? bringToFront
+          : sendToBack
+        : e.key === ']'
+          ? bringForward
+          : sendBackward;
+      commitChange(() => {
+        fn(state.rooms, roomId);
+      });
       return;
     }
 

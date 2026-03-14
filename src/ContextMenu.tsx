@@ -1,3 +1,4 @@
+import Divider from '@mui/material/Divider';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import type { ContextMenuItem } from './context-menu.ts';
@@ -28,22 +29,27 @@ export default function ContextMenu({ open, anchorPosition, items, onClose }: Co
         },
       }}
     >
-      {items.map((item, i) => (
-        <MenuItem
-          key={`${i}-${item.label}`}
-          disabled={item.disabled}
-          onClick={() => {
-            item.action();
-            onClose();
-          }}
-          sx={{
-            fontSize: 13,
-            py: 0.75,
-          }}
-        >
-          {item.label}
-        </MenuItem>
-      ))}
+      {items.map((item, i) => {
+        if (item.separator) {
+          return <Divider key={`sep-${i}`} />;
+        }
+        return (
+          <MenuItem
+            key={`${i}-${item.label}`}
+            disabled={item.disabled}
+            onClick={() => {
+              item.action();
+              onClose();
+            }}
+            sx={{
+              fontSize: 13,
+              py: 0.75,
+            }}
+          >
+            {item.label}
+          </MenuItem>
+        );
+      })}
     </Menu>
   );
 }
