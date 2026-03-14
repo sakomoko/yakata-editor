@@ -18,7 +18,12 @@ interface WallWindow extends WallObjectBase {
   type: 'window';
 }
 
-type WallObject = WallWindow;  // 将来的にドアなどを追加可能
+interface WallDoor extends WallObjectBase {
+  type: 'door';
+  swing: 'inward' | 'outward';  // 内開き/外開き
+}
+
+type WallObject = WallWindow | WallDoor;
 ```
 
 | プロパティ | 説明 |
@@ -26,6 +31,7 @@ type WallObject = WallWindow;  // 将来的にドアなどを追加可能
 | `side` | 配置される壁（北/東/南/西） |
 | `offset` | 壁の左端（北/南）または上端（東/西）からの距離（グリッド単位） |
 | `width` | オブジェクトの幅（グリッド単位） |
+| `swing` | ドアの開き方向（`'inward'`: 内開き / `'outward'`: 外開き）※ドアのみ |
 
 ## Room
 
@@ -41,7 +47,7 @@ interface Room {
   label: string;           // 部屋名
   fontSize?: number;       // ラベルのフォントサイズ
   floor?: number;          // フロア番号（将来対応）
-  wallObjects?: WallObject[]; // 壁に配置されたオブジェクト（窓など）
+  wallObjects?: WallObject[]; // 壁に配置されたオブジェクト（窓・ドアなど）
 }
 ```
 

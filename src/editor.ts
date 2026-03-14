@@ -1,4 +1,4 @@
-import type { EditorState, MouseCoord, Room } from './types.ts';
+import type { EditorState, MouseCoord, Room, WallObject } from './types.ts';
 import { GRID, COLS, ROWS, drawGrid } from './grid.ts';
 import {
   drawRoom,
@@ -27,6 +27,7 @@ import {
 } from './viewport.ts';
 import {
   createWallWindow,
+  createWallDoor,
   hitWallObjectInRooms,
   nearestWallSide,
   clampWallObjects,
@@ -420,17 +421,35 @@ export function initEditor(
     if (wallHit) {
       const roomId = wallHit.room.id;
       const objId = wallHit.obj.id;
-      items.push({
-        label: '窓を削除',
-        action: () => {
-          const room = state.rooms.find((r) => r.id === roomId);
-          if (!room) return;
-          commitChange(() => {
-            room.wallObjects = room.wallObjects?.filter((o) => o.id !== objId);
-            if (room.wallObjects?.length === 0) room.wallObjects = undefined;
-          });
-        },
-      });
+      const hitObj = wallHit.obj;
+
+      const removeWallObject = () => {
+        const room = state.rooms.find((r) => r.id === roomId);
+        if (!room) return;
+        commitChange(() => {
+          room.wallObjects = room.wallObjects?.filter((o) => o.id !== objId);
+          if (room.wallObjects?.length === 0) room.wallObjects = undefined;
+        });
+      };
+
+      if (hitObj.type === 'door') {
+        items.push({
+          label: '開き方向を切替',
+          action: () => {
+            const room = state.rooms.find((r) => r.id === roomId);
+            if (!room) return;
+            const door = room.wallObjects?.find((o) => o.id === objId);
+            if (!door || door.type !== 'door') return;
+            commitChange(() => {
+              door.swing = door.swing === 'inward' ? 'outward' : 'inward';
+            });
+          },
+        });
+        items.push({ label: 'ドアを削除', action: removeWallObject });
+      } else {
+        items.push({ label: '窓を削除', action: removeWallObject });
+      }
+
       callbacks.onContextMenu({ screenX: e.clientX, screenY: e.clientY, items });
       return;
     }
@@ -443,17 +462,23 @@ export function initEditor(
       const hasOverlap = hitR.wallObjects?.some(
         (o) => o.side === side && offset < o.offset + o.width && offset + 1 > o.offset,
       );
+      const placeWallObject = (factory: () => WallObject) => {
+        const room = state.rooms.find((r) => r.id === roomId);
+        if (!room) return;
+        commitChange(() => {
+          if (!room.wallObjects) room.wallObjects = [];
+          room.wallObjects.push(factory());
+        });
+      };
       items.push({
         label: '窓を配置',
         disabled: hasOverlap ?? false,
-        action: () => {
-          const room = state.rooms.find((r) => r.id === roomId);
-          if (!room) return;
-          commitChange(() => {
-            if (!room.wallObjects) room.wallObjects = [];
-            room.wallObjects.push(createWallWindow(side, offset));
-          });
-        },
+        action: () => placeWallObject(() => createWallWindow(side, offset)),
+      });
+      items.push({
+        label: 'ドアを配置',
+        disabled: hasOverlap ?? false,
+        action: () => placeWallObject(() => createWallDoor(side, offset)),
       });
       callbacks.onContextMenu({ screenX: e.clientX, screenY: e.clientY, items });
     }

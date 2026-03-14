@@ -11,7 +11,12 @@ export interface WallWindow extends WallObjectBase {
   type: 'window';
 }
 
-export type WallObject = WallWindow;
+export interface WallDoor extends WallObjectBase {
+  type: 'door';
+  swing: 'inward' | 'outward';
+}
+
+export type WallObject = WallWindow | WallDoor;
 
 export interface Room {
   id: string;

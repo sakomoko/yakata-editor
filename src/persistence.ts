@@ -1,4 +1,4 @@
-import type { Room, WallObject } from './types.ts';
+import type { Room, WallObject, WallWindow, WallDoor, WallSide } from './types.ts';
 import type { ViewportState } from './viewport.ts';
 import { clampZoom } from './viewport.ts';
 
@@ -6,9 +6,11 @@ const STORAGE_KEY = 'madori_data';
 const VIEWPORT_KEY = 'madori_viewport';
 
 const VALID_SIDES = new Set(['n', 'e', 's', 'w']);
-const VALID_WALL_OBJECT_TYPES = new Set(['window']);
+const VALID_WALL_OBJECT_TYPES = new Set(['window', 'door']);
+const VALID_DOOR_SWINGS = new Set(['inward', 'outward']);
 
-function ensureWallObjectIds(objects: unknown[]): WallObject[] {
+/** @internal Exported for testing */
+export function ensureWallObjectIds(objects: unknown[]): WallObject[] {
   return objects
     .filter((o) => {
       const obj = o as Record<string, unknown>;
@@ -19,15 +21,20 @@ function ensureWallObjectIds(objects: unknown[]): WallObject[] {
         VALID_WALL_OBJECT_TYPES.has(obj.type as string)
       );
     })
-    .map((o) => {
+    .map((o): WallObject => {
       const obj = o as Record<string, unknown>;
-      return {
-        id: typeof obj.id === 'string' ? obj.id : crypto.randomUUID(),
-        type: obj.type as WallObject['type'],
-        side: obj.side as WallObject['side'],
-        offset: obj.offset as number,
-        width: obj.width as number,
-      } as WallObject;
+      const id = typeof obj.id === 'string' ? obj.id : crypto.randomUUID();
+      const side = obj.side as WallSide;
+      const offset = obj.offset as number;
+      const width = obj.width as number;
+
+      if (obj.type === 'door') {
+        const swing = VALID_DOOR_SWINGS.has(obj.swing as string)
+          ? (obj.swing as 'inward' | 'outward')
+          : 'inward';
+        return { id, type: 'door', side, offset, width, swing } satisfies WallDoor;
+      }
+      return { id, type: 'window', side, offset, width } satisfies WallWindow;
     });
 }
 
