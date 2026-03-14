@@ -19,17 +19,18 @@ export default function ContextMenu({ open, anchorPosition, items, onClose }: Co
       slotProps={{
         paper: {
           sx: {
-            bgcolor: '#2a2a2a',
-            color: '#ccc',
-            border: '1px solid #555',
+            bgcolor: 'background.paper',
+            color: 'text.primary',
+            border: 1,
+            borderColor: 'divider',
             minWidth: 140,
           },
         },
       }}
     >
-      {items.map((item) => (
+      {items.map((item, i) => (
         <MenuItem
-          key={item.label}
+          key={`${i}-${item.label}`}
           disabled={item.disabled}
           onClick={() => {
             item.action();
@@ -38,7 +39,6 @@ export default function ContextMenu({ open, anchorPosition, items, onClose }: Co
           sx={{
             fontSize: 13,
             py: 0.75,
-            '&:hover': { bgcolor: '#444' },
           }}
         >
           {item.label}
