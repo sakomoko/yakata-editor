@@ -423,6 +423,15 @@ export function initEditor(
       const objId = wallHit.obj.id;
       const hitObj = wallHit.obj;
 
+      const removeWallObject = () => {
+        const room = state.rooms.find((r) => r.id === roomId);
+        if (!room) return;
+        commitChange(() => {
+          room.wallObjects = room.wallObjects?.filter((o) => o.id !== objId);
+          if (room.wallObjects?.length === 0) room.wallObjects = undefined;
+        });
+      };
+
       if (hitObj.type === 'door') {
         items.push({
           label: '開き方向を切替',
@@ -436,29 +445,9 @@ export function initEditor(
             });
           },
         });
-        items.push({
-          label: 'ドアを削除',
-          action: () => {
-            const room = state.rooms.find((r) => r.id === roomId);
-            if (!room) return;
-            commitChange(() => {
-              room.wallObjects = room.wallObjects?.filter((o) => o.id !== objId);
-              if (room.wallObjects?.length === 0) room.wallObjects = undefined;
-            });
-          },
-        });
+        items.push({ label: 'ドアを削除', action: removeWallObject });
       } else {
-        items.push({
-          label: '窓を削除',
-          action: () => {
-            const room = state.rooms.find((r) => r.id === roomId);
-            if (!room) return;
-            commitChange(() => {
-              room.wallObjects = room.wallObjects?.filter((o) => o.id !== objId);
-              if (room.wallObjects?.length === 0) room.wallObjects = undefined;
-            });
-          },
-        });
+        items.push({ label: '窓を削除', action: removeWallObject });
       }
 
       callbacks.onContextMenu({ screenX: e.clientX, screenY: e.clientY, items });

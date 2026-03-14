@@ -2,7 +2,7 @@ import type { Room, WallSide, WallObject, WallWindow, WallDoor } from './types.t
 import { GRID, WALL, WALL_SEL } from './grid.ts';
 
 const WINDOW_DRAW_OFFSET = 4;
-const WINDOW_HIT_TOLERANCE = 6;
+const WALL_OBJECT_HIT_TOLERANCE = 6;
 
 export function createWallWindow(side: WallSide, offset: number, width = 1): WallWindow {
   return { id: crypto.randomUUID(), type: 'window', side, offset, width };
@@ -119,12 +119,18 @@ export function drawWallSegments(
 /** Angle lookup table for door swing directions per wall side. */
 const DOOR_ANGLES: Record<
   WallSide,
-  { closedAngle: number; inward: number; outward: number }
+  {
+    closedAngle: number;
+    inward: number;
+    outward: number;
+    inwardCCW: boolean;
+    outwardCCW: boolean;
+  }
 > = {
-  n: { closedAngle: 0, inward: Math.PI / 2, outward: -Math.PI / 2 },
-  s: { closedAngle: 0, inward: -Math.PI / 2, outward: Math.PI / 2 },
-  w: { closedAngle: Math.PI / 2, inward: 0, outward: Math.PI },
-  e: { closedAngle: Math.PI / 2, inward: Math.PI, outward: 0 },
+  n: { closedAngle: 0, inward: Math.PI / 2, outward: -Math.PI / 2, inwardCCW: false, outwardCCW: true },
+  s: { closedAngle: 0, inward: -Math.PI / 2, outward: Math.PI / 2, inwardCCW: true, outwardCCW: false },
+  w: { closedAngle: Math.PI / 2, inward: 0, outward: Math.PI, inwardCCW: true, outwardCCW: false },
+  e: { closedAngle: Math.PI / 2, inward: Math.PI, outward: 0, inwardCCW: false, outwardCCW: true },
 };
 
 function drawDoor(
@@ -136,17 +142,13 @@ function drawDoor(
 ): void {
   const rect = wallObjectToPixelRect(room, obj);
   const radius = rect.length;
-
-  // Hinge is at the start of the object along the wall
-  const hingeX = rect.horizontal ? rect.x : rect.x;
-  const hingeY = rect.horizontal ? rect.y : rect.y;
+  const hingeX = rect.x;
+  const hingeY = rect.y;
 
   const angles = DOOR_ANGLES[obj.side];
   const closedAngle = angles.closedAngle;
   const openAngle = obj.swing === 'inward' ? angles.inward : angles.outward;
-
-  // Determine arc direction (counterclockwise if openAngle < closedAngle)
-  const anticlockwise = openAngle < closedAngle;
+  const anticlockwise = obj.swing === 'inward' ? angles.inwardCCW : angles.outwardCCW;
 
   // Draw panel line (from hinge to open position)
   ctx.strokeStyle = color;
@@ -258,7 +260,7 @@ function hitDoorShape(
   const angles = DOOR_ANGLES[obj.side];
   const closedAngle = angles.closedAngle;
   const openAngle = obj.swing === 'inward' ? angles.inward : angles.outward;
-  const anticlockwise = openAngle < closedAngle;
+  const anticlockwise = obj.swing === 'inward' ? angles.inwardCCW : angles.outwardCCW;
 
   // Check if point is inside the wedge (pie shape) with tolerance:
   // 1. Distance from hinge <= radius + tolerance
@@ -277,7 +279,7 @@ export function hitWallObject(
   zoom = 1,
 ): WallObject | null {
   if (!room.wallObjects?.length) return null;
-  const tolerance = WINDOW_HIT_TOLERANCE / zoom;
+  const tolerance = WALL_OBJECT_HIT_TOLERANCE / zoom;
 
   for (let i = room.wallObjects.length - 1; i >= 0; i--) {
     const obj = room.wallObjects[i];

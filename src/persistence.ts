@@ -20,11 +20,6 @@ function ensureWallObjectIds(objects: unknown[]): WallObject[] {
         VALID_WALL_OBJECT_TYPES.has(obj.type as string)
       );
     })
-    .filter((o) => {
-      const obj = o as Record<string, unknown>;
-      if (obj.type === 'door' && !VALID_DOOR_SWINGS.has(obj.swing as string)) return false;
-      return true;
-    })
     .map((o) => {
       const obj = o as Record<string, unknown>;
       const base = {
@@ -35,7 +30,10 @@ function ensureWallObjectIds(objects: unknown[]): WallObject[] {
         width: obj.width as number,
       };
       if (base.type === 'door') {
-        return { ...base, swing: obj.swing as 'inward' | 'outward' } as WallObject;
+        const swing = VALID_DOOR_SWINGS.has(obj.swing as string)
+          ? (obj.swing as 'inward' | 'outward')
+          : 'inward';
+        return { ...base, swing } as WallObject;
       }
       return base as WallObject;
     });
