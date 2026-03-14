@@ -5,6 +5,7 @@ import {
   drawCreationPreview,
   hitHandle,
   hitRoom,
+  isInsideRoom,
   createRoom,
   calcAutoFontSize,
 } from './room.ts';
@@ -147,10 +148,6 @@ export function initEditor(
     callbacks.onStatusChange(text);
   }
   /* eslint-enable no-irregular-whitespace */
-
-  function isInsideRoom(r: Room, px: number, py: number): boolean {
-    return px >= r.x * GRID && px <= (r.x + r.w) * GRID && py >= r.y * GRID && py <= (r.y + r.h) * GRID;
-  }
 
   function commitChange(fn: () => void): void {
     pushUndo(state.history, state.rooms);
@@ -578,13 +575,10 @@ export function initEditor(
     if ((e.metaKey || e.ctrlKey) && (e.key === ']' || e.key === '[') && state.selection.size === 1) {
       e.preventDefault();
       const roomId = [...state.selection][0];
+      const forward = e.key === ']';
       const fn = e.shiftKey
-        ? e.key === ']'
-          ? bringToFront
-          : sendToBack
-        : e.key === ']'
-          ? bringForward
-          : sendBackward;
+        ? (forward ? bringToFront : sendToBack)
+        : (forward ? bringForward : sendBackward);
       commitChange(() => {
         fn(state.rooms, roomId);
       });

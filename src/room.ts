@@ -110,17 +110,18 @@ export function hitHandle(
   return null;
 }
 
+export function isInsideRoom(r: Room, px: number, py: number): boolean {
+  return (
+    px >= r.x * GRID &&
+    px <= (r.x + r.w) * GRID &&
+    py >= r.y * GRID &&
+    py <= (r.y + r.h) * GRID
+  );
+}
+
 export function hitRoom(rooms: Room[], px: number, py: number): Room | null {
   for (let i = rooms.length - 1; i >= 0; i--) {
-    const r = rooms[i];
-    if (
-      px >= r.x * GRID &&
-      px <= (r.x + r.w) * GRID &&
-      py >= r.y * GRID &&
-      py <= (r.y + r.h) * GRID
-    ) {
-      return r;
-    }
+    if (isInsideRoom(rooms[i], px, py)) return rooms[i];
   }
   return null;
 }
