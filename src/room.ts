@@ -112,10 +112,7 @@ export function hitHandle(
 
 export function isInsideRoom(r: Room, px: number, py: number): boolean {
   return (
-    px >= r.x * GRID &&
-    px <= (r.x + r.w) * GRID &&
-    py >= r.y * GRID &&
-    py <= (r.y + r.h) * GRID
+    px >= r.x * GRID && px <= (r.x + r.w) * GRID && py >= r.y * GRID && py <= (r.y + r.h) * GRID
   );
 }
 

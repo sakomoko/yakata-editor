@@ -1,5 +1,5 @@
 import type { EditorState, MouseCoord, Room, WallObject } from './types.ts';
-import { GRID, COLS, ROWS, drawGrid } from './grid.ts';
+import { GRID, drawGrid } from './grid.ts';
 import {
   drawRoom,
   drawCreationPreview,
@@ -95,7 +95,7 @@ export function initEditor(
   function render(): void {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#888';
+    ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.setTransform(
@@ -107,10 +107,11 @@ export function initEditor(
       -viewport.panY * viewport.zoom,
     );
 
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, COLS * GRID, ROWS * GRID);
-
-    drawGrid(ctx);
+    const viewMinX = viewport.panX;
+    const viewMinY = viewport.panY;
+    const viewMaxX = viewport.panX + canvas.width / viewport.zoom;
+    const viewMaxY = viewport.panY + canvas.height / viewport.zoom;
+    drawGrid(ctx, viewMinX, viewMinY, viewMaxX, viewMaxY);
 
     const activeWallObjectId =
       state.drag?.type === 'moveWallObject' ? state.drag.objectId : undefined;
@@ -185,6 +186,34 @@ export function initEditor(
     saveAsJson(state.rooms);
   }
 
+  function computeRoomsBoundingBox(rooms: Room[]): {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  } {
+    if (rooms.length === 0) {
+      return { x: 0, y: 0, w: 40 * GRID, h: 30 * GRID };
+    }
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const r of rooms) {
+      minX = Math.min(minX, r.x * GRID);
+      minY = Math.min(minY, r.y * GRID);
+      maxX = Math.max(maxX, (r.x + r.w) * GRID);
+      maxY = Math.max(maxY, (r.y + r.h) * GRID);
+    }
+    const padding = GRID * 2;
+    return {
+      x: minX - padding,
+      y: minY - padding,
+      w: maxX - minX + padding * 2,
+      h: maxY - minY + padding * 2,
+    };
+  }
+
   function exportAsPng(): void {
     const prevSelection = new Set(state.selection);
     clearSelection(state.selection);
@@ -194,11 +223,12 @@ export function initEditor(
     const savedH = canvas.height;
 
     try {
+      const bbox = computeRoomsBoundingBox(state.rooms);
       viewport.zoom = 1;
-      viewport.panX = 0;
-      viewport.panY = 0;
-      canvas.width = COLS * GRID;
-      canvas.height = ROWS * GRID;
+      viewport.panX = bbox.x;
+      viewport.panY = bbox.y;
+      canvas.width = bbox.w;
+      canvas.height = bbox.h;
 
       render();
       exportPng(canvas);
@@ -580,13 +610,21 @@ export function initEditor(
       return;
     }
 
-    if ((e.metaKey || e.ctrlKey) && (e.key === ']' || e.key === '[') && state.selection.size === 1) {
+    if (
+      (e.metaKey || e.ctrlKey) &&
+      (e.key === ']' || e.key === '[') &&
+      state.selection.size === 1
+    ) {
       e.preventDefault();
       const roomId = [...state.selection][0];
       const forward = e.key === ']';
       const fn = e.shiftKey
-        ? (forward ? bringToFront : sendToBack)
-        : (forward ? bringForward : sendBackward);
+        ? forward
+          ? bringToFront
+          : sendToBack
+        : forward
+          ? bringForward
+          : sendBackward;
       pushUndo(state.history, state.rooms);
       const changed = fn(state.rooms, roomId);
       if (changed) {
