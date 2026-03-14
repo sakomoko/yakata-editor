@@ -133,6 +133,28 @@ const DOOR_ANGLES: Record<
   e: { closedAngle: Math.PI / 2, inward: Math.PI, outward: 0, inwardCCW: false, outwardCCW: true },
 };
 
+interface DoorGeometry {
+  hingeX: number;
+  hingeY: number;
+  radius: number;
+  closedAngle: number;
+  openAngle: number;
+  anticlockwise: boolean;
+}
+
+function getDoorGeometry(room: Room, obj: WallDoor): DoorGeometry {
+  const rect = wallObjectToPixelRect(room, obj);
+  const angles = DOOR_ANGLES[obj.side];
+  return {
+    hingeX: rect.x,
+    hingeY: rect.y,
+    radius: rect.length,
+    closedAngle: angles.closedAngle,
+    openAngle: obj.swing === 'inward' ? angles.inward : angles.outward,
+    anticlockwise: obj.swing === 'inward' ? angles.inwardCCW : angles.outwardCCW,
+  };
+}
+
 function drawDoor(
   ctx: CanvasRenderingContext2D,
   room: Room,
@@ -140,15 +162,8 @@ function drawDoor(
   color: string,
   lineWidth: number,
 ): void {
-  const rect = wallObjectToPixelRect(room, obj);
-  const radius = rect.length;
-  const hingeX = rect.x;
-  const hingeY = rect.y;
-
-  const angles = DOOR_ANGLES[obj.side];
-  const closedAngle = angles.closedAngle;
-  const openAngle = obj.swing === 'inward' ? angles.inward : angles.outward;
-  const anticlockwise = obj.swing === 'inward' ? angles.inwardCCW : angles.outwardCCW;
+  const { hingeX, hingeY, radius, closedAngle, openAngle, anticlockwise } =
+    getDoorGeometry(room, obj);
 
   // Draw panel line (from hinge to open position)
   ctx.strokeStyle = color;
@@ -252,15 +267,8 @@ function hitDoorShape(
   py: number,
   tolerance: number,
 ): boolean {
-  const rect = wallObjectToPixelRect(room, obj);
-  const hingeX = rect.x;
-  const hingeY = rect.y;
-  const radius = rect.length;
-
-  const angles = DOOR_ANGLES[obj.side];
-  const closedAngle = angles.closedAngle;
-  const openAngle = obj.swing === 'inward' ? angles.inward : angles.outward;
-  const anticlockwise = obj.swing === 'inward' ? angles.inwardCCW : angles.outwardCCW;
+  const { hingeX, hingeY, radius, closedAngle, openAngle, anticlockwise } =
+    getDoorGeometry(room, obj);
 
   // Check if point is inside the wedge (pie shape) with tolerance:
   // 1. Distance from hinge <= radius + tolerance

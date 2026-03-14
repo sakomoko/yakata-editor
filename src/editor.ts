@@ -1,4 +1,4 @@
-import type { EditorState, MouseCoord, Room } from './types.ts';
+import type { EditorState, MouseCoord, Room, WallObject } from './types.ts';
 import { GRID, COLS, ROWS, drawGrid } from './grid.ts';
 import {
   drawRoom,
@@ -462,29 +462,23 @@ export function initEditor(
       const hasOverlap = hitR.wallObjects?.some(
         (o) => o.side === side && offset < o.offset + o.width && offset + 1 > o.offset,
       );
+      const placeWallObject = (factory: () => WallObject) => {
+        const room = state.rooms.find((r) => r.id === roomId);
+        if (!room) return;
+        commitChange(() => {
+          if (!room.wallObjects) room.wallObjects = [];
+          room.wallObjects.push(factory());
+        });
+      };
       items.push({
         label: '窓を配置',
         disabled: hasOverlap ?? false,
-        action: () => {
-          const room = state.rooms.find((r) => r.id === roomId);
-          if (!room) return;
-          commitChange(() => {
-            if (!room.wallObjects) room.wallObjects = [];
-            room.wallObjects.push(createWallWindow(side, offset));
-          });
-        },
+        action: () => placeWallObject(() => createWallWindow(side, offset)),
       });
       items.push({
         label: 'ドアを配置',
         disabled: hasOverlap ?? false,
-        action: () => {
-          const room = state.rooms.find((r) => r.id === roomId);
-          if (!room) return;
-          commitChange(() => {
-            if (!room.wallObjects) room.wallObjects = [];
-            room.wallObjects.push(createWallDoor(side, offset));
-          });
-        },
+        action: () => placeWallObject(() => createWallDoor(side, offset)),
       });
       callbacks.onContextMenu({ screenX: e.clientX, screenY: e.clientY, items });
     }

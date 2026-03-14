@@ -1,4 +1,4 @@
-import type { Room, WallObject } from './types.ts';
+import type { Room, WallObject, WallWindow, WallDoor, WallSide } from './types.ts';
 import type { ViewportState } from './viewport.ts';
 import { clampZoom } from './viewport.ts';
 
@@ -20,22 +20,20 @@ function ensureWallObjectIds(objects: unknown[]): WallObject[] {
         VALID_WALL_OBJECT_TYPES.has(obj.type as string)
       );
     })
-    .map((o) => {
+    .map((o): WallObject => {
       const obj = o as Record<string, unknown>;
-      const base = {
-        id: typeof obj.id === 'string' ? obj.id : crypto.randomUUID(),
-        type: obj.type as WallObject['type'],
-        side: obj.side as WallObject['side'],
-        offset: obj.offset as number,
-        width: obj.width as number,
-      };
-      if (base.type === 'door') {
+      const id = typeof obj.id === 'string' ? obj.id : crypto.randomUUID();
+      const side = obj.side as WallSide;
+      const offset = obj.offset as number;
+      const width = obj.width as number;
+
+      if (obj.type === 'door') {
         const swing = VALID_DOOR_SWINGS.has(obj.swing as string)
           ? (obj.swing as 'inward' | 'outward')
           : 'inward';
-        return { ...base, swing } as WallObject;
+        return { id, type: 'door', side, offset, width, swing } satisfies WallDoor;
       }
-      return base as WallObject;
+      return { id, type: 'window', side, offset, width } satisfies WallWindow;
     });
 }
 

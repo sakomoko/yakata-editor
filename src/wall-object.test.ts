@@ -458,6 +458,74 @@ describe('ドアのヒット判定', () => {
     expect(hit).toBe(door);
   });
 
+  it('西壁・外開きドアの扇形内でヒットする', () => {
+    // 西壁 outward: openAngle=π(左), closedAngle=π/2(下)
+    // 扇形は下→左の範囲。角度3π/4(左下45度)の内部点でヒット
+    const room = createRoom(0, 0, 5, 5);
+    const door = createWallDoor('w', 2, 1, 'outward');
+    room.wallObjects = [door];
+    const px = 0 + Math.cos((3 * Math.PI) / 4) * GRID * 0.5;
+    const py = 2 * GRID + Math.sin((3 * Math.PI) / 4) * GRID * 0.5;
+    const hit = hitWallObject(room, px, py, 1);
+    expect(hit).toBe(door);
+  });
+
+  it('南壁・内開きドアの扇形内でヒットする', () => {
+    // 南壁 inward: closedAngle=0(右), openAngle=-π/2(上=室内)
+    // 扇形は右→上の範囲。角度-π/4(右上45度)の内部点でヒット
+    const room = createRoom(0, 0, 5, 5);
+    const door = createWallDoor('s', 2, 1, 'inward');
+    room.wallObjects = [door];
+    const hingeX = 2 * GRID;
+    const hingeY = 5 * GRID;
+    const px = hingeX + Math.cos(-Math.PI / 4) * GRID * 0.5;
+    const py = hingeY + Math.sin(-Math.PI / 4) * GRID * 0.5;
+    const hit = hitWallObject(room, px, py, 1);
+    expect(hit).toBe(door);
+  });
+
+  it('南壁・外開きドアの扇形内でヒットする', () => {
+    // 南壁 outward: closedAngle=0(右), openAngle=π/2(下=室外)
+    // 扇形は右→下の範囲。角度π/4(右下45度)の内部点でヒット
+    const room = createRoom(0, 0, 5, 5);
+    const door = createWallDoor('s', 2, 1, 'outward');
+    room.wallObjects = [door];
+    const hingeX = 2 * GRID;
+    const hingeY = 5 * GRID;
+    const px = hingeX + Math.cos(Math.PI / 4) * GRID * 0.5;
+    const py = hingeY + Math.sin(Math.PI / 4) * GRID * 0.5;
+    const hit = hitWallObject(room, px, py, 1);
+    expect(hit).toBe(door);
+  });
+
+  it('東壁・内開きドアの扇形内でヒットする', () => {
+    // 東壁 inward: closedAngle=π/2(下), openAngle=π(左=室内)
+    // 扇形は下→左の範囲。角度3π/4(左下45度)の内部点でヒット
+    const room = createRoom(0, 0, 5, 5);
+    const door = createWallDoor('e', 2, 1, 'inward');
+    room.wallObjects = [door];
+    const hingeX = 5 * GRID;
+    const hingeY = 2 * GRID;
+    const px = hingeX + Math.cos((3 * Math.PI) / 4) * GRID * 0.5;
+    const py = hingeY + Math.sin((3 * Math.PI) / 4) * GRID * 0.5;
+    const hit = hitWallObject(room, px, py, 1);
+    expect(hit).toBe(door);
+  });
+
+  it('東壁・外開きドアの扇形内でヒットする', () => {
+    // 東壁 outward: closedAngle=π/2(下), openAngle=0(右=室外)
+    // 扇形は下→右の範囲。角度π/4(右下45度)の内部点でヒット
+    const room = createRoom(0, 0, 5, 5);
+    const door = createWallDoor('e', 2, 1, 'outward');
+    room.wallObjects = [door];
+    const hingeX = 5 * GRID;
+    const hingeY = 2 * GRID;
+    const px = hingeX + Math.cos(Math.PI / 4) * GRID * 0.5;
+    const py = hingeY + Math.sin(Math.PI / 4) * GRID * 0.5;
+    const hit = hitWallObject(room, px, py, 1);
+    expect(hit).toBe(door);
+  });
+
   it('ドアの壁セグメント分割が正しく機能する', () => {
     const room = createRoom(0, 0, 5, 3);
     room.wallObjects = [createWallDoor('n', 2, 1)];
