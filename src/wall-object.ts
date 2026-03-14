@@ -337,21 +337,6 @@ export function hitWallObject(room: Room, px: number, py: number, zoom = 1): Wal
       }
     }
 
-    // Opening-specific: hit the gap area on the wall line
-    if (obj.type === 'opening') {
-      const rect = wallObjectToPixelRect(room, obj);
-      if (rect.horizontal) {
-        if (px >= rect.x && px <= rect.x + rect.length && Math.abs(py - rect.y) < tolerance) {
-          return obj;
-        }
-      } else {
-        if (py >= rect.y && py <= rect.y + rect.length && Math.abs(px - rect.x) < tolerance) {
-          return obj;
-        }
-      }
-      continue;
-    }
-
     if (wallLineHit) return obj;
 
     // Door-specific: also check arc and panel line
