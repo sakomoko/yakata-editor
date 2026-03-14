@@ -31,6 +31,7 @@ export interface Room {
   label: string;
   fontSize?: number;
   floor?: number;
+  linkGroup?: string;
   wallObjects?: WallObject[];
 }
 

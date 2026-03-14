@@ -53,6 +53,11 @@ function ensureIds(rooms: unknown[]): Room[] {
       h: room.h as number,
       label: (room.label as string) ?? '',
     } as Room;
+    if (typeof room.linkGroup === 'string') {
+      result.linkGroup = room.linkGroup;
+    } else {
+      delete result.linkGroup;
+    }
     if (Array.isArray(room.wallObjects) && room.wallObjects.length > 0) {
       result.wallObjects = ensureWallObjectIds(room.wallObjects);
     }

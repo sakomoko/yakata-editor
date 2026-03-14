@@ -38,6 +38,15 @@ import {
 } from './wall-object.ts';
 import type { ContextMenuItem } from './context-menu.ts';
 import { bringToFront, sendToBack, bringForward, sendBackward } from './z-order.ts';
+import {
+  expandWithLinked,
+  linkRooms,
+  unlinkRooms,
+  cleanupSingletonGroups,
+  hasAdjacentPair,
+  hasLinkedRoom,
+  allAlreadyLinked,
+} from './link.ts';
 
 export interface RoomEditData {
   label: string;
@@ -282,9 +291,10 @@ export function initEditor(
         return;
       }
       pushUndo(state.history, state.rooms);
+      const expanded = expandWithLinked(state.rooms, state.selection);
       const originals = new Map<string, { x: number; y: number }>();
       for (const room of state.rooms) {
-        if (state.selection.has(room.id)) {
+        if (expanded.has(room.id)) {
           originals.set(room.id, { x: room.x, y: room.y });
         }
       }
@@ -510,6 +520,36 @@ export function initEditor(
         action: () => placeWallObject(() => createWallOpening(side, offset)),
       });
 
+      // 連結/連結解除メニュー
+      if (
+        state.selection.size >= 2 &&
+        hasAdjacentPair(state.rooms, state.selection) &&
+        !allAlreadyLinked(state.rooms, state.selection)
+      ) {
+        items.push({ separator: true });
+        items.push({
+          label: '連結',
+          action: () => {
+            commitChange(() => {
+              linkRooms(state.rooms, state.selection);
+            });
+          },
+        });
+      }
+      if (hasLinkedRoom(state.rooms, state.selection)) {
+        if (items.length > 0 && !('separator' in items[items.length - 1])) {
+          items.push({ separator: true });
+        }
+        items.push({
+          label: '連結解除',
+          action: () => {
+            commitChange(() => {
+              unlinkRooms(state.rooms, state.selection);
+            });
+          },
+        });
+      }
+
       const roomIdx = state.rooms.findIndex((r) => r.id === roomId);
       const isFirst = roomIdx === 0;
       const isLast = roomIdx === state.rooms.length - 1;
@@ -625,6 +665,7 @@ export function initEditor(
       e.preventDefault();
       commitChange(() => {
         state.rooms = state.rooms.filter((r) => !state.selection.has(r.id));
+        cleanupSingletonGroups(state.rooms);
         clearSelection(state.selection);
       });
     }

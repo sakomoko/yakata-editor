@@ -51,6 +51,7 @@ interface Room {
   label: string;           // 部屋名
   fontSize?: number;       // ラベルのフォントサイズ
   floor?: number;          // フロア番号（将来対応）
+  linkGroup?: string;      // 連結グループID（同じ値の部屋が一体的に移動）
   wallObjects?: WallObject[]; // 壁に配置されたオブジェクト（窓・ドアなど）
 }
 ```

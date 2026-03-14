@@ -36,6 +36,7 @@ Canvas 再描画 + localStorage 保存
 - **room.ts** — 部屋の生成（`createRoom`）、Canvas描画（`drawRoom`）、ヒット判定（`hitRoom`, `hitHandle`）、リサイズハンドル計算（`getHandles`）
 - **wall-object.ts** — 壁オブジェクト（窓・ドア）の生成（`createWallWindow`, `createWallDoor`）、描画（`drawWallObjects`）、ヒット判定（`hitWallObject`, `hitWallObjectInRooms`）、ピクセル座標変換（`wallObjectToPixelRect`）、壁セグメント分割（`getWallSegments`）。ドアはヒンジ点から弧を描くビジュアルで、扇形エリア全体がヒット対象
 - **context-menu.ts** / **ContextMenu.tsx** — 壁の右クリックコンテキストメニュー（窓・ドアの追加・削除・開き方向切替）。ReactコンポーネントとしてCanvas上にオーバーレイ表示
+- **link.ts** — 部屋の連結機能。隣接判定（`areAdjacent`）、選択のグループ拡張（`expandWithLinked`）、連結/解除（`linkRooms`, `unlinkRooms`）、孤立グループのクリーンアップ（`cleanupSingletonGroups`）
 - **z-order.ts** — 部屋の重なり順序操作（`bringToFront`, `sendToBack`, `bringForward`, `sendBackward`）。rooms配列のインデックスをin-placeで変更する純粋関数群
 - **selection.ts** — `Set<string>` ベースの選択状態管理
 - **history.ts** — Undoスタック（JSON snapshot方式、最大50件）
@@ -51,6 +52,7 @@ main.ts
   │   ├─ grid.ts
   │   ├─ room.ts → types.ts, grid.ts
   │   ├─ wall-object.ts → types.ts, grid.ts
+  │   ├─ link.ts → types.ts
   │   ├─ z-order.ts → types.ts
   │   ├─ selection.ts → types.ts
   │   ├─ history.ts → types.ts
