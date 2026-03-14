@@ -4,9 +4,11 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
-import { initEditor, type EditorAPI, type RoomEditData } from './editor.ts';
+import { initEditor, type EditorAPI, type RoomEditData, type ContextMenuRequest } from './editor.ts';
 import { loadFromFile } from './persistence.ts';
 import RoomDialog from './RoomDialog.tsx';
+import ContextMenu from './ContextMenu.tsx';
+import type { ContextMenuItem } from './context-menu.ts';
 
 const darkTheme = createTheme({
   palette: {
@@ -26,6 +28,7 @@ export default function App() {
   const [status, setStatus] = useState('準備完了');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogData, setDialogData] = useState<RoomEditData | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
 
   const handleRoomEdit = useCallback((data: RoomEditData): Promise<{ label: string; fontSize?: number } | null> => {
     setDialogData(data);
@@ -41,6 +44,10 @@ export default function App() {
     roomEditResolveRef.current = null;
   }, []);
 
+  const handleContextMenu = useCallback((request: ContextMenuRequest) => {
+    setCtxMenu({ x: request.screenX, y: request.screenY, items: request.items });
+  }, []);
+
   useEffect(() => {
     const canvas = canvasRef.current!;
     const container = containerRef.current!;
@@ -48,6 +55,7 @@ export default function App() {
     const api = initEditor(canvas, container, {
       onStatusChange: setStatus,
       onRoomEdit: handleRoomEdit,
+      onContextMenu: handleContextMenu,
     });
     editorRef.current = api;
 
@@ -58,7 +66,7 @@ export default function App() {
       window.removeEventListener('resize', onResize);
       api.destroy();
     };
-  }, [handleRoomEdit]);
+  }, [handleRoomEdit, handleContextMenu]);
 
   const handleLoad = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -158,6 +166,14 @@ export default function App() {
           onClose={handleDialogClose}
         />
       )}
+
+      {/* Context menu */}
+      <ContextMenu
+        open={ctxMenu !== null}
+        anchorPosition={ctxMenu ? { top: ctxMenu.y, left: ctxMenu.x } : undefined}
+        items={ctxMenu?.items ?? []}
+        onClose={() => setCtxMenu(null)}
+      />
     </ThemeProvider>
   );
   /* eslint-enable no-irregular-whitespace */

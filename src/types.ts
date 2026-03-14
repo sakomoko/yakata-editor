@@ -1,3 +1,18 @@
+export type WallSide = 'n' | 'e' | 's' | 'w';
+
+interface WallObjectBase {
+  id: string;
+  side: WallSide;
+  offset: number;
+  width: number;
+}
+
+export interface WallWindow extends WallObjectBase {
+  type: 'window';
+}
+
+export type WallObject = WallWindow;
+
 export interface Room {
   id: string;
   x: number;
@@ -7,6 +22,7 @@ export interface Room {
   label: string;
   fontSize?: number;
   floor?: number;
+  wallObjects?: WallObject[];
 }
 
 export interface Project {
@@ -47,6 +63,14 @@ export type DragState =
       startScreenY: number;
       startPanX: number;
       startPanY: number;
+    }
+  | {
+      type: 'moveWallObject';
+      roomId: string;
+      objectId: string;
+      side: WallSide;
+      start: MouseCoord;
+      originalOffset: number;
     }
   | null;
 

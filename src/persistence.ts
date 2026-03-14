@@ -1,14 +1,24 @@
-import type { Room } from './types.ts';
+import type { Room, WallObject } from './types.ts';
 import type { ViewportState } from './viewport.ts';
 import { clampZoom } from './viewport.ts';
 
 const STORAGE_KEY = 'madori_data';
 const VIEWPORT_KEY = 'madori_viewport';
 
+function ensureWallObjectIds(objects: unknown[]): WallObject[] {
+  return objects.map((o) => {
+    const obj = o as Record<string, unknown>;
+    return {
+      ...obj,
+      id: typeof obj.id === 'string' ? obj.id : crypto.randomUUID(),
+    } as WallObject;
+  });
+}
+
 function ensureIds(rooms: unknown[]): Room[] {
   return rooms.map((r) => {
     const room = r as Record<string, unknown>;
-    return {
+    const result: Room = {
       ...room,
       id: typeof room.id === 'string' ? room.id : crypto.randomUUID(),
       x: room.x as number,
@@ -17,6 +27,10 @@ function ensureIds(rooms: unknown[]): Room[] {
       h: room.h as number,
       label: (room.label as string) ?? '',
     } as Room;
+    if (Array.isArray(room.wallObjects) && room.wallObjects.length > 0) {
+      result.wallObjects = ensureWallObjectIds(room.wallObjects);
+    }
+    return result;
   });
 }
 
