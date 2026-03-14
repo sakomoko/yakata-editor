@@ -111,8 +111,12 @@ export function hitHandle(
 }
 
 export function isInsideRoom(r: Room, px: number, py: number): boolean {
+  // prettier-ignore
   return (
-    px >= r.x * GRID && px <= (r.x + r.w) * GRID && py >= r.y * GRID && py <= (r.y + r.h) * GRID
+    px >= r.x * GRID &&
+    px <= (r.x + r.w) * GRID &&
+    py >= r.y * GRID &&
+    py <= (r.y + r.h) * GRID
   );
 }
 
@@ -121,4 +125,34 @@ export function hitRoom(rooms: Room[], px: number, py: number): Room | null {
     if (isInsideRoom(rooms[i], px, py)) return rooms[i];
   }
   return null;
+}
+
+/** 全部屋を囲むバウンディングボックスをピクセル座標で返す（パディング付き） */
+export function computeRoomsBoundingBox(rooms: Room[]): {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+} {
+  if (rooms.length === 0) {
+    // デフォルト: 800×600px（原点付近の空白領域）
+    return { x: 0, y: 0, w: 40 * GRID, h: 30 * GRID };
+  }
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const r of rooms) {
+    minX = Math.min(minX, r.x * GRID);
+    minY = Math.min(minY, r.y * GRID);
+    maxX = Math.max(maxX, (r.x + r.w) * GRID);
+    maxY = Math.max(maxY, (r.y + r.h) * GRID);
+  }
+  const padding = GRID * 2;
+  return {
+    x: minX - padding,
+    y: minY - padding,
+    w: maxX - minX + padding * 2,
+    h: maxY - minY + padding * 2,
+  };
 }

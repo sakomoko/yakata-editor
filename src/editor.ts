@@ -8,6 +8,7 @@ import {
   isInsideRoom,
   createRoom,
   calcAutoFontSize,
+  computeRoomsBoundingBox,
 } from './room.ts';
 import { toggleSelection, selectSingle, clearSelection, getSingleSelected } from './selection.ts';
 import { pushUndo, popUndo } from './history.ts';
@@ -184,34 +185,6 @@ export function initEditor(
 
   function saveProject(): void {
     saveAsJson(state.rooms);
-  }
-
-  function computeRoomsBoundingBox(rooms: Room[]): {
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-  } {
-    if (rooms.length === 0) {
-      return { x: 0, y: 0, w: 40 * GRID, h: 30 * GRID };
-    }
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-    for (const r of rooms) {
-      minX = Math.min(minX, r.x * GRID);
-      minY = Math.min(minY, r.y * GRID);
-      maxX = Math.max(maxX, (r.x + r.w) * GRID);
-      maxY = Math.max(maxY, (r.y + r.h) * GRID);
-    }
-    const padding = GRID * 2;
-    return {
-      x: minX - padding,
-      y: minY - padding,
-      w: maxX - minX + padding * 2,
-      h: maxY - minY + padding * 2,
-    };
   }
 
   function exportAsPng(): void {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createRoom, getHandles, hitRoom, hitHandle } from './room.ts';
+import { createRoom, getHandles, hitRoom, hitHandle, computeRoomsBoundingBox } from './room.ts';
 import { GRID } from './grid.ts';
 
 describe('createRoom', () => {
@@ -104,5 +104,43 @@ describe('hitHandle', () => {
     const room = createRoom(2, 2, 4, 4);
     const result = hitHandle([room], new Set(), 2 * GRID, 2 * GRID);
     expect(result).toBeNull();
+  });
+});
+
+describe('computeRoomsBoundingBox', () => {
+  it('should return default area when no rooms', () => {
+    const bbox = computeRoomsBoundingBox([]);
+    expect(bbox).toEqual({ x: 0, y: 0, w: 40 * GRID, h: 30 * GRID });
+  });
+
+  it('should compute bounding box for a single room with padding', () => {
+    const room = createRoom(5, 5, 10, 8);
+    const bbox = computeRoomsBoundingBox([room]);
+    const padding = GRID * 2;
+    expect(bbox.x).toBe(5 * GRID - padding);
+    expect(bbox.y).toBe(5 * GRID - padding);
+    expect(bbox.w).toBe(10 * GRID + padding * 2);
+    expect(bbox.h).toBe(8 * GRID + padding * 2);
+  });
+
+  it('should encompass multiple rooms', () => {
+    const a = createRoom(0, 0, 5, 5);
+    const b = createRoom(10, 10, 3, 3);
+    const bbox = computeRoomsBoundingBox([a, b]);
+    const padding = GRID * 2;
+    expect(bbox.x).toBe(0 - padding);
+    expect(bbox.y).toBe(0 - padding);
+    expect(bbox.w).toBe(13 * GRID + padding * 2);
+    expect(bbox.h).toBe(13 * GRID + padding * 2);
+  });
+
+  it('should handle rooms at negative coordinates', () => {
+    const room = createRoom(-10, -5, 4, 3);
+    const bbox = computeRoomsBoundingBox([room]);
+    const padding = GRID * 2;
+    expect(bbox.x).toBe(-10 * GRID - padding);
+    expect(bbox.y).toBe(-5 * GRID - padding);
+    expect(bbox.w).toBe(4 * GRID + padding * 2);
+    expect(bbox.h).toBe(3 * GRID + padding * 2);
   });
 });
