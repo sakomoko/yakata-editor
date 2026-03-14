@@ -224,11 +224,14 @@ export function initEditor(
 
     try {
       const bbox = computeRoomsBoundingBox(state.rooms);
-      viewport.zoom = 1;
+      const maxDim = Math.max(bbox.w, bbox.h);
+      const MAX_EXPORT_SIZE = 16384;
+      const scale = maxDim > MAX_EXPORT_SIZE ? MAX_EXPORT_SIZE / maxDim : 1;
+      viewport.zoom = scale;
       viewport.panX = bbox.x;
       viewport.panY = bbox.y;
-      canvas.width = bbox.w;
-      canvas.height = bbox.h;
+      canvas.width = Math.round(bbox.w * scale);
+      canvas.height = Math.round(bbox.h * scale);
 
       render();
       exportPng(canvas);

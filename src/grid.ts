@@ -16,22 +16,39 @@ export function drawGrid(
   const startRow = Math.floor(viewMinY / GRID);
   const endRow = Math.ceil(viewMaxY / GRID);
 
+  // minor lines (batched)
+  ctx.strokeStyle = '#eee';
+  ctx.lineWidth = 0.3;
+  ctx.beginPath();
   for (let i = startCol; i <= endCol; i++) {
-    const major = ((i % 5) + 5) % 5 === 0;
-    ctx.strokeStyle = major ? '#ccc' : '#eee';
-    ctx.lineWidth = major ? 0.7 : 0.3;
-    ctx.beginPath();
-    ctx.moveTo(i * GRID, startRow * GRID);
-    ctx.lineTo(i * GRID, endRow * GRID);
-    ctx.stroke();
+    if (((i % 5) + 5) % 5 !== 0) {
+      ctx.moveTo(i * GRID, startRow * GRID);
+      ctx.lineTo(i * GRID, endRow * GRID);
+    }
   }
   for (let i = startRow; i <= endRow; i++) {
-    const major = ((i % 5) + 5) % 5 === 0;
-    ctx.strokeStyle = major ? '#ccc' : '#eee';
-    ctx.lineWidth = major ? 0.7 : 0.3;
-    ctx.beginPath();
-    ctx.moveTo(startCol * GRID, i * GRID);
-    ctx.lineTo(endCol * GRID, i * GRID);
-    ctx.stroke();
+    if (((i % 5) + 5) % 5 !== 0) {
+      ctx.moveTo(startCol * GRID, i * GRID);
+      ctx.lineTo(endCol * GRID, i * GRID);
+    }
   }
+  ctx.stroke();
+
+  // major lines (batched)
+  ctx.strokeStyle = '#ccc';
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  for (let i = startCol; i <= endCol; i++) {
+    if (((i % 5) + 5) % 5 === 0) {
+      ctx.moveTo(i * GRID, startRow * GRID);
+      ctx.lineTo(i * GRID, endRow * GRID);
+    }
+  }
+  for (let i = startRow; i <= endRow; i++) {
+    if (((i % 5) + 5) % 5 === 0) {
+      ctx.moveTo(startCol * GRID, i * GRID);
+      ctx.lineTo(endCol * GRID, i * GRID);
+    }
+  }
+  ctx.stroke();
 }
