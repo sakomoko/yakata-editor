@@ -1,6 +1,6 @@
 export type WallSide = 'n' | 'e' | 's' | 'w';
 
-interface WallObjectBase {
+export interface WallObjectBase {
   id: string;
   side: WallSide;
   offset: number;

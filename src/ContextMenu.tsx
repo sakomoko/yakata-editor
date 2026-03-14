@@ -27,9 +27,9 @@ export default function ContextMenu({ open, anchorPosition, items, onClose }: Co
         },
       }}
     >
-      {items.map((item, i) => (
+      {items.map((item) => (
         <MenuItem
-          key={i}
+          key={item.label}
           disabled={item.disabled}
           onClick={() => {
             item.action();

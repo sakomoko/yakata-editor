@@ -1,5 +1,5 @@
 import type { Room, WallSide, WallObject, WallWindow } from './types.ts';
-import { GRID } from './grid.ts';
+import { GRID, WALL, WALL_SEL } from './grid.ts';
 
 const WINDOW_DRAW_OFFSET = 4;
 const WINDOW_HIT_TOLERANCE = 6;
@@ -77,7 +77,7 @@ export function drawWallSegments(
   ctx: CanvasRenderingContext2D,
   room: Room,
   isSelected: boolean,
-  zoom: number,
+  zoom = 1,
 ): void {
   const rx = room.x * GRID;
   const ry = room.y * GRID;
@@ -85,8 +85,7 @@ export function drawWallSegments(
   const rh = room.h * GRID;
 
   ctx.strokeStyle = isSelected ? '#2196F3' : '#000';
-  const lineWidth = (isSelected ? 2.5 : 2) / zoom;
-  ctx.lineWidth = lineWidth;
+  ctx.lineWidth = (isSelected ? WALL_SEL : WALL) / zoom;
 
   ctx.beginPath();
   for (const seg of getWallSegments(room, 'n')) {

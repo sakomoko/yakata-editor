@@ -5,14 +5,28 @@ import { clampZoom } from './viewport.ts';
 const STORAGE_KEY = 'madori_data';
 const VIEWPORT_KEY = 'madori_viewport';
 
+const VALID_SIDES = new Set(['n', 'e', 's', 'w']);
+
 function ensureWallObjectIds(objects: unknown[]): WallObject[] {
-  return objects.map((o) => {
-    const obj = o as Record<string, unknown>;
-    return {
-      ...obj,
-      id: typeof obj.id === 'string' ? obj.id : crypto.randomUUID(),
-    } as WallObject;
-  });
+  return objects
+    .filter((o) => {
+      const obj = o as Record<string, unknown>;
+      return (
+        typeof obj.offset === 'number' &&
+        typeof obj.width === 'number' &&
+        VALID_SIDES.has(obj.side as string)
+      );
+    })
+    .map((o) => {
+      const obj = o as Record<string, unknown>;
+      return {
+        id: typeof obj.id === 'string' ? obj.id : crypto.randomUUID(),
+        type: 'window',
+        side: obj.side as WallObject['side'],
+        offset: obj.offset as number,
+        width: obj.width as number,
+      } as WallObject;
+    });
 }
 
 function ensureIds(rooms: unknown[]): Room[] {
