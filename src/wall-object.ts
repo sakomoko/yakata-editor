@@ -1,4 +1,4 @@
-import type { Room, WallSide, WallObject, WallWindow, WallDoor } from './types.ts';
+import type { Room, WallSide, WallObject, WallWindow, WallDoor, WallOpening } from './types.ts';
 import { GRID, WALL, WALL_SEL } from './grid.ts';
 
 const WINDOW_DRAW_OFFSET = 4;
@@ -6,6 +6,10 @@ const WALL_OBJECT_HIT_TOLERANCE = 6;
 
 export function createWallWindow(side: WallSide, offset: number, width = 1): WallWindow {
   return { id: crypto.randomUUID(), type: 'window', side, offset, width };
+}
+
+export function createWallOpening(side: WallSide, offset: number, width = 1): WallOpening {
+  return { id: crypto.randomUUID(), type: 'opening', side, offset, width };
 }
 
 export function createWallDoor(
@@ -246,6 +250,10 @@ export function drawWallObjects(
       }
       case 'door': {
         drawDoor(ctx, room, obj, color, objLineWidth);
+        break;
+      }
+      case 'opening': {
+        // 開口は壁の隙間のみで表現される（getWallSegmentsで自動処理）
         break;
       }
     }
