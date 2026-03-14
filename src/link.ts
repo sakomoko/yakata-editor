@@ -59,7 +59,7 @@ export function linkRooms(rooms: Room[], roomIds: Set<string>): void {
   // 既存グループの他メンバーも統合
   if (existingGroups.size > 1) {
     for (const room of rooms) {
-      if (room.linkGroup && existingGroups.has(room.linkGroup)) {
+      if (!roomIds.has(room.id) && room.linkGroup && existingGroups.has(room.linkGroup)) {
         room.linkGroup = targetGroup;
       }
     }
@@ -104,5 +104,5 @@ export function hasAdjacentPair(rooms: Room[], roomIds: Set<string>): boolean {
 
 /** 選択した部屋にlinkGroupを持つものがあるか */
 export function hasLinkedRoom(rooms: Room[], roomIds: Set<string>): boolean {
-  return rooms.some((r) => roomIds.has(r.id) && r.linkGroup);
+  return rooms.some((r) => roomIds.has(r.id) && r.linkGroup !== undefined);
 }

@@ -74,6 +74,16 @@ describe('expandWithLinked', () => {
     expect(result.has(b.id)).toBe(true);
     expect(result.has(c.id)).toBe(false);
   });
+
+  it('複数グループを同時に拡張', () => {
+    const a = makeRoom({ x: 0, y: 0, w: 3, h: 3, linkGroup: 'g1' });
+    const b = makeRoom({ x: 3, y: 0, w: 3, h: 3, linkGroup: 'g1' });
+    const c = makeRoom({ x: 10, y: 0, w: 3, h: 3, linkGroup: 'g2' });
+    const d = makeRoom({ x: 13, y: 0, w: 3, h: 3, linkGroup: 'g2' });
+    const result = expandWithLinked([a, b, c, d], new Set([a.id, c.id]));
+    expect(result.has(b.id)).toBe(true);
+    expect(result.has(d.id)).toBe(true);
+  });
 });
 
 describe('linkRooms', () => {
@@ -95,6 +105,18 @@ describe('linkRooms', () => {
     // 全て同じグループになる
     expect(a.linkGroup).toBe(b.linkGroup);
     expect(b.linkGroup).toBe(c.linkGroup);
+  });
+
+  it('3グループ以上を統合', () => {
+    const a = makeRoom({ x: 0, y: 0, w: 3, h: 3, linkGroup: 'g1' });
+    const b = makeRoom({ x: 3, y: 0, w: 3, h: 3, linkGroup: 'g2' });
+    const c = makeRoom({ x: 6, y: 0, w: 3, h: 3, linkGroup: 'g3' });
+    const d = makeRoom({ x: 9, y: 0, w: 3, h: 3, linkGroup: 'g3' });
+    const rooms = [a, b, c, d];
+    linkRooms(rooms, new Set([a.id, b.id, c.id]));
+    expect(a.linkGroup).toBe(b.linkGroup);
+    expect(b.linkGroup).toBe(c.linkGroup);
+    expect(c.linkGroup).toBe(d.linkGroup);
   });
 });
 
