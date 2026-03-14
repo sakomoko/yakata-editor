@@ -83,14 +83,22 @@ export default function RoomDialog({ open, data, onClose }: Props) {
           <Typography variant="caption" sx={{ color: '#aaa', fontSize: 11 }}>
             {isCustom ? `${fontSize}px` : `${data.autoFontSize}px (自動)`}
           </Typography>
-          <Button size="small" onClick={handleReset} sx={{ fontSize: 10, color: '#aaa', minWidth: 0, px: 1 }}>
+          <Button
+            size="small"
+            onClick={handleReset}
+            sx={{ fontSize: 10, color: '#aaa', minWidth: 0, px: 1 }}
+          >
             リセット
           </Button>
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleCancel} sx={{ color: '#ccc' }}>キャンセル</Button>
-        <Button onClick={handleOk} variant="contained">OK</Button>
+        <Button onClick={handleCancel} sx={{ color: '#ccc' }}>
+          キャンセル
+        </Button>
+        <Button onClick={handleOk} variant="contained">
+          OK
+        </Button>
       </DialogActions>
     </Dialog>
   );

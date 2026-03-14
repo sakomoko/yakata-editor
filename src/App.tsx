@@ -4,7 +4,12 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
-import { initEditor, type EditorAPI, type RoomEditData, type ContextMenuRequest } from './editor.ts';
+import {
+  initEditor,
+  type EditorAPI,
+  type RoomEditData,
+  type ContextMenuRequest,
+} from './editor.ts';
 import { loadFromFile } from './persistence.ts';
 import RoomDialog from './RoomDialog.tsx';
 import ContextMenu from './ContextMenu.tsx';
@@ -23,20 +28,27 @@ export default function App() {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<EditorAPI | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const roomEditResolveRef = useRef<((v: { label: string; fontSize?: number } | null) => void) | null>(null);
+  const roomEditResolveRef = useRef<
+    ((v: { label: string; fontSize?: number } | null) => void) | null
+  >(null);
 
   const [status, setStatus] = useState('準備完了');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogData, setDialogData] = useState<RoomEditData | null>(null);
-  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(
+    null,
+  );
 
-  const handleRoomEdit = useCallback((data: RoomEditData): Promise<{ label: string; fontSize?: number } | null> => {
-    setDialogData(data);
-    setDialogOpen(true);
-    return new Promise((resolve) => {
-      roomEditResolveRef.current = resolve;
-    });
-  }, []);
+  const handleRoomEdit = useCallback(
+    (data: RoomEditData): Promise<{ label: string; fontSize?: number } | null> => {
+      setDialogData(data);
+      setDialogOpen(true);
+      return new Promise((resolve) => {
+        roomEditResolveRef.current = resolve;
+      });
+    },
+    [],
+  );
 
   const handleDialogClose = useCallback((result: { label: string; fontSize?: number } | null) => {
     setDialogOpen(false);
@@ -86,43 +98,68 @@ export default function App() {
       <CssBaseline />
 
       {/* Toolbar */}
-      <Box sx={{
-        height: 36,
-        bgcolor: 'background.paper',
-        display: 'flex',
-        alignItems: 'center',
-        px: 1,
-        gap: 0.75,
-        borderBottom: '1px solid #444',
-      }}>
-        <Button size="small" variant="contained" color="inherit"
+      <Box
+        sx={{
+          height: 36,
+          bgcolor: 'background.paper',
+          display: 'flex',
+          alignItems: 'center',
+          px: 1,
+          gap: 0.75,
+          borderBottom: '1px solid #444',
+        }}
+      >
+        <Button
+          size="small"
+          variant="contained"
+          color="inherit"
           sx={toolbarButtonSx}
-          onClick={() => editorRef.current?.newProject()}>
+          onClick={() => editorRef.current?.newProject()}
+        >
           新規
         </Button>
         <Divider orientation="vertical" flexItem sx={{ borderColor: '#555', mx: 0.5 }} />
-        <Button size="small" variant="contained" color="inherit"
+        <Button
+          size="small"
+          variant="contained"
+          color="inherit"
           sx={toolbarButtonSx}
-          onClick={() => editorRef.current?.saveProject()}>
+          onClick={() => editorRef.current?.saveProject()}
+        >
           保存
         </Button>
-        <Button size="small" variant="contained" color="inherit"
+        <Button
+          size="small"
+          variant="contained"
+          color="inherit"
           sx={toolbarButtonSx}
-          onClick={() => fileInputRef.current?.click()}>
+          onClick={() => fileInputRef.current?.click()}
+        >
           開く
         </Button>
-        <Button size="small" variant="contained" color="inherit"
+        <Button
+          size="small"
+          variant="contained"
+          color="inherit"
           sx={toolbarButtonSx}
-          onClick={() => editorRef.current?.exportAsPng()}>
+          onClick={() => editorRef.current?.exportAsPng()}
+        >
           PNG出力
         </Button>
         <Divider orientation="vertical" flexItem sx={{ borderColor: '#555', mx: 0.5 }} />
-        <Button size="small" variant="contained" color="inherit"
+        <Button
+          size="small"
+          variant="contained"
+          color="inherit"
           sx={toolbarButtonSx}
-          onClick={() => editorRef.current?.undo()}>
+          onClick={() => editorRef.current?.undo()}
+        >
           戻す (⌘Z)
         </Button>
-        <Typography variant="caption" sx={{ color: '#ddd', ml: 'auto', whiteSpace: 'nowrap', fontSize: 13 }}>
+        <Typography
+          variant="caption"
+          sx={{ color: '#ddd', ml: 'auto', whiteSpace: 'nowrap', fontSize: 13 }}
+        >
           ドラッグ→部屋作成　クリック→選択　Shift+クリック→複数選択　ダブルクリック→名前　Delete→削除　ホイール→ズーム　Space+ドラッグ→移動　⌘0→リセット
         </Typography>
       </Box>
@@ -133,19 +170,21 @@ export default function App() {
       </div>
 
       {/* Status bar */}
-      <Box sx={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 24,
-        bgcolor: 'background.paper',
-        color: '#999',
-        fontSize: 11,
-        lineHeight: '24px',
-        px: '10px',
-        borderTop: '1px solid #444',
-      }}>
+      <Box
+        sx={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 24,
+          bgcolor: 'background.paper',
+          color: '#999',
+          fontSize: 11,
+          lineHeight: '24px',
+          px: '10px',
+          borderTop: '1px solid #444',
+        }}
+      >
         {status}
       </Box>
 
@@ -159,13 +198,7 @@ export default function App() {
       />
 
       {/* Room dialog */}
-      {dialogData && (
-        <RoomDialog
-          open={dialogOpen}
-          data={dialogData}
-          onClose={handleDialogClose}
-        />
-      )}
+      {dialogData && <RoomDialog open={dialogOpen} data={dialogData} onClose={handleDialogClose} />}
 
       {/* Context menu */}
       <ContextMenu
