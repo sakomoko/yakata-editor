@@ -67,6 +67,7 @@ type DragState =
   | { type: 'create'; start: MouseCoord; cur: MouseCoord }
   | { type: 'move'; originals: Map<string, { x: number; y: number }>; start: MouseCoord }
   | { type: 'resize'; dir: ResizeDirection; orig: { x: number; y: number; w: number; h: number }; targetId: string; start: MouseCoord }
+  | { type: 'moveWallObject'; roomId: string; objectId: string }
   | null;
 ```
 
@@ -76,7 +77,7 @@ type DragState =
 | `move` | 選択中の部屋をドラッグ | 部屋を移動（複数選択時は一括移動） |
 | `resize` | ハンドルをドラッグ | 部屋のリサイズ（単一選択時のみ） |
 | `pan` | 中ボタンドラッグ | キャンバスのパン移動 |
-| `moveWallObject` | 壁オブジェクトをドラッグ | 壁上のオブジェクトを移動 |
+| `moveWallObject` | 壁オブジェクトをドラッグ | 壁上のオブジェクトを移動（別の壁への移動も可能） |
 | `null` | ドラッグなし | 通常状態 |
 
 ## EditorState
