@@ -23,7 +23,11 @@ interface WallDoor extends WallObjectBase {
   swing: 'inward' | 'outward';  // 内開き/外開き
 }
 
-type WallObject = WallWindow | WallDoor;
+interface WallOpening extends WallObjectBase {
+  type: 'opening';
+}
+
+type WallObject = WallWindow | WallDoor | WallOpening;
 ```
 
 | プロパティ | 説明 |
