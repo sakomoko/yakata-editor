@@ -20,8 +20,9 @@ export function areAdjacent(a: Room, b: Room): boolean {
 export function expandWithLinked(rooms: Room[], selectedIds: Set<string>): Set<string> {
   const result = new Set(selectedIds);
   const groups = new Set<string>();
+  const roomById = new Map(rooms.map((r) => [r.id, r]));
   for (const id of selectedIds) {
-    const room = rooms.find((r) => r.id === id);
+    const room = roomById.get(id);
     if (room?.linkGroup) {
       groups.add(room.linkGroup);
     }
@@ -56,7 +57,7 @@ export function linkRooms(rooms: Room[], roomIds: Set<string>): void {
     }
   }
 
-  // 既存グループの他メンバーも統合（size===1の場合は非選択メンバーも既にtargetGroupを持つためスキップ可）
+  // 既存グループが複数ある場合のみ、非選択メンバーを統合先に揃える必要がある
   if (existingGroups.size > 1) {
     for (const room of rooms) {
       if (!roomIds.has(room.id) && room.linkGroup && existingGroups.has(room.linkGroup)) {
@@ -105,4 +106,13 @@ export function hasAdjacentPair(rooms: Room[], roomIds: Set<string>): boolean {
 /** 選択した部屋にlinkGroupを持つものがあるか */
 export function hasLinkedRoom(rooms: Room[], roomIds: Set<string>): boolean {
   return rooms.some((r) => roomIds.has(r.id) && r.linkGroup !== undefined);
+}
+
+/** 選択した部屋が全て同一のlinkGroupに属しているか */
+export function allAlreadyLinked(rooms: Room[], roomIds: Set<string>): boolean {
+  const selected = rooms.filter((r) => roomIds.has(r.id));
+  if (selected.length < 2) return false;
+  const group = selected[0].linkGroup;
+  if (!group) return false;
+  return selected.every((r) => r.linkGroup === group);
 }

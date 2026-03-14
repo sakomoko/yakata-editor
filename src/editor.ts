@@ -45,6 +45,7 @@ import {
   cleanupSingletonGroups,
   hasAdjacentPair,
   hasLinkedRoom,
+  allAlreadyLinked,
 } from './link.ts';
 
 export interface RoomEditData {
@@ -520,7 +521,11 @@ export function initEditor(
       });
 
       // 連結/連結解除メニュー
-      if (state.selection.size >= 2 && hasAdjacentPair(state.rooms, state.selection)) {
+      if (
+        state.selection.size >= 2 &&
+        hasAdjacentPair(state.rooms, state.selection) &&
+        !allAlreadyLinked(state.rooms, state.selection)
+      ) {
         items.push({ separator: true });
         items.push({
           label: '連結',
