@@ -208,8 +208,8 @@ export function initEditor(
       viewport.zoom = exportScale;
       viewport.panX = bbox.x;
       viewport.panY = bbox.y;
-      canvas.width = Math.round(bbox.w * exportScale);
-      canvas.height = Math.round(bbox.h * exportScale);
+      canvas.width = Math.max(1, Math.round(bbox.w * exportScale));
+      canvas.height = Math.max(1, Math.round(bbox.h * exportScale));
 
       render();
       exportPng(canvas);
