@@ -9,7 +9,8 @@ const VALID_SIDES = new Set(['n', 'e', 's', 'w']);
 const VALID_WALL_OBJECT_TYPES = new Set(['window', 'door']);
 const VALID_DOOR_SWINGS = new Set(['inward', 'outward']);
 
-function ensureWallObjectIds(objects: unknown[]): WallObject[] {
+/** @internal Exported for testing */
+export function ensureWallObjectIds(objects: unknown[]): WallObject[] {
   return objects
     .filter((o) => {
       const obj = o as Record<string, unknown>;

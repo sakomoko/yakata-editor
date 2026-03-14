@@ -53,10 +53,7 @@ export function wallObjectToPixelRect(
 }
 
 /** Returns wall segments for a given side, with gaps cut out for wall objects. */
-export function getWallSegments(
-  room: Room,
-  side: WallSide,
-): { start: number; end: number }[] {
+export function getWallSegments(room: Room, side: WallSide): { start: number; end: number }[] {
   const sideLen = wallSideLength(room, side) * GRID;
   if (!room.wallObjects?.length) return [{ start: 0, end: sideLen }];
 
@@ -127,10 +124,38 @@ const DOOR_ANGLES: Record<
     outwardCCW: boolean;
   }
 > = {
-  n: { closedAngle: 0, inward: Math.PI / 2, outward: -Math.PI / 2, inwardCCW: false, outwardCCW: true },
-  s: { closedAngle: 0, inward: -Math.PI / 2, outward: Math.PI / 2, inwardCCW: true, outwardCCW: false },
-  w: { closedAngle: Math.PI / 2, inward: 0, outward: Math.PI, inwardCCW: true, outwardCCW: false },
-  e: { closedAngle: Math.PI / 2, inward: Math.PI, outward: 0, inwardCCW: false, outwardCCW: true },
+  // 北壁: 壁沿い=右(0), 内開き=下(π/2)時計回り, 外開き=上(-π/2)反時計回り
+  n: {
+    closedAngle: 0,
+    inward: Math.PI / 2,
+    outward: -Math.PI / 2,
+    inwardCCW: false,
+    outwardCCW: true,
+  },
+  // 南壁: 壁沿い=右(0), 内開き=上(-π/2)反時計回り, 外開き=下(π/2)時計回り
+  s: {
+    closedAngle: 0,
+    inward: -Math.PI / 2,
+    outward: Math.PI / 2,
+    inwardCCW: true,
+    outwardCCW: false,
+  },
+  // 西壁: 壁沿い=下(π/2), 内開き=右(0)反時計回り, 外開き=左(π)時計回り
+  w: {
+    closedAngle: Math.PI / 2,
+    inward: 0,
+    outward: Math.PI,
+    inwardCCW: true,
+    outwardCCW: false,
+  },
+  // 東壁: 壁沿い=下(π/2), 内開き=左(π)時計回り, 外開き=右(0)反時計回り
+  e: {
+    closedAngle: Math.PI / 2,
+    inward: Math.PI,
+    outward: 0,
+    inwardCCW: false,
+    outwardCCW: true,
+  },
 };
 
 interface DoorGeometry {
@@ -162,8 +187,10 @@ function drawDoor(
   color: string,
   lineWidth: number,
 ): void {
-  const { hingeX, hingeY, radius, closedAngle, openAngle, anticlockwise } =
-    getDoorGeometry(room, obj);
+  const { hingeX, hingeY, radius, closedAngle, openAngle, anticlockwise } = getDoorGeometry(
+    room,
+    obj,
+  );
 
   // Draw panel line (from hinge to open position)
   ctx.strokeStyle = color;
@@ -267,8 +294,10 @@ function hitDoorShape(
   py: number,
   tolerance: number,
 ): boolean {
-  const { hingeX, hingeY, radius, closedAngle, openAngle, anticlockwise } =
-    getDoorGeometry(room, obj);
+  const { hingeX, hingeY, radius, closedAngle, openAngle, anticlockwise } = getDoorGeometry(
+    room,
+    obj,
+  );
 
   // Check if point is inside the wedge (pie shape) with tolerance:
   // 1. Distance from hinge <= radius + tolerance
@@ -280,12 +309,7 @@ function hitDoorShape(
   return isAngleInSweep(angle, closedAngle, openAngle, anticlockwise);
 }
 
-export function hitWallObject(
-  room: Room,
-  px: number,
-  py: number,
-  zoom = 1,
-): WallObject | null {
+export function hitWallObject(room: Room, px: number, py: number, zoom = 1): WallObject | null {
   if (!room.wallObjects?.length) return null;
   const tolerance = WALL_OBJECT_HIT_TOLERANCE / zoom;
 
@@ -296,19 +320,11 @@ export function hitWallObject(
     // Wall-line hit (shared by all wall object types)
     let wallLineHit = false;
     if (rect.horizontal) {
-      if (
-        px >= rect.x &&
-        px <= rect.x + rect.length &&
-        Math.abs(py - rect.y) < tolerance
-      ) {
+      if (px >= rect.x && px <= rect.x + rect.length && Math.abs(py - rect.y) < tolerance) {
         wallLineHit = true;
       }
     } else {
-      if (
-        py >= rect.y &&
-        py <= rect.y + rect.length &&
-        Math.abs(px - rect.x) < tolerance
-      ) {
+      if (py >= rect.y && py <= rect.y + rect.length && Math.abs(px - rect.x) < tolerance) {
         wallLineHit = true;
       }
     }
