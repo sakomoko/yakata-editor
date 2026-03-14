@@ -494,7 +494,7 @@ export function initEditor(
       const roomIdx = state.rooms.findIndex((r) => r.id === roomId);
       const isFirst = roomIdx === 0;
       const isLast = roomIdx === state.rooms.length - 1;
-      items.push({ label: '', separator: true, action: () => {} });
+      items.push({ separator: true });
       items.push({
         label: '最前面へ移動',
         disabled: isLast,
@@ -579,9 +579,14 @@ export function initEditor(
       const fn = e.shiftKey
         ? (forward ? bringToFront : sendToBack)
         : (forward ? bringForward : sendBackward);
-      commitChange(() => {
-        fn(state.rooms, roomId);
-      });
+      pushUndo(state.history, state.rooms);
+      const changed = fn(state.rooms, roomId);
+      if (changed) {
+        render();
+        persistToStorage(state.rooms);
+      } else {
+        state.history.pop();
+      }
       return;
     }
 
