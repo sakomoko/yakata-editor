@@ -54,6 +54,12 @@ describe('areAdjacent', () => {
     const b = makeRoom({ x: 2, y: 0, w: 3, h: 3 });
     expect(areAdjacent(a, b)).toBe(true);
   });
+
+  it('重なっている部屋は隣接しない', () => {
+    const a = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const b = makeRoom({ x: 3, y: 0, w: 5, h: 5 });
+    expect(areAdjacent(a, b)).toBe(false);
+  });
 });
 
 describe('expandWithLinked', () => {

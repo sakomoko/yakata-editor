@@ -56,7 +56,7 @@ export function linkRooms(rooms: Room[], roomIds: Set<string>): void {
     }
   }
 
-  // 既存グループの他メンバーも統合
+  // 既存グループの他メンバーも統合（size===1の場合は非選択メンバーも既にtargetGroupを持つためスキップ可）
   if (existingGroups.size > 1) {
     for (const room of rooms) {
       if (!roomIds.has(room.id) && room.linkGroup && existingGroups.has(room.linkGroup)) {
