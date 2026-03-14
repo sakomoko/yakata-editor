@@ -9,6 +9,7 @@ import {
   hitWallObject,
   hitWallObjectInRooms,
   nearestWallSide,
+  computeWallObjectPosition,
 } from './wall-object.ts';
 import { GRID } from './grid.ts';
 
@@ -245,5 +246,60 @@ describe('nearestWallSide', () => {
     const result = nearestWallSide(room, 10 * GRID, 0);
     expect(result.offset).toBeLessThanOrEqual(2);
     expect(result.offset).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('computeWallObjectPosition', () => {
+  it('北壁に近い位置ではside=nを返す', () => {
+    const room = createRoom(0, 0, 10, 10);
+    const result = computeWallObjectPosition(room, 5 * GRID, 0.5 * GRID, 1);
+    expect(result.side).toBe('n');
+  });
+
+  it('マウス位置に基づいてオフセットを計算する', () => {
+    const room = createRoom(0, 0, 10, 10);
+    const result = computeWallObjectPosition(room, 5 * GRID, 0.5 * GRID, 1);
+    expect(result.offset).toBe(5);
+  });
+
+  it('幅2のオブジェクトはマウス位置を中心にオフセットする', () => {
+    const room = createRoom(0, 0, 10, 10);
+    const result = computeWallObjectPosition(room, 5 * GRID, 0.5 * GRID, 2);
+    expect(result.offset).toBe(4);
+  });
+
+  it('北壁から東壁へ移動できる', () => {
+    const room = createRoom(0, 0, 10, 10);
+    const result = computeWallObjectPosition(room, 9.5 * GRID, 5 * GRID, 1);
+    expect(result.side).toBe('e');
+    expect(result.offset).toBe(5);
+  });
+
+  it('西壁から南壁へ移動できる', () => {
+    const room = createRoom(0, 0, 10, 10);
+    const result = computeWallObjectPosition(room, 5 * GRID, 9.5 * GRID, 1);
+    expect(result.side).toBe('s');
+    expect(result.offset).toBe(5);
+  });
+
+  it('オフセットが0未満にならない', () => {
+    const room = createRoom(5, 5, 10, 10);
+    const result = computeWallObjectPosition(room, 5.1 * GRID, 5.1 * GRID, 2);
+    expect(result.side).toBe('n');
+    expect(result.offset).toBe(0);
+  });
+
+  it('オフセットが壁の長さ-幅を超えない', () => {
+    const room = createRoom(0, 0, 5, 5);
+    const result = computeWallObjectPosition(room, 20 * GRID, 0.1 * GRID, 2);
+    expect(result.side).toBe('n');
+    expect(result.offset).toBe(3);
+  });
+
+  it('オフセット付きの部屋でも正しく計算する', () => {
+    const room = createRoom(10, 10, 5, 5);
+    const result = computeWallObjectPosition(room, 12 * GRID, 10.1 * GRID, 1);
+    expect(result.side).toBe('n');
+    expect(result.offset).toBe(2);
   });
 });

@@ -36,6 +36,7 @@ export function drawRoom(
   isSelected: boolean,
   showHandles: boolean,
   zoom = 1,
+  activeWallObjectId?: string,
 ): void {
   const x = room.x * GRID,
     y = room.y * GRID;
@@ -57,7 +58,7 @@ export function drawRoom(
     ctx.fillText(room.label, x + w / 2, y + h / 2, w * 0.9);
   }
 
-  drawWallObjects(ctx, room, isSelected, zoom);
+  drawWallObjects(ctx, room, isSelected, zoom, activeWallObjectId);
 
   if (isSelected && showHandles) {
     const size = HANDLE_SIZE / zoom;

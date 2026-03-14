@@ -68,9 +68,6 @@ export type DragState =
       type: 'moveWallObject';
       roomId: string;
       objectId: string;
-      side: WallSide;
-      start: MouseCoord;
-      originalOffset: number;
     }
   | null;
 
