@@ -113,31 +113,34 @@ export function drawWallObjects(
   room: Room,
   isSelected: boolean,
   zoom = 1,
+  activeObjectId?: string,
 ): void {
   if (!room.wallObjects?.length) return;
 
-  const color = isSelected ? '#2196F3' : '#000';
   const lineWidth = 1.5 / zoom;
-  const offset = WINDOW_DRAW_OFFSET / zoom;
+  const drawOffset = WINDOW_DRAW_OFFSET / zoom;
 
   for (const obj of room.wallObjects) {
     if (obj.type !== 'window') continue;
 
+    const isActive = obj.id === activeObjectId;
+    const color = isActive ? '#FF9800' : isSelected ? '#2196F3' : '#000';
+
     const rect = wallObjectToPixelRect(room, obj);
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = lineWidth;
+    ctx.lineWidth = isActive ? 2.5 / zoom : lineWidth;
     ctx.beginPath();
     if (rect.horizontal) {
-      ctx.moveTo(rect.x, rect.y - offset);
-      ctx.lineTo(rect.x + rect.length, rect.y - offset);
-      ctx.moveTo(rect.x, rect.y + offset);
-      ctx.lineTo(rect.x + rect.length, rect.y + offset);
+      ctx.moveTo(rect.x, rect.y - drawOffset);
+      ctx.lineTo(rect.x + rect.length, rect.y - drawOffset);
+      ctx.moveTo(rect.x, rect.y + drawOffset);
+      ctx.lineTo(rect.x + rect.length, rect.y + drawOffset);
     } else {
-      ctx.moveTo(rect.x - offset, rect.y);
-      ctx.lineTo(rect.x - offset, rect.y + rect.length);
-      ctx.moveTo(rect.x + offset, rect.y);
-      ctx.lineTo(rect.x + offset, rect.y + rect.length);
+      ctx.moveTo(rect.x - drawOffset, rect.y);
+      ctx.lineTo(rect.x - drawOffset, rect.y + rect.length);
+      ctx.moveTo(rect.x + drawOffset, rect.y);
+      ctx.lineTo(rect.x + drawOffset, rect.y + rect.length);
     }
     ctx.stroke();
   }
@@ -190,6 +193,22 @@ export function hitWallObjectInRooms(
     if (obj) return { room, obj };
   }
   return null;
+}
+
+/** Compute where a wall object should be placed when dragged to a given pixel position. */
+export function computeWallObjectPosition(
+  room: Room,
+  px: number,
+  py: number,
+  objWidth: number,
+): { side: WallSide; offset: number } {
+  const { side } = nearestWallSide(room, px, py);
+  const rx = room.x * GRID;
+  const ry = room.y * GRID;
+  const along = side === 'n' || side === 's' ? px - rx : py - ry;
+  const offsetGrid = Math.round(along / GRID - objWidth / 2);
+  const sideLen = side === 'n' || side === 's' ? room.w : room.h;
+  return { side, offset: Math.max(0, Math.min(offsetGrid, sideLen - objWidth)) };
 }
 
 export function nearestWallSide(

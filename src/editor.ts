@@ -30,6 +30,7 @@ import {
   hitWallObjectInRooms,
   nearestWallSide,
   clampWallObjects,
+  computeWallObjectPosition,
 } from './wall-object.ts';
 import type { ContextMenuItem } from './context-menu.ts';
 
@@ -107,9 +108,18 @@ export function initEditor(
 
     drawGrid(ctx);
 
+    const activeWallObjectId =
+      state.drag?.type === 'moveWallObject' ? state.drag.objectId : undefined;
     for (const r of state.rooms) {
       const isSelected = state.selection.has(r.id);
-      drawRoom(ctx, r, isSelected, isSelected && state.selection.size === 1, viewport.zoom);
+      drawRoom(
+        ctx,
+        r,
+        isSelected,
+        isSelected && state.selection.size === 1,
+        viewport.zoom,
+        activeWallObjectId,
+      );
     }
 
     if (state.drag && state.drag.type === 'create') {
@@ -233,15 +243,12 @@ export function initEditor(
     const wallHit = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom);
     if (wallHit) {
       pushUndo(state.history, state.rooms);
-      selectSingle(state.selection, wallHit.room.id);
       state.drag = {
         type: 'moveWallObject',
         roomId: wallHit.room.id,
         objectId: wallHit.obj.id,
-        side: wallHit.obj.side,
-        start: m,
-        originalOffset: wallHit.obj.offset,
       };
+      canvas.style.cursor = 'grabbing';
       render();
       return;
     }
@@ -301,7 +308,7 @@ export function initEditor(
       if (h) {
         canvas.style.cursor = h.handle.dir + '-resize';
       } else if (hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom)) {
-        canvas.style.cursor = 'pointer';
+        canvas.style.cursor = 'grab';
       } else if (hitRoom(state.rooms, m.px, m.py)) {
         canvas.style.cursor = 'move';
       } else {
@@ -351,13 +358,9 @@ export function initEditor(
       if (targetRoom) {
         const obj = targetRoom.wallObjects?.find((o) => o.id === drag.objectId);
         if (obj) {
-          const side = drag.side;
-          const deltaGrid =
-            side === 'n' || side === 's'
-              ? m.gx - drag.start.gx
-              : m.gy - drag.start.gy;
-          const sideLen = side === 'n' || side === 's' ? targetRoom.w : targetRoom.h;
-          obj.offset = Math.max(0, Math.min(drag.originalOffset + deltaGrid, sideLen - obj.width));
+          const pos = computeWallObjectPosition(targetRoom, m.px, m.py, obj.width);
+          obj.side = pos.side;
+          obj.offset = pos.offset;
         }
       }
     }
@@ -372,6 +375,18 @@ export function initEditor(
       state.drag = null;
       canvas.style.cursor = isPanning ? 'grab' : 'crosshair';
       persistViewport(viewport);
+      return;
+    }
+
+    if (state.drag.type === 'moveWallObject') {
+      selectSingle(state.selection, state.drag.roomId);
+      state.drag = null;
+      // Cursor will be recalculated on next mousemove; set a reasonable default
+      const m = mousePos(e);
+      const stillOnWallObj = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom);
+      canvas.style.cursor = stillOnWallObj ? 'grab' : 'crosshair';
+      render();
+      persistToStorage(state.rooms);
       return;
     }
 
