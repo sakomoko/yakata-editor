@@ -1,4 +1,4 @@
-import type { Room, WallSide, WallObject, WallWindow, WallDoor } from './types.ts';
+import type { Room, WallSide, WallObject, WallWindow, WallDoor, WallOpening } from './types.ts';
 import { GRID, WALL, WALL_SEL } from './grid.ts';
 
 const WINDOW_DRAW_OFFSET = 4;
@@ -6,6 +6,10 @@ const WALL_OBJECT_HIT_TOLERANCE = 6;
 
 export function createWallWindow(side: WallSide, offset: number, width = 1): WallWindow {
   return { id: crypto.randomUUID(), type: 'window', side, offset, width };
+}
+
+export function createWallOpening(side: WallSide, offset: number, width = 1): WallOpening {
+  return { id: crypto.randomUUID(), type: 'opening', side, offset, width };
 }
 
 export function createWallDoor(
@@ -248,6 +252,10 @@ export function drawWallObjects(
         drawDoor(ctx, room, obj, color, objLineWidth);
         break;
       }
+      case 'opening': {
+        // 開口は壁の隙間のみで表現される（getWallSegmentsで自動処理）
+        break;
+      }
     }
   }
 }
@@ -327,6 +335,21 @@ export function hitWallObject(room: Room, px: number, py: number, zoom = 1): Wal
       if (py >= rect.y && py <= rect.y + rect.length && Math.abs(px - rect.x) < tolerance) {
         wallLineHit = true;
       }
+    }
+
+    // Opening-specific: hit the gap area on the wall line
+    if (obj.type === 'opening') {
+      const rect = wallObjectToPixelRect(room, obj);
+      if (rect.horizontal) {
+        if (px >= rect.x && px <= rect.x + rect.length && Math.abs(py - rect.y) < tolerance) {
+          return obj;
+        }
+      } else {
+        if (py >= rect.y && py <= rect.y + rect.length && Math.abs(px - rect.x) < tolerance) {
+          return obj;
+        }
+      }
+      continue;
     }
 
     if (wallLineHit) return obj;

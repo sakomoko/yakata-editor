@@ -16,7 +16,11 @@ export interface WallDoor extends WallObjectBase {
   swing: 'inward' | 'outward';
 }
 
-export type WallObject = WallWindow | WallDoor;
+export interface WallOpening extends WallObjectBase {
+  type: 'opening';
+}
+
+export type WallObject = WallWindow | WallDoor | WallOpening;
 
 export interface Room {
   id: string;

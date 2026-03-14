@@ -1,4 +1,4 @@
-import type { Room, WallObject, WallWindow, WallDoor, WallSide } from './types.ts';
+import type { Room, WallObject, WallWindow, WallDoor, WallOpening, WallSide } from './types.ts';
 import type { ViewportState } from './viewport.ts';
 import { clampZoom } from './viewport.ts';
 
@@ -6,7 +6,7 @@ const STORAGE_KEY = 'madori_data';
 const VIEWPORT_KEY = 'madori_viewport';
 
 const VALID_SIDES = new Set(['n', 'e', 's', 'w']);
-const VALID_WALL_OBJECT_TYPES = new Set(['window', 'door']);
+const VALID_WALL_OBJECT_TYPES = new Set(['window', 'door', 'opening']);
 const VALID_DOOR_SWINGS = new Set(['inward', 'outward']);
 
 /** @internal Exported for testing */
@@ -33,6 +33,9 @@ export function ensureWallObjectIds(objects: unknown[]): WallObject[] {
           ? (obj.swing as 'inward' | 'outward')
           : 'inward';
         return { id, type: 'door', side, offset, width, swing } satisfies WallDoor;
+      }
+      if (obj.type === 'opening') {
+        return { id, type: 'opening', side, offset, width } satisfies WallOpening;
       }
       return { id, type: 'window', side, offset, width } satisfies WallWindow;
     });

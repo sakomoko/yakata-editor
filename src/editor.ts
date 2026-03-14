@@ -29,6 +29,7 @@ import {
 import {
   createWallWindow,
   createWallDoor,
+  createWallOpening,
   hitWallObjectInRooms,
   nearestWallSide,
   clampWallObjects,
@@ -448,6 +449,8 @@ export function initEditor(
           },
         });
         items.push({ label: 'ドアを削除', action: removeWallObject });
+      } else if (hitObj.type === 'opening') {
+        items.push({ label: '開口を削除', action: removeWallObject });
       } else {
         items.push({ label: '窓を削除', action: removeWallObject });
       }
@@ -489,6 +492,11 @@ export function initEditor(
         label: 'ドアを配置',
         disabled: hasOverlap ?? false,
         action: () => placeWallObject(() => createWallDoor(side, offset)),
+      });
+      items.push({
+        label: '開口を配置',
+        disabled: hasOverlap ?? false,
+        action: () => placeWallObject(() => createWallOpening(side, offset)),
       });
 
       const roomIdx = state.rooms.findIndex((r) => r.id === roomId);

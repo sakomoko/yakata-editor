@@ -3,6 +3,7 @@ import { createRoom } from './room.ts';
 import {
   createWallWindow,
   createWallDoor,
+  createWallOpening,
   wallSideLength,
   clampWallObjects,
   wallObjectToPixelRect,
@@ -533,5 +534,74 @@ describe('ドアのヒット判定', () => {
       { start: 0, end: 2 * GRID },
       { start: 3 * GRID, end: 5 * GRID },
     ]);
+  });
+});
+
+describe('createWallOpening', () => {
+  it('デフォルト幅1の開口を生成する', () => {
+    const opening = createWallOpening('n', 2);
+    expect(opening.type).toBe('opening');
+    expect(opening.side).toBe('n');
+    expect(opening.offset).toBe(2);
+    expect(opening.width).toBe(1);
+    expect(opening.id).toBeTruthy();
+  });
+
+  it('幅を指定して開口を生成する', () => {
+    const opening = createWallOpening('s', 1, 3);
+    expect(opening.width).toBe(3);
+  });
+});
+
+describe('開口の壁セグメント分割', () => {
+  it('開口がある壁は隙間ができる', () => {
+    const room = createRoom(0, 0, 5, 3);
+    room.wallObjects = [createWallOpening('n', 2, 1)];
+    expect(getWallSegments(room, 'n')).toEqual([
+      { start: 0, end: 2 * GRID },
+      { start: 3 * GRID, end: 5 * GRID },
+    ]);
+  });
+
+  it('開口と窓が同じ壁にある場合', () => {
+    const room = createRoom(0, 0, 10, 3);
+    room.wallObjects = [createWallOpening('n', 1, 1), createWallWindow('n', 5, 2)];
+    expect(getWallSegments(room, 'n')).toEqual([
+      { start: 0, end: 1 * GRID },
+      { start: 2 * GRID, end: 5 * GRID },
+      { start: 7 * GRID, end: 10 * GRID },
+    ]);
+  });
+});
+
+describe('開口のヒット判定', () => {
+  it('北壁の開口のギャップ部分にヒットする', () => {
+    const room = createRoom(0, 0, 5, 3);
+    const opening = createWallOpening('n', 2, 1);
+    room.wallObjects = [opening];
+    const hit = hitWallObject(room, 2.5 * GRID, 0, 1);
+    expect(hit).toBe(opening);
+  });
+
+  it('東壁の開口のギャップ部分にヒットする', () => {
+    const room = createRoom(0, 0, 5, 5);
+    const opening = createWallOpening('e', 2, 1);
+    room.wallObjects = [opening];
+    const hit = hitWallObject(room, 5 * GRID, 2.5 * GRID, 1);
+    expect(hit).toBe(opening);
+  });
+
+  it('開口の範囲外ではヒットしない', () => {
+    const room = createRoom(0, 0, 5, 3);
+    room.wallObjects = [createWallOpening('n', 2, 1)];
+    const hit = hitWallObject(room, 0.5 * GRID, 0, 1);
+    expect(hit).toBeNull();
+  });
+
+  it('開口から離れた位置ではヒットしない', () => {
+    const room = createRoom(0, 0, 5, 3);
+    room.wallObjects = [createWallOpening('n', 2, 1)];
+    const hit = hitWallObject(room, 2.5 * GRID, GRID, 1);
+    expect(hit).toBeNull();
   });
 });
