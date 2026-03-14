@@ -135,7 +135,7 @@ export function computeRoomsBoundingBox(rooms: Room[]): {
   h: number;
 } {
   if (rooms.length === 0) {
-    // デフォルト: 800×600px（原点付近の空白領域）
+    // デフォルト: 800×600px — 部屋がない場合の初期エクスポート領域
     return { x: 0, y: 0, w: 40 * GRID, h: 30 * GRID };
   }
   let minX = Infinity;

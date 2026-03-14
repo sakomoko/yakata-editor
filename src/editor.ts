@@ -199,12 +199,17 @@ export function initEditor(
       const bbox = computeRoomsBoundingBox(state.rooms);
       const maxDim = Math.max(bbox.w, bbox.h);
       const MAX_EXPORT_SIZE = 16384;
-      const scale = maxDim > MAX_EXPORT_SIZE ? MAX_EXPORT_SIZE / maxDim : 1;
-      viewport.zoom = scale;
+      const exportScale = maxDim > MAX_EXPORT_SIZE ? MAX_EXPORT_SIZE / maxDim : 1;
+      if (exportScale < 1) {
+        console.warn(
+          `PNG export: サイズが上限を超えたため縮小されます (${Math.round(maxDim)}px → ${MAX_EXPORT_SIZE}px)`,
+        );
+      }
+      viewport.zoom = exportScale;
       viewport.panX = bbox.x;
       viewport.panY = bbox.y;
-      canvas.width = Math.round(bbox.w * scale);
-      canvas.height = Math.round(bbox.h * scale);
+      canvas.width = Math.round(bbox.w * exportScale);
+      canvas.height = Math.round(bbox.h * exportScale);
 
       render();
       exportPng(canvas);
