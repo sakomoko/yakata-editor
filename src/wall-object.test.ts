@@ -296,6 +296,13 @@ describe('computeWallObjectPosition', () => {
     expect(result.offset).toBe(3);
   });
 
+  it('東壁から西壁へ移動できる', () => {
+    const room = createRoom(0, 0, 10, 10);
+    const result = computeWallObjectPosition(room, 0.5 * GRID, 5 * GRID, 1);
+    expect(result.side).toBe('w');
+    expect(result.offset).toBe(5);
+  });
+
   it('オフセット付きの部屋でも正しく計算する', () => {
     const room = createRoom(10, 10, 5, 5);
     const result = computeWallObjectPosition(room, 12 * GRID, 10.1 * GRID, 1);

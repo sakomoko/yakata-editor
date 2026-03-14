@@ -381,7 +381,10 @@ export function initEditor(
     if (state.drag.type === 'moveWallObject') {
       selectSingle(state.selection, state.drag.roomId);
       state.drag = null;
-      canvas.style.cursor = 'grab';
+      // Cursor will be recalculated on next mousemove; set a reasonable default
+      const m = mousePos(e);
+      const stillOnWallObj = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom);
+      canvas.style.cursor = stillOnWallObj ? 'grab' : 'crosshair';
       render();
       persistToStorage(state.rooms);
       return;
