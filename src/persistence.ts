@@ -6,6 +6,7 @@ const STORAGE_KEY = 'madori_data';
 const VIEWPORT_KEY = 'madori_viewport';
 
 const VALID_SIDES = new Set(['n', 'e', 's', 'w']);
+const VALID_WALL_OBJECT_TYPES = new Set(['window']);
 
 function ensureWallObjectIds(objects: unknown[]): WallObject[] {
   return objects
@@ -14,14 +15,15 @@ function ensureWallObjectIds(objects: unknown[]): WallObject[] {
       return (
         typeof obj.offset === 'number' &&
         typeof obj.width === 'number' &&
-        VALID_SIDES.has(obj.side as string)
+        VALID_SIDES.has(obj.side as string) &&
+        VALID_WALL_OBJECT_TYPES.has(obj.type as string)
       );
     })
     .map((o) => {
       const obj = o as Record<string, unknown>;
       return {
         id: typeof obj.id === 'string' ? obj.id : crypto.randomUUID(),
-        type: 'window',
+        type: obj.type as WallObject['type'],
         side: obj.side as WallObject['side'],
         offset: obj.offset as number,
         width: obj.width as number,

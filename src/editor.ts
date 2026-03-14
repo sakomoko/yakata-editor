@@ -425,8 +425,12 @@ export function initEditor(
     if (hitR) {
       const roomId = hitR.id;
       const { side, offset } = nearestWallSide(hitR, m.px, m.py);
+      const hasOverlap = hitR.wallObjects?.some(
+        (o) => o.side === side && offset < o.offset + o.width && offset + 1 > o.offset,
+      );
       items.push({
         label: '窓を配置',
+        disabled: hasOverlap ?? false,
         action: () => {
           const room = state.rooms.find((r) => r.id === roomId);
           if (!room) return;
