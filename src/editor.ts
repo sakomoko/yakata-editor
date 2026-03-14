@@ -1,5 +1,5 @@
 import type { EditorState, MouseCoord, Room, WallObject } from './types.ts';
-import { GRID, COLS, ROWS, drawGrid } from './grid.ts';
+import { GRID, drawGrid } from './grid.ts';
 import {
   drawRoom,
   drawCreationPreview,
@@ -8,6 +8,7 @@ import {
   isInsideRoom,
   createRoom,
   calcAutoFontSize,
+  computeRoomsBoundingBox,
 } from './room.ts';
 import { toggleSelection, selectSingle, clearSelection, getSingleSelected } from './selection.ts';
 import { pushUndo, popUndo } from './history.ts';
@@ -95,7 +96,7 @@ export function initEditor(
   function render(): void {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#888';
+    ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.setTransform(
@@ -107,10 +108,11 @@ export function initEditor(
       -viewport.panY * viewport.zoom,
     );
 
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, COLS * GRID, ROWS * GRID);
-
-    drawGrid(ctx);
+    const viewMinX = viewport.panX;
+    const viewMinY = viewport.panY;
+    const viewMaxX = viewport.panX + canvas.width / viewport.zoom;
+    const viewMaxY = viewport.panY + canvas.height / viewport.zoom;
+    drawGrid(ctx, viewMinX, viewMinY, viewMaxX, viewMaxY);
 
     const activeWallObjectId =
       state.drag?.type === 'moveWallObject' ? state.drag.objectId : undefined;
@@ -194,11 +196,20 @@ export function initEditor(
     const savedH = canvas.height;
 
     try {
-      viewport.zoom = 1;
-      viewport.panX = 0;
-      viewport.panY = 0;
-      canvas.width = COLS * GRID;
-      canvas.height = ROWS * GRID;
+      const bbox = computeRoomsBoundingBox(state.rooms);
+      const maxDim = Math.max(bbox.w, bbox.h);
+      const MAX_EXPORT_SIZE = 16384;
+      const exportScale = maxDim > MAX_EXPORT_SIZE ? MAX_EXPORT_SIZE / maxDim : 1;
+      if (exportScale < 1) {
+        console.warn(
+          `PNG export: サイズが上限を超えたため縮小されます (${Math.round(maxDim)}px → ${MAX_EXPORT_SIZE}px)`,
+        );
+      }
+      viewport.zoom = exportScale;
+      viewport.panX = bbox.x;
+      viewport.panY = bbox.y;
+      canvas.width = Math.max(1, Math.round(bbox.w * exportScale));
+      canvas.height = Math.max(1, Math.round(bbox.h * exportScale));
 
       render();
       exportPng(canvas);
@@ -580,13 +591,21 @@ export function initEditor(
       return;
     }
 
-    if ((e.metaKey || e.ctrlKey) && (e.key === ']' || e.key === '[') && state.selection.size === 1) {
+    if (
+      (e.metaKey || e.ctrlKey) &&
+      (e.key === ']' || e.key === '[') &&
+      state.selection.size === 1
+    ) {
       e.preventDefault();
       const roomId = [...state.selection][0];
       const forward = e.key === ']';
       const fn = e.shiftKey
-        ? (forward ? bringToFront : sendToBack)
-        : (forward ? bringForward : sendBackward);
+        ? forward
+          ? bringToFront
+          : sendToBack
+        : forward
+          ? bringForward
+          : sendBackward;
       pushUndo(state.history, state.rooms);
       const changed = fn(state.rooms, roomId);
       if (changed) {

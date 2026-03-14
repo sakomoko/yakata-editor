@@ -39,7 +39,7 @@ Canvas 再描画 + localStorage 保存
 - **z-order.ts** — 部屋の重なり順序操作（`bringToFront`, `sendToBack`, `bringForward`, `sendBackward`）。rooms配列のインデックスをin-placeで変更する純粋関数群
 - **selection.ts** — `Set<string>` ベースの選択状態管理
 - **history.ts** — Undoスタック（JSON snapshot方式、最大50件）
-- **grid.ts** — グリッド定数（`GRID=20px`, `COLS=100`, `ROWS=75`）と描画
+- **grid.ts** — グリッド定数（`GRID=20px`）とビューポート対応のグリッド描画
 - **persistence.ts** — localStorage自動保存、JSON/PNGエクスポート、ファイルインポート
 
 ## モジュール依存関係

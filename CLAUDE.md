@@ -32,7 +32,7 @@ Canvas上でのマウス操作 → editor.ts のイベントハンドラ → sta
 - **context-menu.ts** / **ContextMenu.tsx** — 壁の右クリックコンテキストメニュー(窓の追加・削除)
 - **selection.ts** — 選択状態管理 (Set\<string\>ベース)
 - **history.ts** — Undoスタック (JSON snapshot方式、最大50件、Redo無し)
-- **grid.ts** — グリッド定数 (`GRID=20px`, `COLS=100`, `ROWS=75`) と描画
+- **grid.ts** — グリッド定数 (`GRID=20px`) とビューポート対応のグリッド描画
 - **persistence.ts** — localStorage自動保存、JSON/PNGエクスポート、ファイルインポート
 - **main.ts** — エントリポイント。DOM初期化、`initEditor()`呼出、ツールバーボタンのイベント接続
 
@@ -41,7 +41,7 @@ Canvas上でのマウス操作 → editor.ts のイベントハンドラ → sta
 - 座標系は2種類: ピクセル座標(px, py)とグリッド座標(gx, gy)。マウス座標は常にグリッドにスナップ
 - DragStateはdiscriminated union (`create | move | resize | null`)
 - 部屋のヒット判定はz-order考慮(後に追加された部屋が優先)
-- Canvasサイズは固定 2000×1500px
+- キャンバスは無限（固定境界なし）。グリッドは可視範囲のみ描画
 
 ### 型拡張時の注意: persistence.ts の同期
 

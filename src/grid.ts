@@ -1,29 +1,54 @@
 export const GRID = 20;
-export const COLS = 100;
-export const ROWS = 75;
 export const WALL = 2;
 export const WALL_SEL = 2.5;
 export const HANDLE_SIZE = 8;
 export const HANDLE_HIT = 7;
 
-export function drawGrid(ctx: CanvasRenderingContext2D): void {
-  const W = COLS * GRID;
-  const H = ROWS * GRID;
+export function drawGrid(
+  ctx: CanvasRenderingContext2D,
+  viewMinX: number,
+  viewMinY: number,
+  viewMaxX: number,
+  viewMaxY: number,
+): void {
+  const startCol = Math.floor(viewMinX / GRID);
+  const endCol = Math.ceil(viewMaxX / GRID);
+  const startRow = Math.floor(viewMinY / GRID);
+  const endRow = Math.ceil(viewMaxY / GRID);
 
-  for (let i = 0; i <= COLS; i++) {
-    ctx.strokeStyle = i % 5 === 0 ? '#ccc' : '#eee';
-    ctx.lineWidth = i % 5 === 0 ? 0.7 : 0.3;
-    ctx.beginPath();
-    ctx.moveTo(i * GRID, 0);
-    ctx.lineTo(i * GRID, H);
-    ctx.stroke();
+  // minor lines (batched)
+  ctx.strokeStyle = '#eee';
+  ctx.lineWidth = 0.3;
+  ctx.beginPath();
+  for (let i = startCol; i <= endCol; i++) {
+    if (((i % 5) + 5) % 5 !== 0) {
+      ctx.moveTo(i * GRID, startRow * GRID);
+      ctx.lineTo(i * GRID, endRow * GRID);
+    }
   }
-  for (let i = 0; i <= ROWS; i++) {
-    ctx.strokeStyle = i % 5 === 0 ? '#ccc' : '#eee';
-    ctx.lineWidth = i % 5 === 0 ? 0.7 : 0.3;
-    ctx.beginPath();
-    ctx.moveTo(0, i * GRID);
-    ctx.lineTo(W, i * GRID);
-    ctx.stroke();
+  for (let i = startRow; i <= endRow; i++) {
+    if (((i % 5) + 5) % 5 !== 0) {
+      ctx.moveTo(startCol * GRID, i * GRID);
+      ctx.lineTo(endCol * GRID, i * GRID);
+    }
   }
+  ctx.stroke();
+
+  // major lines (batched)
+  ctx.strokeStyle = '#ccc';
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  for (let i = startCol; i <= endCol; i++) {
+    if (((i % 5) + 5) % 5 === 0) {
+      ctx.moveTo(i * GRID, startRow * GRID);
+      ctx.lineTo(i * GRID, endRow * GRID);
+    }
+  }
+  for (let i = startRow; i <= endRow; i++) {
+    if (((i % 5) + 5) % 5 === 0) {
+      ctx.moveTo(startCol * GRID, i * GRID);
+      ctx.lineTo(endCol * GRID, i * GRID);
+    }
+  }
+  ctx.stroke();
 }
