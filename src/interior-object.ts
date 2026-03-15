@@ -3,7 +3,9 @@ import type {
   RoomInteriorObject,
   StraightStairs,
   FoldingStairs,
+  Marker,
   StairsDirection,
+  MarkerKind,
   ResizeDirection,
 } from './types.ts';
 import { GRID, HANDLE_SIZE, HANDLE_HIT } from './grid.ts';
@@ -12,6 +14,8 @@ const STAIRS_DEFAULT_W = 2;
 const STAIRS_DEFAULT_H = 3;
 const FOLDING_STAIRS_DEFAULT_W = 4;
 const FOLDING_STAIRS_DEFAULT_H = 3;
+const MARKER_DEFAULT_W = 2;
+const MARKER_DEFAULT_H = 1;
 const MIN_INTERIOR_SIZE = 1;
 
 export function createStraightStairs(
@@ -44,6 +48,26 @@ export function createFoldingStairs(
     id: crypto.randomUUID(),
     type: 'stairs',
     stairsType: 'folding',
+    x,
+    y,
+    w,
+    h,
+    direction,
+  };
+}
+
+export function createMarker(
+  x: number,
+  y: number,
+  w = MARKER_DEFAULT_W,
+  h = MARKER_DEFAULT_H,
+  direction: StairsDirection = 'e',
+  markerKind: MarkerKind = 'body',
+): Marker {
+  return {
+    id: crypto.randomUUID(),
+    type: 'marker',
+    markerKind,
     x,
     y,
     w,
@@ -91,8 +115,10 @@ export function drawInteriorObjects(
     ctx.strokeStyle = style.color;
     ctx.lineWidth = style.lineWidth;
 
-    // Draw outer rectangle
-    ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+    // Draw outer rectangle (skip for markers — they have no bounding box)
+    if (obj.type !== 'marker') {
+      ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+    }
 
     // Draw tread lines and arrow based on stairs type
     if (obj.type === 'stairs') {
@@ -102,6 +128,10 @@ export function drawInteriorObjects(
       } else {
         drawStairsTreads(ctx, rect, obj.direction, style);
         drawStairsArrow(ctx, rect, obj.direction, style);
+      }
+    } else if (obj.type === 'marker') {
+      if (obj.markerKind === 'body') {
+        drawMarkerBody(ctx, rect, obj.direction, style);
       }
     }
   }
@@ -378,6 +408,93 @@ function drawFoldingStairsArrow(
   );
   ctx.closePath();
   ctx.fill();
+}
+
+function drawMarkerBody(
+  ctx: CanvasRenderingContext2D,
+  rect: { x: number; y: number; w: number; h: number },
+  direction: StairsDirection,
+  style: { color: string; lineWidth: number },
+): void {
+  ctx.save();
+
+  const cx = rect.x + rect.w / 2;
+  const cy = rect.y + rect.h / 2;
+
+  // Rotate based on direction (default 'e' = head right, lying down)
+  let angle = 0;
+  switch (direction) {
+    case 'e':
+      angle = 0;
+      break;
+    case 's':
+      angle = Math.PI / 2;
+      break;
+    case 'w':
+      angle = Math.PI;
+      break;
+    case 'n':
+      angle = -Math.PI / 2;
+      break;
+  }
+
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
+
+  // Draw in local coordinates centered at (0,0), body lying along X axis
+  // head on the right (+x), feet on the left (-x)
+  const hw = rect.w / 2; // half width
+  const hh = rect.h / 2; // half height
+
+  // Scale factor to fit within the rect with some margin
+  const margin = 0.1;
+  const scaleX = hw * (1 - margin);
+  const scaleY = hh * (1 - margin);
+
+  ctx.strokeStyle = style.color;
+  ctx.lineWidth = style.lineWidth;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  // Head (circle at +x end)
+  const headRadius = Math.min(scaleX * 0.18, scaleY * 0.35);
+  const headCx = scaleX * 0.7;
+  ctx.beginPath();
+  ctx.arc(headCx, 0, headRadius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Torso: from neck to hip
+  const neckX = headCx - headRadius;
+  const hipX = -scaleX * 0.1;
+  ctx.beginPath();
+  ctx.moveTo(neckX, 0);
+  ctx.lineTo(hipX, 0);
+  ctx.stroke();
+
+  // Arms: from shoulder, spread out
+  const shoulderX = neckX - (neckX - hipX) * 0.25;
+  ctx.beginPath();
+  ctx.moveTo(shoulderX, 0);
+  ctx.lineTo(shoulderX - scaleX * 0.2, -scaleY * 0.7);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(shoulderX, 0);
+  ctx.lineTo(shoulderX + scaleX * 0.15, scaleY * 0.8);
+  ctx.stroke();
+
+  // Legs: from hip, spread out
+  ctx.beginPath();
+  ctx.moveTo(hipX, 0);
+  ctx.lineTo(-scaleX * 0.75, -scaleY * 0.55);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(hipX, 0);
+  ctx.lineTo(-scaleX * 0.85, scaleY * 0.45);
+  ctx.stroke();
+
+  ctx.restore();
 }
 
 export function drawInteriorObjectHandles(

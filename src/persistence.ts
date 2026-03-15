@@ -8,7 +8,9 @@ import type {
   RoomInteriorObject,
   StraightStairs,
   FoldingStairs,
+  Marker,
   StairsDirection,
+  MarkerKind,
 } from './types.ts';
 import type { ViewportState } from './viewport.ts';
 import { clampZoom } from './viewport.ts';
@@ -20,9 +22,10 @@ const VALID_SIDES = new Set(['n', 'e', 's', 'w']);
 const VALID_WALL_OBJECT_TYPES = new Set(['window', 'door', 'opening']);
 const VALID_DOOR_SWINGS = new Set(['inward', 'outward']);
 const VALID_DOOR_HINGES = new Set(['start', 'end']);
-const VALID_INTERIOR_OBJECT_TYPES = new Set(['stairs']);
+const VALID_INTERIOR_OBJECT_TYPES = new Set(['stairs', 'marker']);
 const VALID_STAIRS_TYPES = new Set(['straight', 'folding']);
 const VALID_STAIRS_DIRECTIONS = new Set(['n', 'e', 's', 'w']);
+const VALID_MARKER_KINDS = new Set(['body']);
 
 function restorePairedWithEntry(
   value: unknown,
@@ -135,6 +138,16 @@ export function ensureInteriorObjectIds(objects: unknown[]): RoomInteriorObject[
           return { id, type: 'stairs', stairsType: 'folding', direction, x, y, w, h } satisfies FoldingStairs;
         }
         return { id, type: 'stairs', stairsType: 'straight', direction, x, y, w, h } satisfies StraightStairs;
+      }
+
+      if (obj.type === 'marker') {
+        const direction = VALID_STAIRS_DIRECTIONS.has(obj.direction as string)
+          ? (obj.direction as StairsDirection)
+          : 'e';
+        const markerKind = VALID_MARKER_KINDS.has(obj.markerKind as string)
+          ? (obj.markerKind as MarkerKind)
+          : 'body';
+        return { id, type: 'marker', markerKind, direction, x, y, w, h } satisfies Marker;
       }
 
       // Fallback (shouldn't reach here due to filter, but TypeScript needs it)

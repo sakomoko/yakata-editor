@@ -48,7 +48,15 @@ export interface FoldingStairs extends InteriorObjectBase {
   direction: StairsDirection;
 }
 
-export type RoomInteriorObject = StraightStairs | FoldingStairs;
+export type MarkerKind = 'body';
+
+export interface Marker extends InteriorObjectBase {
+  type: 'marker';
+  markerKind: MarkerKind;
+  direction: StairsDirection;
+}
+
+export type RoomInteriorObject = StraightStairs | FoldingStairs | Marker;
 
 export interface Room {
   id: string;
@@ -123,12 +131,14 @@ export type DragState =
       objectId: string;
       offsetX: number;
       offsetY: number;
+      snapToGrid: boolean;
     }
   | {
       type: 'resizeInteriorObject';
       roomId: string;
       objectId: string;
       dir: ResizeDirection;
+      snapToGrid: boolean;
       orig: { x: number; y: number; w: number; h: number };
     }
   | null;
