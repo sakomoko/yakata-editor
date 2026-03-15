@@ -749,6 +749,25 @@ export function initEditor(
         : hitR;
     if (contextRoom) {
       const roomId = contextRoom.id;
+      items.push({
+        label: '部屋名を変更',
+        action: async () => {
+          const room = state.rooms.find((r) => r.id === roomId);
+          if (!room) return;
+          const result = await callbacks.onRoomEdit({
+            label: room.label || '',
+            fontSize: room.fontSize,
+            autoFontSize: Math.round(calcAutoFontSize(room)),
+          });
+          if (result) {
+            commitChange(() => {
+              room.label = result.label;
+              room.fontSize = result.fontSize;
+            });
+          }
+        },
+      });
+      items.push({ separator: true });
       const { side, offset } = nearestWallSide(contextRoom, m.px, m.py);
       const hasOverlap = contextRoom.wallObjects?.some(
         (o) => o.side === side && offset < o.offset + o.width && offset + 1 > o.offset,

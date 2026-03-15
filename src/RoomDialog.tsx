@@ -59,6 +59,9 @@ export default function RoomDialog({ open, data, onClose }: Props) {
           label="部屋名"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleOk();
+          }}
           size="small"
           variant="outlined"
           sx={{ mt: 1, mb: 2 }}
