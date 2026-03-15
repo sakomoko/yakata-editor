@@ -180,7 +180,6 @@ export function initEditor(
       drawAreaSelectPreview(ctx, state.drag.start, state.drag.cur, viewport.zoom, state.rooms);
     }
 
-
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     updateStatus();
   }
@@ -314,12 +313,7 @@ export function initEditor(
     }
 
     // Check interior object handle hit (resize)
-    const intHandleHit = hitInteriorObjectHandleInRooms(
-      selectedRooms,
-      m.px,
-      m.py,
-      viewport.zoom,
-    );
+    const intHandleHit = hitInteriorObjectHandleInRooms(selectedRooms, m.px, m.py, viewport.zoom);
     if (intHandleHit) {
       pushUndo(state.history, state.rooms);
       activeInteriorObjectId = intHandleHit.obj.id;
@@ -328,7 +322,12 @@ export function initEditor(
         roomId: intHandleHit.room.id,
         objectId: intHandleHit.obj.id,
         dir: intHandleHit.dir,
-        orig: { x: intHandleHit.obj.x, y: intHandleHit.obj.y, w: intHandleHit.obj.w, h: intHandleHit.obj.h },
+        orig: {
+          x: intHandleHit.obj.x,
+          y: intHandleHit.obj.y,
+          w: intHandleHit.obj.w,
+          h: intHandleHit.obj.h,
+        },
       };
       canvas.style.cursor = intHandleHit.dir + '-resize';
       render();
@@ -443,7 +442,12 @@ export function initEditor(
         const horiz = edgeHover.obj.side === 'n' || edgeHover.obj.side === 's';
         canvas.style.cursor = horiz ? 'ew-resize' : 'ns-resize';
       } else {
-        const intHandleHover = hitInteriorObjectHandleInRooms(selectedRooms, m.px, m.py, viewport.zoom);
+        const intHandleHover = hitInteriorObjectHandleInRooms(
+          selectedRooms,
+          m.px,
+          m.py,
+          viewport.zoom,
+        );
         if (intHandleHover) {
           canvas.style.cursor = intHandleHover.dir + '-resize';
         } else {
@@ -550,7 +554,14 @@ export function initEditor(
       if (targetRoom) {
         const obj = targetRoom.interiorObjects?.find((o) => o.id === drag.objectId);
         if (obj) {
-          const pos = computeInteriorObjectMove(targetRoom, obj, m.gx, m.gy, drag.offsetX, drag.offsetY);
+          const pos = computeInteriorObjectMove(
+            targetRoom,
+            obj,
+            m.gx,
+            m.gy,
+            drag.offsetX,
+            drag.offsetY,
+          );
           obj.x = pos.x;
           obj.y = pos.y;
         }
@@ -612,7 +623,8 @@ export function initEditor(
     }
 
     if (state.drag.type === 'areaSelect') {
-      const area = normalizeArea(state.drag.start, state.drag.cur);
+      const m = mousePos(e);
+      const area = normalizeArea(state.drag.start, m);
       const contained = findRoomsInArea(state.rooms, area);
       if (contained.length > 0) {
         if (!e.shiftKey) {
@@ -822,7 +834,8 @@ export function initEditor(
         action: () => {
           const room = state.rooms.find((r) => r.id === roomId);
           if (!room) return;
-          const sw = 2, sh = 3;
+          const sw = 2,
+            sh = 3;
           const sx = Math.max(0, Math.min(Math.floor((room.w - sw) / 2), room.w - sw));
           const sy = Math.max(0, Math.min(Math.floor((room.h - sh) / 2), room.h - sh));
           const stairs = createStraightStairs(sx, sy, sw, sh);
@@ -839,7 +852,8 @@ export function initEditor(
         action: () => {
           const room = state.rooms.find((r) => r.id === roomId);
           if (!room) return;
-          const fw = 4, fh = 3;
+          const fw = 4,
+            fh = 3;
           const fx = Math.max(0, Math.min(Math.floor((room.w - fw) / 2), room.w - fw));
           const fy = Math.max(0, Math.min(Math.floor((room.h - fh) / 2), room.h - fh));
           const stairs = createFoldingStairs(fx, fy, fw, fh);
@@ -992,10 +1006,7 @@ export function initEditor(
       return;
     }
 
-    if (
-      (e.key === 'Delete' || e.key === 'Backspace') &&
-      document.activeElement === document.body
-    ) {
+    if ((e.key === 'Delete' || e.key === 'Backspace') && document.activeElement === document.body) {
       // Delete active interior object first
       if (activeInteriorObjectId) {
         e.preventDefault();

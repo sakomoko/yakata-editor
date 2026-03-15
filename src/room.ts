@@ -116,19 +116,23 @@ export function drawAreaSelectPreview(
   zoom = 1,
   rooms: Room[] = [],
 ): void {
-  const { x, y, w, h } = normalizeArea(start, cur);
-  if (w <= 0 || h <= 0) return;
+  const area = normalizeArea(start, cur);
+  if (area.w <= 0 || area.h <= 0) return;
+
+  const px = area.x * GRID,
+    py = area.y * GRID,
+    pw = area.w * GRID,
+    ph = area.h * GRID;
 
   ctx.fillStyle = 'rgba(51, 153, 255, 0.1)';
-  ctx.fillRect(x * GRID, y * GRID, w * GRID, h * GRID);
+  ctx.fillRect(px, py, pw, ph);
   ctx.strokeStyle = 'rgba(51, 153, 255, 0.6)';
   ctx.lineWidth = 1.5 / zoom;
   ctx.setLineDash([4 / zoom, 3 / zoom]);
-  ctx.strokeRect(x * GRID, y * GRID, w * GRID, h * GRID);
+  ctx.strokeRect(px, py, pw, ph);
   ctx.setLineDash([]);
 
-  const contained = findRoomsInArea(rooms, { x, y, w, h });
-  for (const r of contained) {
+  for (const r of findRoomsInArea(rooms, area)) {
     ctx.fillStyle = 'rgba(51, 153, 255, 0.15)';
     ctx.fillRect(r.x * GRID, r.y * GRID, r.w * GRID, r.h * GRID);
   }
