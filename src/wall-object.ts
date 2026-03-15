@@ -5,6 +5,8 @@ const WINDOW_DRAW_OFFSET = 4;
 const WALL_OBJECT_HIT_TOLERANCE = 6;
 /** Door arc line width (px, before zoom scaling). Thinner than walls for visual distinction. */
 const DOOR_ARC_LINE_WIDTH = 0.8;
+/** Minimum arc line width (px) to keep arcs visible at high zoom levels. */
+const DOOR_ARC_MIN_LINE_WIDTH = 0.3;
 /** Door arc color in default (non-selected, non-active) state. */
 const DOOR_ARC_DEFAULT_COLOR = '#888';
 /** Resize handle diameter (px). */
@@ -227,8 +229,6 @@ function drawDoor(
     obj,
   );
 
-  ctx.save();
-
   // Draw panel line (from hinge to open position)
   ctx.strokeStyle = color;
   ctx.lineWidth = panelLineWidth;
@@ -239,13 +239,13 @@ function drawDoor(
 
   // Draw arc (from closed position to open position) — thinner & lighter than walls.
   // Use the selection/active color as-is; only lighten the default (non-highlighted) color.
+  ctx.save();
   const arcColor = isActive || isSelected ? color : DOOR_ARC_DEFAULT_COLOR;
   ctx.strokeStyle = arcColor;
-  ctx.lineWidth = DOOR_ARC_LINE_WIDTH / zoom;
+  ctx.lineWidth = Math.max(DOOR_ARC_MIN_LINE_WIDTH, DOOR_ARC_LINE_WIDTH / zoom);
   ctx.beginPath();
   ctx.arc(hingeX, hingeY, radius, closedAngle, openAngle, anticlockwise);
   ctx.stroke();
-
   ctx.restore();
 }
 
