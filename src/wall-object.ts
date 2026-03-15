@@ -3,8 +3,10 @@ import { GRID, WALL, WALL_SEL } from './grid.ts';
 
 const WINDOW_DRAW_OFFSET = 4;
 const WALL_OBJECT_HIT_TOLERANCE = 6;
-/** Edge hit tolerance (px). RESIZE_HANDLE_SIZE/2 (3px) + 2px margin for easy targeting. */
-const WALL_OBJECT_EDGE_HIT_TOLERANCE = 5;
+/** Resize handle diameter (px). */
+const RESIZE_HANDLE_SIZE = 6;
+/** Edge hit tolerance (px), derived from handle size + margin for easy targeting. */
+const WALL_OBJECT_EDGE_HIT_TOLERANCE = RESIZE_HANDLE_SIZE / 2 + 2; // 5px
 
 export function createWallWindow(side: WallSide, offset: number, width = 1): WallWindow {
   return { id: crypto.randomUUID(), type: 'window', side, offset, width };
@@ -211,9 +213,6 @@ function drawDoor(
   ctx.arc(hingeX, hingeY, radius, closedAngle, openAngle, anticlockwise);
   ctx.stroke();
 }
-
-/** Resize handle diameter (px). Hit tolerance is WALL_OBJECT_EDGE_HIT_TOLERANCE. */
-const RESIZE_HANDLE_SIZE = 6;
 
 /** Draw wall object symbols (windows and doors) on wall objects. */
 export function drawWallObjects(

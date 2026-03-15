@@ -268,8 +268,8 @@ export function initEditor(
     }
 
     // Check wall object edge hit (resize) — only for selected rooms (matches handle visibility)
-    const selectedRoomsForEdge = state.rooms.filter((r) => state.selection.has(r.id));
-    const edgeHit = hitWallObjectEdgeInRooms(selectedRoomsForEdge, m.px, m.py, viewport.zoom);
+    const selectedRooms = state.rooms.filter((r) => state.selection.has(r.id));
+    const edgeHit = hitWallObjectEdgeInRooms(selectedRooms, m.px, m.py, viewport.zoom);
     if (edgeHit) {
       pushUndo(state.history, state.rooms);
       const horiz = edgeHit.obj.side === 'n' || edgeHit.obj.side === 's';
