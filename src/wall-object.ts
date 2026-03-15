@@ -3,6 +3,12 @@ import { GRID, WALL, WALL_SEL } from './grid.ts';
 
 const WINDOW_DRAW_OFFSET = 4;
 const WALL_OBJECT_HIT_TOLERANCE = 6;
+/** Door arc line width (px, before zoom scaling). Thinner than walls for visual distinction. */
+const DOOR_ARC_LINE_WIDTH = 0.8;
+/** Minimum arc line width (px) to keep arcs visible at high zoom levels. */
+const DOOR_ARC_MIN_LINE_WIDTH = 0.3;
+/** Door arc color in default (non-selected, non-active) state. */
+const DOOR_ARC_DEFAULT_COLOR = '#888';
 /** Resize handle diameter (px). */
 const RESIZE_HANDLE_SIZE = 6;
 /** Edge hit tolerance (px), derived from handle size + margin for easy targeting. */
@@ -213,7 +219,10 @@ function drawDoor(
   room: Room,
   obj: WallDoor,
   color: string,
-  lineWidth: number,
+  panelLineWidth: number,
+  isSelected: boolean,
+  isActive: boolean,
+  zoom = 1,
 ): void {
   const { hingeX, hingeY, radius, closedAngle, openAngle, anticlockwise } = getDoorGeometry(
     room,
@@ -222,16 +231,22 @@ function drawDoor(
 
   // Draw panel line (from hinge to open position)
   ctx.strokeStyle = color;
-  ctx.lineWidth = lineWidth;
+  ctx.lineWidth = panelLineWidth;
   ctx.beginPath();
   ctx.moveTo(hingeX, hingeY);
   ctx.lineTo(hingeX + Math.cos(openAngle) * radius, hingeY + Math.sin(openAngle) * radius);
   ctx.stroke();
 
-  // Draw arc (from closed position to open position)
+  // Draw arc (from closed position to open position) — thinner & lighter than walls.
+  // Use the selection/active color as-is; only lighten the default (non-highlighted) color.
+  ctx.save();
+  const arcColor = isActive || isSelected ? color : DOOR_ARC_DEFAULT_COLOR;
+  ctx.strokeStyle = arcColor;
+  ctx.lineWidth = Math.max(DOOR_ARC_MIN_LINE_WIDTH, DOOR_ARC_LINE_WIDTH / zoom);
   ctx.beginPath();
   ctx.arc(hingeX, hingeY, radius, closedAngle, openAngle, anticlockwise);
   ctx.stroke();
+  ctx.restore();
 }
 
 /** Compute color and line width for a wall object based on selection/active state. */
@@ -268,7 +283,7 @@ export function drawOutwardDoorsOverlay(
   for (const obj of outwardDoors) {
     const isActive = obj.id === activeObjectId;
     const style = getWallObjectStyle(isSelected, isActive, zoom);
-    drawDoor(ctx, room, obj, style.color, style.lineWidth);
+    drawDoor(ctx, room, obj, style.color, style.lineWidth, isSelected, isActive, zoom);
   }
 }
 
@@ -309,7 +324,7 @@ export function drawWallObjects(
         break;
       }
       case 'door': {
-        drawDoor(ctx, room, obj, style.color, style.lineWidth);
+        drawDoor(ctx, room, obj, style.color, style.lineWidth, isSelected, isActive, zoom);
         break;
       }
       case 'opening': {
