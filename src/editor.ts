@@ -268,10 +268,8 @@ export function initEditor(
 
     // Check wall object edge hit (resize) FIRST — on narrow walls, room handles overlap
     const selectedRooms = state.rooms.filter((r) => state.selection.has(r.id));
-    const edgeHit = hitWallObjectEdgeInRooms(selectedRooms, m.px, m.py, viewport.zoom);
+    const edgeHit = hitWallObjectEdgeInRooms(selectedRooms, m.px, m.py, viewport.zoom, true);
     if (edgeHit) {
-      // 自動生成された開口はリサイズ不可
-      if (isPairedAutoOpening(edgeHit.obj)) return;
       pushUndo(state.history, state.rooms);
       const horiz = edgeHit.obj.side === 'n' || edgeHit.obj.side === 's';
       state.drag = {
@@ -301,11 +299,9 @@ export function initEditor(
       return;
     }
 
-    // Check wall object hit (window drag)
-    const wallHit = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom);
+    // Check wall object hit (window drag) — skip auto-generated openings
+    const wallHit = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom, true);
     if (wallHit) {
-      // 自動生成された開口は移動不可
-      if (isPairedAutoOpening(wallHit.obj)) return;
       pushUndo(state.history, state.rooms);
       state.drag = {
         type: 'moveWallObject',
@@ -370,7 +366,7 @@ export function initEditor(
         return;
       }
       const selectedRooms = state.rooms.filter((r) => state.selection.has(r.id));
-      const edgeHover = hitWallObjectEdgeInRooms(selectedRooms, m.px, m.py, viewport.zoom);
+      const edgeHover = hitWallObjectEdgeInRooms(selectedRooms, m.px, m.py, viewport.zoom, true);
       if (edgeHover) {
         const horiz = edgeHover.obj.side === 'n' || edgeHover.obj.side === 's';
         canvas.style.cursor = horiz ? 'ew-resize' : 'ns-resize';
@@ -378,7 +374,7 @@ export function initEditor(
         const h = hitHandle(state.rooms, state.selection, m.px, m.py, viewport.zoom);
         if (h) {
           canvas.style.cursor = h.handle.dir + '-resize';
-        } else if (hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom)) {
+        } else if (hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom, true)) {
           canvas.style.cursor = 'grab';
         } else if (hitRoom(state.rooms, m.px, m.py)) {
           canvas.style.cursor = 'move';
@@ -433,6 +429,7 @@ export function initEditor(
           const pos = computeWallObjectPosition(targetRoom, m.px, m.py, obj.width);
           obj.side = pos.side;
           obj.offset = pos.offset;
+          syncPairedOpening(state.rooms, targetRoom, obj);
         }
       }
     } else if (state.drag.type === 'resizeWallObject') {
@@ -452,6 +449,7 @@ export function initEditor(
           );
           obj.offset = result.offset;
           obj.width = result.width;
+          syncPairedOpening(state.rooms, targetRoom, obj);
         }
       }
     }
@@ -482,7 +480,7 @@ export function initEditor(
       }
       // Cursor will be recalculated on next mousemove; set a reasonable default
       const m = mousePos(e);
-      const stillOnWallObj = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom);
+      const stillOnWallObj = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom, true);
       canvas.style.cursor = stillOnWallObj ? 'grab' : 'crosshair';
       render();
       persistToStorage(state.rooms);
