@@ -48,12 +48,13 @@ export interface FoldingStairs extends InteriorObjectBase {
   direction: StairsDirection;
 }
 
-export type MarkerKind = 'body';
+export type MarkerKind = 'body' | 'pin' | 'text';
 
 export interface Marker extends InteriorObjectBase {
   type: 'marker';
   markerKind: MarkerKind;
   direction: StairsDirection;
+  label?: string;
 }
 
 export type RoomInteriorObject = StraightStairs | FoldingStairs | Marker;

@@ -76,6 +76,10 @@ export interface RoomEditData {
   autoFontSize: number;
 }
 
+export interface MarkerEditData {
+  label: string;
+}
+
 export interface ContextMenuRequest {
   screenX: number;
   screenY: number;
@@ -85,6 +89,7 @@ export interface ContextMenuRequest {
 export interface EditorCallbacks {
   onStatusChange: (text: string) => void;
   onRoomEdit: (data: RoomEditData) => Promise<{ label: string; fontSize?: number } | null>;
+  onMarkerEdit: (data: MarkerEditData) => Promise<{ label: string } | null>;
   onContextMenu: (request: ContextMenuRequest) => void;
 }
 
@@ -582,7 +587,8 @@ export function initEditor(
         if (obj) {
           const gxF = drag.snapToGrid ? m.gx : m.px / GRID;
           const gyF = drag.snapToGrid ? m.gy : m.py / GRID;
-          const result = computeInteriorObjectResize(targetRoom, drag.dir, drag.orig, gxF, gyF);
+          const minSize = drag.snapToGrid ? 1 : 0.25;
+          const result = computeInteriorObjectResize(targetRoom, drag.dir, drag.orig, gxF, gyF, minSize);
           obj.x = result.x;
           obj.y = result.y;
           obj.w = result.w;
@@ -715,27 +721,46 @@ export function initEditor(
       }
 
       if (intObjHit.obj.type === 'marker') {
-        const directions: { label: string; dir: 'n' | 'e' | 's' | 'w' }[] = [
-          { label: '↑ 上向き', dir: 'n' },
-          { label: '→ 右向き', dir: 'e' },
-          { label: '↓ 下向き', dir: 's' },
-          { label: '← 左向き', dir: 'w' },
-        ];
-        for (const d of directions) {
-          items.push({
-            label: d.label,
-            disabled: intObjHit.obj.direction === d.dir,
-            action: () => {
-              const room = state.rooms.find((r) => r.id === roomId);
-              if (!room) return;
-              const obj = room.interiorObjects?.find((o) => o.id === objId);
-              if (!obj || obj.type !== 'marker') return;
-              commitChange(() => {
-                obj.direction = d.dir;
-              });
-            },
-          });
+        items.push({
+          label: 'ラベルを変更',
+          action: async () => {
+            const room = state.rooms.find((r) => r.id === roomId);
+            if (!room) return;
+            const obj = room.interiorObjects?.find((o) => o.id === objId);
+            if (!obj || obj.type !== 'marker') return;
+            const result = await callbacks.onMarkerEdit({ label: obj.label ?? '' });
+            if (!result) return;
+            commitChange(() => {
+              obj.label = result.label || undefined;
+            });
+          },
+        });
+
+        if (intObjHit.obj.markerKind === 'body') {
+          items.push({ separator: true });
+          const directions: { label: string; dir: 'n' | 'e' | 's' | 'w' }[] = [
+            { label: '↑ 上向き', dir: 'n' },
+            { label: '→ 右向き', dir: 'e' },
+            { label: '↓ 下向き', dir: 's' },
+            { label: '← 左向き', dir: 'w' },
+          ];
+          for (const d of directions) {
+            items.push({
+              label: d.label,
+              disabled: intObjHit.obj.direction === d.dir,
+              action: () => {
+                const room = state.rooms.find((r) => r.id === roomId);
+                if (!room) return;
+                const obj = room.interiorObjects?.find((o) => o.id === objId);
+                if (!obj || obj.type !== 'marker') return;
+                commitChange(() => {
+                  obj.direction = d.dir;
+                });
+              },
+            });
+          }
         }
+
         items.push({ separator: true });
         items.push({
           label: 'マーカーを削除',
@@ -913,18 +938,60 @@ export function initEditor(
         },
       });
 
-      const canPlaceMarker = contextRoom.w >= 2 && contextRoom.h >= 1;
+      // マーカー配置: カーソル位置を基準にオブジェクトの左上を決定
+      const cursorRelX = m.px / GRID - contextRoom.x;
+      const cursorRelY = m.py / GRID - contextRoom.y;
+
+      const canPlaceBodyMarker = contextRoom.w >= 2 && contextRoom.h >= 1;
       items.push({
         label: '死体を配置',
-        disabled: !canPlaceMarker,
+        disabled: !canPlaceBodyMarker,
         action: () => {
           const room = state.rooms.find((r) => r.id === roomId);
           if (!room) return;
           const mw = 2,
             mh = 1;
-          const mx = Math.max(0, Math.min(Math.floor((room.w - mw) / 2), room.w - mw));
-          const my = Math.max(0, Math.min(Math.floor((room.h - mh) / 2), room.h - mh));
+          const mx = Math.max(0, Math.min(cursorRelX - mw / 2, room.w - mw));
+          const my = Math.max(0, Math.min(cursorRelY - mh / 2, room.h - mh));
           const marker = createMarker(mx, my, mw, mh);
+          commitChange(() => {
+            if (!room.interiorObjects) room.interiorObjects = [];
+            room.interiorObjects.push(marker);
+          });
+          activeInteriorObjectId = marker.id;
+        },
+      });
+      items.push({
+        label: 'マーカーを配置',
+        action: async () => {
+          const room = state.rooms.find((r) => r.id === roomId);
+          if (!room) return;
+          const result = await callbacks.onMarkerEdit({ label: '' });
+          if (!result) return;
+          const mw = Math.max(1, Math.min((result.label?.length || 0) + 1, room.w));
+          const mh = 1;
+          const mx = Math.max(0, Math.min(cursorRelX - mw / 2, room.w - mw));
+          const my = Math.max(0, Math.min(cursorRelY - mh / 2, room.h - mh));
+          const marker = createMarker(mx, my, mw, mh, 'e', 'pin', result.label || undefined);
+          commitChange(() => {
+            if (!room.interiorObjects) room.interiorObjects = [];
+            room.interiorObjects.push(marker);
+          });
+          activeInteriorObjectId = marker.id;
+        },
+      });
+      items.push({
+        label: 'テキストを配置',
+        action: async () => {
+          const room = state.rooms.find((r) => r.id === roomId);
+          if (!room) return;
+          const result = await callbacks.onMarkerEdit({ label: '' });
+          if (!result || !result.label) return;
+          const mw = Math.max(1, Math.min(result.label.length + 1, room.w));
+          const mh = 1;
+          const mx = Math.max(0, Math.min(cursorRelX - mw / 2, room.w - mw));
+          const my = Math.max(0, Math.min(cursorRelY - mh / 2, room.h - mh));
+          const marker = createMarker(mx, my, mw, mh, 'e', 'text', result.label);
           commitChange(() => {
             if (!room.interiorObjects) room.interiorObjects = [];
             room.interiorObjects.push(marker);
@@ -1008,6 +1075,23 @@ export function initEditor(
 
   async function onDblClick(e: MouseEvent): Promise<void> {
     const m = mousePos(e);
+
+    const intHit = hitInteriorObjectInRooms(state.rooms, m.px, m.py);
+    if (intHit && intHit.obj.type === 'marker') {
+      const roomId = intHit.room.id;
+      const objId = intHit.obj.id;
+      const result = await callbacks.onMarkerEdit({ label: intHit.obj.label ?? '' });
+      if (!result) return;
+      const room = state.rooms.find((r) => r.id === roomId);
+      if (!room) return;
+      const obj = room.interiorObjects?.find((o) => o.id === objId);
+      if (!obj || obj.type !== 'marker') return;
+      commitChange(() => {
+        obj.label = result.label || undefined;
+      });
+      return;
+    }
+
     const r = hitRoom(state.rooms, m.px, m.py);
     if (r) {
       await applyRoomEdit(r);

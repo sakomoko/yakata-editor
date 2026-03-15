@@ -25,7 +25,7 @@ const VALID_DOOR_HINGES = new Set(['start', 'end']);
 const VALID_INTERIOR_OBJECT_TYPES = new Set(['stairs', 'marker']);
 const VALID_STAIRS_TYPES = new Set(['straight', 'folding']);
 const VALID_STAIRS_DIRECTIONS = new Set(['n', 'e', 's', 'w']);
-const VALID_MARKER_KINDS = new Set(['body']);
+const VALID_MARKER_KINDS = new Set(['body', 'pin', 'text']);
 
 function restorePairedWithEntry(
   value: unknown,
@@ -147,7 +147,9 @@ export function ensureInteriorObjectIds(objects: unknown[]): RoomInteriorObject[
         const markerKind = VALID_MARKER_KINDS.has(obj.markerKind as string)
           ? (obj.markerKind as MarkerKind)
           : 'body';
-        return { id, type: 'marker', markerKind, direction, x, y, w, h } satisfies Marker;
+        const result: Marker = { id, type: 'marker', markerKind, direction, x, y, w, h };
+        if (typeof obj.label === 'string' && obj.label) result.label = obj.label;
+        return result;
       }
 
       // Fallback (shouldn't reach here due to filter, but TypeScript needs it)
