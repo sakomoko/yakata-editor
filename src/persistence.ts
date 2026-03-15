@@ -124,8 +124,8 @@ export function ensureInteriorObjectIds(objects: unknown[]): RoomInteriorObject[
         const direction = VALID_STAIRS_DIRECTIONS.has(obj.direction as string)
           ? (obj.direction as StairsDirection)
           : 'n';
-        const stairsType = VALID_STAIRS_TYPES.has(obj.stairsType as string)
-          ? (obj.stairsType as string)
+        const stairsType: 'straight' | 'folding' = VALID_STAIRS_TYPES.has(obj.stairsType as string)
+          ? (obj.stairsType as 'straight' | 'folding')
           : 'straight';
         if (stairsType === 'folding') {
           return { id, type: 'stairs', stairsType: 'folding', direction, x, y, w, h } satisfies FoldingStairs;

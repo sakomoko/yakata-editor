@@ -216,6 +216,7 @@ export function initEditor(
       state.rooms = [];
       clearSelection(state.selection);
     });
+    activeInteriorObjectId = undefined;
   }
 
   function loadProjectData(rooms: Room[]): void {
@@ -224,6 +225,7 @@ export function initEditor(
       clearSelection(state.selection);
       syncAllPairedOpenings(state.rooms);
     });
+    activeInteriorObjectId = undefined;
   }
 
   function saveProject(): void {
