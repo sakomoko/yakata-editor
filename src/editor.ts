@@ -39,6 +39,15 @@ import {
   computeWallObjectResize,
   drawOutwardDoorsOverlay,
 } from './wall-object.ts';
+import {
+  createStraightStairs,
+  createFoldingStairs,
+  hitInteriorObjectInRooms,
+  hitInteriorObjectHandleInRooms,
+  computeInteriorObjectMove,
+  computeInteriorObjectResize,
+  clampAllInteriorObjects,
+} from './interior-object.ts';
 import type { ContextMenuItem } from './context-menu.ts';
 import { bringToFront, sendToBack, bringForward, sendBackward } from './z-order.ts';
 import {
@@ -102,6 +111,7 @@ export function initEditor(
 
   const viewport: ViewportState = { zoom: 1, panX: 0, panY: 0 };
   let isPanning = false;
+  let activeInteriorObjectId: string | undefined;
 
   function mousePos(e: MouseEvent): MouseCoord {
     const rect = canvas.getBoundingClientRect();
@@ -136,6 +146,10 @@ export function initEditor(
       state.drag?.type === 'moveWallObject' || state.drag?.type === 'resizeWallObject'
         ? state.drag.objectId
         : undefined;
+    const activeIntObjId =
+      state.drag?.type === 'moveInteriorObject' || state.drag?.type === 'resizeInteriorObject'
+        ? state.drag.objectId
+        : activeInteriorObjectId;
     for (const r of state.rooms) {
       const isSelected = state.selection.has(r.id);
       drawRoom(
@@ -145,6 +159,7 @@ export function initEditor(
         isSelected && state.selection.size === 1,
         viewport.zoom,
         activeWallObjectId,
+        activeIntObjId,
       );
     }
 
@@ -190,6 +205,7 @@ export function initEditor(
     if (!restored) return;
     state.rooms = restored;
     clearSelection(state.selection);
+    activeInteriorObjectId = undefined;
     render();
     persistToStorage(state.rooms);
   }
@@ -200,6 +216,7 @@ export function initEditor(
       state.rooms = [];
       clearSelection(state.selection);
     });
+    activeInteriorObjectId = undefined;
   }
 
   function loadProjectData(rooms: Room[]): void {
@@ -208,6 +225,7 @@ export function initEditor(
       clearSelection(state.selection);
       syncAllPairedOpenings(state.rooms);
     });
+    activeInteriorObjectId = undefined;
   }
 
   function saveProject(): void {
@@ -272,6 +290,7 @@ export function initEditor(
     const edgeHit = hitWallObjectEdgeInRooms(selectedRooms, m.px, m.py, viewport.zoom, true);
     if (edgeHit) {
       pushUndo(state.history, state.rooms);
+      activeInteriorObjectId = undefined;
       const horiz = edgeHit.obj.side === 'n' || edgeHit.obj.side === 's';
       state.drag = {
         type: 'resizeWallObject',
@@ -282,6 +301,28 @@ export function initEditor(
         origWidth: edgeHit.obj.width,
       };
       canvas.style.cursor = horiz ? 'ew-resize' : 'ns-resize';
+      render();
+      return;
+    }
+
+    // Check interior object handle hit (resize)
+    const intHandleHit = hitInteriorObjectHandleInRooms(
+      selectedRooms,
+      m.px,
+      m.py,
+      viewport.zoom,
+    );
+    if (intHandleHit) {
+      pushUndo(state.history, state.rooms);
+      activeInteriorObjectId = intHandleHit.obj.id;
+      state.drag = {
+        type: 'resizeInteriorObject',
+        roomId: intHandleHit.room.id,
+        objectId: intHandleHit.obj.id,
+        dir: intHandleHit.dir,
+        orig: { x: intHandleHit.obj.x, y: intHandleHit.obj.y, w: intHandleHit.obj.w, h: intHandleHit.obj.h },
+      };
+      canvas.style.cursor = intHandleHit.dir + '-resize';
       render();
       return;
     }
@@ -304,6 +345,7 @@ export function initEditor(
     const wallHit = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom, true);
     if (wallHit) {
       pushUndo(state.history, state.rooms);
+      activeInteriorObjectId = undefined;
       state.drag = {
         type: 'moveWallObject',
         roomId: wallHit.room.id,
@@ -314,6 +356,27 @@ export function initEditor(
       return;
     }
 
+    // Check interior object hit (move)
+    const intHit = hitInteriorObjectInRooms(state.rooms, m.px, m.py);
+    if (intHit) {
+      pushUndo(state.history, state.rooms);
+      selectSingle(state.selection, intHit.room.id);
+      activeInteriorObjectId = intHit.obj.id;
+      const offsetX = m.gx - intHit.room.x - intHit.obj.x;
+      const offsetY = m.gy - intHit.room.y - intHit.obj.y;
+      state.drag = {
+        type: 'moveInteriorObject',
+        roomId: intHit.room.id,
+        objectId: intHit.obj.id,
+        offsetX,
+        offsetY,
+      };
+      canvas.style.cursor = 'grabbing';
+      render();
+      return;
+    }
+
+    activeInteriorObjectId = undefined;
     const r = hitRoom(state.rooms, m.px, m.py);
     if (r) {
       if (shift) {
@@ -372,15 +435,22 @@ export function initEditor(
         const horiz = edgeHover.obj.side === 'n' || edgeHover.obj.side === 's';
         canvas.style.cursor = horiz ? 'ew-resize' : 'ns-resize';
       } else {
-        const h = hitHandle(state.rooms, state.selection, m.px, m.py, viewport.zoom);
-        if (h) {
-          canvas.style.cursor = h.handle.dir + '-resize';
-        } else if (hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom, true)) {
-          canvas.style.cursor = 'grab';
-        } else if (hitRoom(state.rooms, m.px, m.py)) {
-          canvas.style.cursor = 'move';
+        const intHandleHover = hitInteriorObjectHandleInRooms(selectedRooms, m.px, m.py, viewport.zoom);
+        if (intHandleHover) {
+          canvas.style.cursor = intHandleHover.dir + '-resize';
         } else {
-          canvas.style.cursor = 'crosshair';
+          const h = hitHandle(state.rooms, state.selection, m.px, m.py, viewport.zoom);
+          if (h) {
+            canvas.style.cursor = h.handle.dir + '-resize';
+          } else if (hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom, true)) {
+            canvas.style.cursor = 'grab';
+          } else if (hitInteriorObjectInRooms(state.rooms, m.px, m.py)) {
+            canvas.style.cursor = 'grab';
+          } else if (hitRoom(state.rooms, m.px, m.py)) {
+            canvas.style.cursor = 'move';
+          } else {
+            canvas.style.cursor = 'crosshair';
+          }
         }
       }
       updateStatus();
@@ -420,6 +490,7 @@ export function initEditor(
           target.h = Math.max(1, m.gy - o.y);
         }
         clampWallObjects(target);
+        clampAllInteriorObjects(target);
       }
     } else if (state.drag.type === 'moveWallObject') {
       const drag = state.drag;
@@ -457,6 +528,30 @@ export function initEditor(
           syncPairedOpening(state.rooms, targetRoom, obj);
         }
       }
+    } else if (state.drag.type === 'moveInteriorObject') {
+      const drag = state.drag;
+      const targetRoom = state.rooms.find((r) => r.id === drag.roomId);
+      if (targetRoom) {
+        const obj = targetRoom.interiorObjects?.find((o) => o.id === drag.objectId);
+        if (obj) {
+          const pos = computeInteriorObjectMove(targetRoom, obj, m.gx, m.gy, drag.offsetX, drag.offsetY);
+          obj.x = pos.x;
+          obj.y = pos.y;
+        }
+      }
+    } else if (state.drag.type === 'resizeInteriorObject') {
+      const drag = state.drag;
+      const targetRoom = state.rooms.find((r) => r.id === drag.roomId);
+      if (targetRoom) {
+        const obj = targetRoom.interiorObjects?.find((o) => o.id === drag.objectId);
+        if (obj) {
+          const result = computeInteriorObjectResize(targetRoom, drag.dir, drag.orig, m.gx, m.gy);
+          obj.x = result.x;
+          obj.y = result.y;
+          obj.w = result.w;
+          obj.h = result.h;
+        }
+      }
     }
 
     render();
@@ -492,6 +587,14 @@ export function initEditor(
       return;
     }
 
+    if (state.drag.type === 'moveInteriorObject' || state.drag.type === 'resizeInteriorObject') {
+      state.drag = null;
+      canvas.style.cursor = 'crosshair';
+      render();
+      persistToStorage(state.rooms);
+      return;
+    }
+
     if (state.drag.type === 'create') {
       const m = mousePos(e);
       const x = Math.min(state.drag.start.gx, m.gx);
@@ -519,6 +622,55 @@ export function initEditor(
     e.preventDefault();
     const m = mousePos(e);
     const items: ContextMenuItem[] = [];
+
+    // Check if right-clicking on an interior object
+    const intObjHit = hitInteriorObjectInRooms(state.rooms, m.px, m.py);
+    if (intObjHit) {
+      const roomId = intObjHit.room.id;
+      const objId = intObjHit.obj.id;
+      activeInteriorObjectId = objId;
+
+      if (intObjHit.obj.type === 'stairs') {
+        const directions: { label: string; dir: 'n' | 'e' | 's' | 'w' }[] = [
+          { label: '↑ 上向き', dir: 'n' },
+          { label: '→ 右向き', dir: 'e' },
+          { label: '↓ 下向き', dir: 's' },
+          { label: '← 左向き', dir: 'w' },
+        ];
+        for (const d of directions) {
+          items.push({
+            label: d.label,
+            disabled: intObjHit.obj.direction === d.dir,
+            action: () => {
+              const room = state.rooms.find((r) => r.id === roomId);
+              if (!room) return;
+              const obj = room.interiorObjects?.find((o) => o.id === objId);
+              if (!obj || obj.type !== 'stairs') return;
+              commitChange(() => {
+                obj.direction = d.dir;
+              });
+            },
+          });
+        }
+        items.push({ separator: true });
+        items.push({
+          label: '階段を削除',
+          action: () => {
+            const room = state.rooms.find((r) => r.id === roomId);
+            if (!room) return;
+            commitChange(() => {
+              room.interiorObjects = room.interiorObjects?.filter((o) => o.id !== objId);
+              if (room.interiorObjects?.length === 0) room.interiorObjects = undefined;
+            });
+            activeInteriorObjectId = undefined;
+          },
+        });
+      }
+
+      callbacks.onContextMenu({ screenX: e.clientX, screenY: e.clientY, items });
+      render();
+      return;
+    }
 
     // Check if right-clicking on a wall object
     const wallHit = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom);
@@ -613,6 +765,45 @@ export function initEditor(
         label: '開口を配置',
         disabled: hasOverlap ?? false,
         action: () => placeWallObject(() => createWallOpening(side, offset)),
+      });
+
+      // Interior object placement
+      const canPlaceStraightStairs = contextRoom.w >= 2 && contextRoom.h >= 3;
+      const canPlaceFoldingStairs = contextRoom.w >= 4 && contextRoom.h >= 3;
+      items.push({ separator: true });
+      items.push({
+        label: '直線階段を配置',
+        disabled: !canPlaceStraightStairs,
+        action: () => {
+          const room = state.rooms.find((r) => r.id === roomId);
+          if (!room) return;
+          const sw = 2, sh = 3;
+          const sx = Math.max(0, Math.min(Math.floor((room.w - sw) / 2), room.w - sw));
+          const sy = Math.max(0, Math.min(Math.floor((room.h - sh) / 2), room.h - sh));
+          const stairs = createStraightStairs(sx, sy, sw, sh);
+          commitChange(() => {
+            if (!room.interiorObjects) room.interiorObjects = [];
+            room.interiorObjects.push(stairs);
+          });
+          activeInteriorObjectId = stairs.id;
+        },
+      });
+      items.push({
+        label: '折り返し階段を配置',
+        disabled: !canPlaceFoldingStairs,
+        action: () => {
+          const room = state.rooms.find((r) => r.id === roomId);
+          if (!room) return;
+          const fw = 4, fh = 3;
+          const fx = Math.max(0, Math.min(Math.floor((room.w - fw) / 2), room.w - fw));
+          const fy = Math.max(0, Math.min(Math.floor((room.h - fh) / 2), room.h - fh));
+          const stairs = createFoldingStairs(fx, fy, fw, fh);
+          commitChange(() => {
+            if (!room.interiorObjects) room.interiorObjects = [];
+            room.interiorObjects.push(stairs);
+          });
+          activeInteriorObjectId = stairs.id;
+        },
       });
 
       // 連結/連結解除メニュー
@@ -754,16 +945,33 @@ export function initEditor(
 
     if (
       (e.key === 'Delete' || e.key === 'Backspace') &&
-      state.selection.size > 0 &&
       document.activeElement === document.body
     ) {
-      e.preventDefault();
-      commitChange(() => {
-        state.rooms = state.rooms.filter((r) => !state.selection.has(r.id));
-        cleanupSingletonGroups(state.rooms);
-        syncAllPairedOpenings(state.rooms);
-        clearSelection(state.selection);
-      });
+      // Delete active interior object first
+      if (activeInteriorObjectId) {
+        e.preventDefault();
+        const activeId = activeInteriorObjectId;
+        commitChange(() => {
+          for (const room of state.rooms) {
+            if (room.interiorObjects?.some((o) => o.id === activeId)) {
+              room.interiorObjects = room.interiorObjects?.filter((o) => o.id !== activeId);
+              if (room.interiorObjects?.length === 0) room.interiorObjects = undefined;
+              break;
+            }
+          }
+        });
+        activeInteriorObjectId = undefined;
+        return;
+      }
+      if (state.selection.size > 0) {
+        e.preventDefault();
+        commitChange(() => {
+          state.rooms = state.rooms.filter((r) => !state.selection.has(r.id));
+          cleanupSingletonGroups(state.rooms);
+          syncAllPairedOpenings(state.rooms);
+          clearSelection(state.selection);
+        });
+      }
     }
     if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
       e.preventDefault();

@@ -25,6 +25,30 @@ export interface WallOpening extends WallObjectBase {
 
 export type WallObject = WallWindow | WallDoor | WallOpening;
 
+export type StairsDirection = 'n' | 'e' | 's' | 'w';
+
+export interface InteriorObjectBase {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface StraightStairs extends InteriorObjectBase {
+  type: 'stairs';
+  stairsType: 'straight';
+  direction: StairsDirection;
+}
+
+export interface FoldingStairs extends InteriorObjectBase {
+  type: 'stairs';
+  stairsType: 'folding';
+  direction: StairsDirection;
+}
+
+export type RoomInteriorObject = StraightStairs | FoldingStairs;
+
 export interface Room {
   id: string;
   x: number;
@@ -36,6 +60,7 @@ export interface Room {
   floor?: number;
   linkGroup?: string;
   wallObjects?: WallObject[];
+  interiorObjects?: RoomInteriorObject[];
 }
 
 export interface Project {
@@ -89,6 +114,20 @@ export type DragState =
       edge: 'start' | 'end';
       origOffset: number;
       origWidth: number;
+    }
+  | {
+      type: 'moveInteriorObject';
+      roomId: string;
+      objectId: string;
+      offsetX: number;
+      offsetY: number;
+    }
+  | {
+      type: 'resizeInteriorObject';
+      roomId: string;
+      objectId: string;
+      dir: ResizeDirection;
+      orig: { x: number; y: number; w: number; h: number };
     }
   | null;
 
