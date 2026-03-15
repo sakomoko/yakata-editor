@@ -266,21 +266,7 @@ export function initEditor(
     const m = mousePos(e);
     const shift = e.shiftKey;
 
-    const handleHit = hitHandle(state.rooms, state.selection, m.px, m.py, viewport.zoom);
-    if (handleHit) {
-      pushUndo(state.history, state.rooms);
-      const { handle, room } = handleHit;
-      state.drag = {
-        type: 'resize',
-        dir: handle.dir,
-        orig: { x: room.x, y: room.y, w: room.w, h: room.h },
-        targetId: room.id,
-        start: m,
-      };
-      return;
-    }
-
-    // Check wall object edge hit (resize) — only for selected rooms (matches handle visibility)
+    // Check wall object edge hit (resize) FIRST — on narrow walls, room handles overlap
     const selectedRooms = state.rooms.filter((r) => state.selection.has(r.id));
     const edgeHit = hitWallObjectEdgeInRooms(selectedRooms, m.px, m.py, viewport.zoom);
     if (edgeHit) {
@@ -298,6 +284,20 @@ export function initEditor(
       };
       canvas.style.cursor = horiz ? 'ew-resize' : 'ns-resize';
       render();
+      return;
+    }
+
+    const handleHit = hitHandle(state.rooms, state.selection, m.px, m.py, viewport.zoom);
+    if (handleHit) {
+      pushUndo(state.history, state.rooms);
+      const { handle, room } = handleHit;
+      state.drag = {
+        type: 'resize',
+        dir: handle.dir,
+        orig: { x: room.x, y: room.y, w: room.w, h: room.h },
+        targetId: room.id,
+        start: m,
+      };
       return;
     }
 
@@ -369,15 +369,15 @@ export function initEditor(
         updateStatus();
         return;
       }
-      const h = hitHandle(state.rooms, state.selection, m.px, m.py, viewport.zoom);
-      if (h) {
-        canvas.style.cursor = h.handle.dir + '-resize';
+      const selectedRooms = state.rooms.filter((r) => state.selection.has(r.id));
+      const edgeHover = hitWallObjectEdgeInRooms(selectedRooms, m.px, m.py, viewport.zoom);
+      if (edgeHover) {
+        const horiz = edgeHover.obj.side === 'n' || edgeHover.obj.side === 's';
+        canvas.style.cursor = horiz ? 'ew-resize' : 'ns-resize';
       } else {
-        const selectedRooms = state.rooms.filter((r) => state.selection.has(r.id));
-        const edgeHover = hitWallObjectEdgeInRooms(selectedRooms, m.px, m.py, viewport.zoom);
-        if (edgeHover) {
-          const horiz = edgeHover.obj.side === 'n' || edgeHover.obj.side === 's';
-          canvas.style.cursor = horiz ? 'ew-resize' : 'ns-resize';
+        const h = hitHandle(state.rooms, state.selection, m.px, m.py, viewport.zoom);
+        if (h) {
+          canvas.style.cursor = h.handle.dir + '-resize';
         } else if (hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom)) {
           canvas.style.cursor = 'grab';
         } else if (hitRoom(state.rooms, m.px, m.py)) {

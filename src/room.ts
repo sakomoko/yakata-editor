@@ -1,6 +1,6 @@
 import type { Room, Handle, MouseCoord } from './types.ts';
 import { GRID, HANDLE_SIZE, HANDLE_HIT } from './grid.ts';
-import { drawWallSegments, drawWallObjects } from './wall-object.ts';
+import { drawWallSegments, drawWallObjects, drawWallObjectResizeHandles } from './wall-object.ts';
 
 export function createRoom(x: number, y: number, w: number, h: number, label = ''): Room {
   return { id: crypto.randomUUID(), x, y, w, h, label };
@@ -58,7 +58,7 @@ export function drawRoom(
     ctx.fillText(room.label, x + w / 2, y + h / 2, w * 0.9);
   }
 
-  drawWallObjects(ctx, room, isSelected, showHandles, zoom, activeWallObjectId);
+  drawWallObjects(ctx, room, isSelected, zoom, activeWallObjectId);
 
   if (isSelected && showHandles) {
     const size = HANDLE_SIZE / zoom;
@@ -66,6 +66,8 @@ export function drawRoom(
       ctx.fillStyle = '#2196F3';
       ctx.fillRect(handle.px - size / 2, handle.py - size / 2, size, size);
     }
+    // Wall object resize handles drawn AFTER room handles so they appear on top
+    drawWallObjectResizeHandles(ctx, room, zoom);
   }
 }
 
