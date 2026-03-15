@@ -623,6 +623,8 @@ export function initEditor(
     }
 
     if (state.drag.type === 'areaSelect' || state.drag.type === 'create') {
+      // mouseup 時点の最終座標で判定する。ドラッグ中のプレビューモード（areaSelect/create）
+      // と mouseup 時の包含判定が異なる場合があるが、最終座標での判定を優先する。
       const m = mousePos(e);
       const area = normalizeArea(state.drag.start, m);
       const contained = findRoomsInArea(state.rooms, area);

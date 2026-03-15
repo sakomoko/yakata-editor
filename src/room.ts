@@ -113,8 +113,8 @@ export function drawAreaSelectPreview(
   ctx: CanvasRenderingContext2D,
   start: MouseCoord,
   cur: MouseCoord,
-  zoom = 1,
-  rooms: Room[] = [],
+  zoom: number,
+  rooms: Room[],
 ): void {
   const area = normalizeArea(start, cur);
   if (area.w <= 0 || area.h <= 0) return;
