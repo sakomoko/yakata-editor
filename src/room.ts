@@ -156,4 +156,3 @@ export function computeRoomsBoundingBox(rooms: Room[]): {
     h: maxY - minY + padding * 2,
   };
 }
-

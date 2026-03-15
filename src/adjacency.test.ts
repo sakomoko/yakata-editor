@@ -1,0 +1,363 @@
+import { describe, it, expect } from 'vitest';
+import type { Room } from './types.ts';
+import {
+  getOppositeSide,
+  findAdjacentRoomsOnWall,
+  convertOffset,
+  syncPairedOpening,
+  removePairedOpening,
+  syncAllPairedOpenings,
+  isPairedAutoOpening,
+} from './adjacency.ts';
+import { createWallWindow, createWallDoor, createWallOpening } from './wall-object.ts';
+
+function makeRoom(overrides: Partial<Room> & { x: number; y: number; w: number; h: number }): Room {
+  return {
+    id: crypto.randomUUID(),
+    label: '',
+    ...overrides,
+  };
+}
+
+describe('getOppositeSide', () => {
+  it('n ↔ s', () => {
+    expect(getOppositeSide('n')).toBe('s');
+    expect(getOppositeSide('s')).toBe('n');
+  });
+
+  it('e ↔ w', () => {
+    expect(getOppositeSide('e')).toBe('w');
+    expect(getOppositeSide('w')).toBe('e');
+  });
+});
+
+describe('findAdjacentRoomsOnWall', () => {
+  it('水平隣接を検出する（東壁）', () => {
+    const roomA = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const roomB = makeRoom({ x: 5, y: 0, w: 5, h: 5 });
+    const rooms = [roomA, roomB];
+
+    const result = findAdjacentRoomsOnWall(rooms, roomA, 'e');
+    expect(result).toHaveLength(1);
+    expect(result[0].room.id).toBe(roomB.id);
+    expect(result[0].side).toBe('w');
+    expect(result[0].sharedStart).toBe(0);
+    expect(result[0].sharedEnd).toBe(5);
+  });
+
+  it('水平隣接を検出する（西壁）', () => {
+    const roomA = makeRoom({ x: 5, y: 0, w: 5, h: 5 });
+    const roomB = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const rooms = [roomA, roomB];
+
+    const result = findAdjacentRoomsOnWall(rooms, roomA, 'w');
+    expect(result).toHaveLength(1);
+    expect(result[0].room.id).toBe(roomB.id);
+    expect(result[0].side).toBe('e');
+  });
+
+  it('垂直隣接を検出する（南壁）', () => {
+    const roomA = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const roomB = makeRoom({ x: 0, y: 5, w: 5, h: 5 });
+    const rooms = [roomA, roomB];
+
+    const result = findAdjacentRoomsOnWall(rooms, roomA, 's');
+    expect(result).toHaveLength(1);
+    expect(result[0].room.id).toBe(roomB.id);
+    expect(result[0].side).toBe('n');
+  });
+
+  it('垂直隣接を検出する（北壁）', () => {
+    const roomA = makeRoom({ x: 0, y: 5, w: 5, h: 5 });
+    const roomB = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const rooms = [roomA, roomB];
+
+    const result = findAdjacentRoomsOnWall(rooms, roomA, 'n');
+    expect(result).toHaveLength(1);
+    expect(result[0].room.id).toBe(roomB.id);
+    expect(result[0].side).toBe('s');
+  });
+
+  it('部分重なりの隣接を検出する', () => {
+    const roomA = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const roomB = makeRoom({ x: 5, y: 2, w: 5, h: 5 });
+    const rooms = [roomA, roomB];
+
+    const result = findAdjacentRoomsOnWall(rooms, roomA, 'e');
+    expect(result).toHaveLength(1);
+    expect(result[0].sharedStart).toBe(2);
+    expect(result[0].sharedEnd).toBe(5);
+  });
+
+  it('隣接していない部屋は検出しない', () => {
+    const roomA = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const roomB = makeRoom({ x: 10, y: 0, w: 5, h: 5 });
+    const rooms = [roomA, roomB];
+
+    const result = findAdjacentRoomsOnWall(rooms, roomA, 'e');
+    expect(result).toHaveLength(0);
+  });
+
+  it('重なりが1グリッド未満の場合は検出しない', () => {
+    const roomA = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const roomB = makeRoom({ x: 5, y: 5, w: 5, h: 5 });
+    const rooms = [roomA, roomB];
+
+    const result = findAdjacentRoomsOnWall(rooms, roomA, 'e');
+    expect(result).toHaveLength(0);
+  });
+});
+
+describe('convertOffset', () => {
+  it('水平壁（n/s）のoffset変換', () => {
+    const roomA = makeRoom({ x: 2, y: 0, w: 5, h: 5 });
+    const roomB = makeRoom({ x: 2, y: 5, w: 5, h: 5 });
+    expect(convertOffset(roomA, roomB, 's', 1)).toBe(1);
+  });
+
+  it('水平壁でオフセットのある場合', () => {
+    const roomA = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const roomB = makeRoom({ x: 2, y: 5, w: 5, h: 5 });
+    // roomA.x(0) + offset(3) - roomB.x(2) = 1
+    expect(convertOffset(roomA, roomB, 's', 3)).toBe(1);
+  });
+
+  it('垂直壁（e/w）のoffset変換', () => {
+    const roomA = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const roomB = makeRoom({ x: 5, y: 2, w: 5, h: 5 });
+    // roomA.y(0) + offset(3) - roomB.y(2) = 1
+    expect(convertOffset(roomA, roomB, 'e', 3)).toBe(1);
+  });
+});
+
+describe('isPairedAutoOpening', () => {
+  it('pairedWithありのopeningはtrue', () => {
+    const opening = createWallOpening('n', 0, 1);
+    opening.pairedWith = [{ roomId: 'r1', objectId: 'o1' }];
+    expect(isPairedAutoOpening(opening)).toBe(true);
+  });
+
+  it('pairedWithなしのopeningはfalse', () => {
+    const opening = createWallOpening('n', 0, 1);
+    expect(isPairedAutoOpening(opening)).toBe(false);
+  });
+
+  it('windowはfalse', () => {
+    const win = createWallWindow('n', 0, 1);
+    win.pairedWith = [{ roomId: 'r1', objectId: 'o1' }];
+    expect(isPairedAutoOpening(win)).toBe(false);
+  });
+
+  it('doorはfalse', () => {
+    const door = createWallDoor('n', 0, 1);
+    door.pairedWith = [{ roomId: 'r1', objectId: 'o1' }];
+    expect(isPairedAutoOpening(door)).toBe(false);
+  });
+});
+
+describe('syncPairedOpening', () => {
+  it('隣接部屋にペア開口を作成する', () => {
+    const roomA = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const roomB = makeRoom({ x: 5, y: 0, w: 5, h: 5 });
+    const rooms = [roomA, roomB];
+
+    const door = createWallDoor('e', 1, 2);
+    roomA.wallObjects = [door];
+
+    syncPairedOpening(rooms, roomA, door);
+
+    // roomBに開口が作成されていること
+    expect(roomB.wallObjects).toHaveLength(1);
+    const paired = roomB.wallObjects![0];
+    expect(paired.type).toBe('opening');
+    expect(paired.side).toBe('w');
+    expect(paired.offset).toBe(1);
+    expect(paired.width).toBe(2);
+    expect(paired.pairedWith).toEqual([{ roomId: roomA.id, objectId: door.id }]);
+
+    // ソースにもpairedWithが設定されていること
+    expect(door.pairedWith).toEqual([{ roomId: roomB.id, objectId: paired.id }]);
+  });
+
+  it('隣接がない場合はペアを作成しない', () => {
+    const roomA = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const roomB = makeRoom({ x: 10, y: 0, w: 5, h: 5 });
+    const rooms = [roomA, roomB];
+
+    const door = createWallDoor('e', 1, 2);
+    roomA.wallObjects = [door];
+
+    syncPairedOpening(rooms, roomA, door);
+
+    expect(roomB.wallObjects).toBeUndefined();
+    expect(door.pairedWith).toBeUndefined();
+  });
+
+  it('既存のペアを更新する（移動時）', () => {
+    const roomA = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const roomB = makeRoom({ x: 5, y: 0, w: 5, h: 5 });
+    const rooms = [roomA, roomB];
+
+    const door = createWallDoor('e', 1, 2);
+    roomA.wallObjects = [door];
+
+    // 最初の同期
+    syncPairedOpening(rooms, roomA, door);
+    expect(roomB.wallObjects).toHaveLength(1);
+    const firstPairedId = roomB.wallObjects![0].id;
+
+    // ドアを移動
+    door.offset = 2;
+    syncPairedOpening(rooms, roomA, door);
+
+    // 古い開口は削除され、新しい開口が作成されている
+    expect(roomB.wallObjects).toHaveLength(1);
+    expect(roomB.wallObjects![0].id).not.toBe(firstPairedId);
+    expect(roomB.wallObjects![0].offset).toBe(2);
+  });
+
+  it('壁オブジェクトが共有壁を超える場合はクランプする', () => {
+    const roomA = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const roomB = makeRoom({ x: 5, y: 2, w: 5, h: 3 }); // Y方向に部分重なり（2〜5）
+    const rooms = [roomA, roomB];
+
+    // roomAの東壁にoffset=0, width=5のドアを配置（全体をカバー）
+    const door = createWallDoor('e', 0, 5);
+    roomA.wallObjects = [door];
+
+    syncPairedOpening(rooms, roomA, door);
+
+    // roomBの西壁には共有範囲（0〜3）のみに開口が作成される
+    expect(roomB.wallObjects).toHaveLength(1);
+    const paired = roomB.wallObjects![0];
+    expect(paired.offset).toBe(0);
+    expect(paired.width).toBe(3);
+  });
+});
+
+describe('removePairedOpening', () => {
+  it('ペア開口を削除する', () => {
+    const roomA = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const roomB = makeRoom({ x: 5, y: 0, w: 5, h: 5 });
+    const rooms = [roomA, roomB];
+
+    const door = createWallDoor('e', 1, 2);
+    roomA.wallObjects = [door];
+
+    syncPairedOpening(rooms, roomA, door);
+    expect(roomB.wallObjects).toHaveLength(1);
+
+    removePairedOpening(rooms, door);
+
+    expect(roomB.wallObjects).toBeUndefined();
+    expect(door.pairedWith).toBeUndefined();
+  });
+
+  it('pairedWithがない場合は何もしない', () => {
+    const roomA = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const rooms = [roomA];
+
+    const door = createWallDoor('e', 1, 2);
+    roomA.wallObjects = [door];
+
+    // エラーなく実行される
+    removePairedOpening(rooms, door);
+    expect(roomA.wallObjects).toHaveLength(1);
+  });
+});
+
+describe('syncAllPairedOpenings', () => {
+  it('全部屋のペア同期を再構築する', () => {
+    const roomA = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const roomB = makeRoom({ x: 5, y: 0, w: 5, h: 5 });
+    const rooms = [roomA, roomB];
+
+    const door = createWallDoor('e', 1, 2);
+    roomA.wallObjects = [door];
+
+    syncAllPairedOpenings(rooms);
+
+    expect(roomB.wallObjects).toHaveLength(1);
+    expect(roomB.wallObjects![0].type).toBe('opening');
+    expect(roomB.wallObjects![0].pairedWith).toBeDefined();
+  });
+
+  it('部屋移動後の再構築でペアが削除される', () => {
+    const roomA = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const roomB = makeRoom({ x: 5, y: 0, w: 5, h: 5 });
+    const rooms = [roomA, roomB];
+
+    const door = createWallDoor('e', 1, 2);
+    roomA.wallObjects = [door];
+
+    syncAllPairedOpenings(rooms);
+    expect(roomB.wallObjects).toHaveLength(1);
+
+    // 部屋Bを離す
+    roomB.x = 20;
+    syncAllPairedOpenings(rooms);
+
+    // ペア開口が削除されている
+    expect(roomB.wallObjects).toBeUndefined();
+    expect(door.pairedWith).toBeUndefined();
+  });
+
+  it('手動で配置した開口はsyncAllで消えない', () => {
+    const roomA = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const rooms = [roomA];
+
+    const manualOpening = createWallOpening('n', 1, 2);
+    roomA.wallObjects = [manualOpening];
+
+    syncAllPairedOpenings(rooms);
+
+    // 手動開口は残っている（pairedWithがないので消されない）
+    expect(roomA.wallObjects).toHaveLength(1);
+    expect(roomA.wallObjects![0].id).toBe(manualOpening.id);
+  });
+
+  it('1つの壁オブジェクトが複数の隣接部屋にまたがる場合、ドア削除で全ての開口が削除される', () => {
+    const roomA = makeRoom({ x: 0, y: 0, w: 5, h: 10 });
+    const roomB = makeRoom({ x: 5, y: 0, w: 5, h: 5 });
+    const roomC = makeRoom({ x: 5, y: 5, w: 5, h: 5 });
+    const rooms = [roomA, roomB, roomC];
+
+    const door = createWallDoor('e', 1, 8); // roomBとroomC両方にまたがる
+    roomA.wallObjects = [door];
+
+    syncAllPairedOpenings(rooms);
+    expect(roomB.wallObjects).toHaveLength(1);
+    expect(roomC.wallObjects).toHaveLength(1);
+
+    removePairedOpening(rooms, door);
+
+    // 両方の部屋から開口が削除されるべき
+    expect(roomB.wallObjects).toBeUndefined();
+    expect(roomC.wallObjects).toBeUndefined();
+    expect(door.pairedWith).toBeUndefined();
+  });
+
+  it('複数の部屋が同一壁に隣接する場合、各隣接部屋に開口を作成する', () => {
+    const roomA = makeRoom({ x: 0, y: 0, w: 5, h: 10 });
+    const roomB = makeRoom({ x: 5, y: 0, w: 5, h: 5 });
+    const roomC = makeRoom({ x: 5, y: 5, w: 5, h: 5 });
+    const rooms = [roomA, roomB, roomC];
+
+    // roomAの東壁にドアを2つ配置
+    const door1 = createWallDoor('e', 1, 2); // Y=1〜3 → roomBの範囲
+    const door2 = createWallDoor('e', 6, 2); // Y=6〜8 → roomCの範囲
+    roomA.wallObjects = [door1, door2];
+
+    syncAllPairedOpenings(rooms);
+
+    // roomBに開口がある
+    expect(roomB.wallObjects).toHaveLength(1);
+    expect(roomB.wallObjects![0].offset).toBe(1);
+    expect(roomB.wallObjects![0].width).toBe(2);
+
+    // roomCに開口がある
+    expect(roomC.wallObjects).toHaveLength(1);
+    expect(roomC.wallObjects![0].offset).toBe(1); // 6 - 5 = 1
+    expect(roomC.wallObjects![0].width).toBe(2);
+  });
+});
