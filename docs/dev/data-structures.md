@@ -12,6 +12,7 @@ interface WallObjectBase {
   side: WallSide;    // 配置される壁の方向
   offset: number;    // 壁の始点からのオフセット（グリッド単位）
   width: number;     // 幅（グリッド単位）
+  pairedWith?: { roomId: string; objectId: string };  // 隣接部屋との双方向リンク
 }
 
 interface WallWindow extends WallObjectBase {
@@ -36,6 +37,7 @@ type WallObject = WallWindow | WallDoor | WallOpening;
 | `offset` | 壁の左端（北/南）または上端（東/西）からの距離（グリッド単位） |
 | `width` | オブジェクトの幅（グリッド単位） |
 | `swing` | ドアの開き方向（`'inward'`: 内開き / `'outward'`: 外開き）※ドアのみ |
+| `pairedWith` | 隣接部屋の対応する壁オブジェクトへの参照（`roomId`: 対象部屋ID、`objectId`: 対象壁オブジェクトID）。壁オブジェクト配置時に自動設定され、自動生成された開口（`type: 'opening' && pairedWith != null`）はユーザーが直接操作できない |
 
 ## Room
 
