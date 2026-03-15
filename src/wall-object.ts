@@ -181,10 +181,9 @@ function getDoorGeometry(room: Room, obj: WallDoor): DoorGeometry {
   const angles = DOOR_ANGLES[obj.side];
 
   if (obj.hinge === 'end') {
-    const isHorizontal = obj.side === 'n' || obj.side === 's';
-    const hingeX = isHorizontal ? rect.x + rect.length : rect.x;
-    const hingeY = isHorizontal ? rect.y : rect.y + rect.length;
-    const mirror = isHorizontal
+    const hingeX = rect.horizontal ? rect.x + rect.length : rect.x;
+    const hingeY = rect.horizontal ? rect.y : rect.y + rect.length;
+    const mirror = rect.horizontal
       ? (a: number) => Math.PI - a
       : (a: number) => -a;
     const openAngle = obj.swing === 'inward' ? angles.inward : angles.outward;
