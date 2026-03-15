@@ -754,17 +754,7 @@ export function initEditor(
         action: async () => {
           const room = state.rooms.find((r) => r.id === roomId);
           if (!room) return;
-          const result = await callbacks.onRoomEdit({
-            label: room.label || '',
-            fontSize: room.fontSize,
-            autoFontSize: Math.round(calcAutoFontSize(room)),
-          });
-          if (result) {
-            commitChange(() => {
-              room.label = result.label;
-              room.fontSize = result.fontSize;
-            });
-          }
+          await applyRoomEdit(room);
         },
       });
       items.push({ separator: true });
@@ -896,21 +886,25 @@ export function initEditor(
     }
   }
 
+  async function applyRoomEdit(room: Room): Promise<void> {
+    const result = await callbacks.onRoomEdit({
+      label: room.label || '',
+      fontSize: room.fontSize,
+      autoFontSize: Math.round(calcAutoFontSize(room)),
+    });
+    if (result) {
+      commitChange(() => {
+        room.label = result.label;
+        room.fontSize = result.fontSize;
+      });
+    }
+  }
+
   async function onDblClick(e: MouseEvent): Promise<void> {
     const m = mousePos(e);
     const r = hitRoom(state.rooms, m.px, m.py);
     if (r) {
-      const result = await callbacks.onRoomEdit({
-        label: r.label || '',
-        fontSize: r.fontSize,
-        autoFontSize: Math.round(calcAutoFontSize(r)),
-      });
-      if (result) {
-        commitChange(() => {
-          r.label = result.label;
-          r.fontSize = result.fontSize;
-        });
-      }
+      await applyRoomEdit(r);
     }
   }
 
