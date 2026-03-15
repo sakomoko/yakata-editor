@@ -78,7 +78,6 @@ export function drawInteriorObjects(
   ctx: CanvasRenderingContext2D,
   room: Room,
   isSelected: boolean,
-  _showHandles: boolean,
   zoom = 1,
   activeId?: string,
 ): void {
@@ -391,9 +390,8 @@ export function drawInteriorObjectHandles(
   const size = HANDLE_SIZE / zoom;
 
   // Only draw handles for the active object to reduce visual noise
-  const targets = activeId
-    ? room.interiorObjects.filter((o) => o.id === activeId)
-    : room.interiorObjects;
+  if (!activeId) return;
+  const targets = room.interiorObjects.filter((o) => o.id === activeId);
 
   for (const obj of targets) {
     const rect = interiorObjectToPixelRect(room, obj);

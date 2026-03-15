@@ -61,7 +61,7 @@ export function drawRoom(
   }
 
   // Interior objects drawn before wall objects (wall objects appear on top)
-  drawInteriorObjects(ctx, room, isSelected, showHandles, zoom, activeInteriorObjectId);
+  drawInteriorObjects(ctx, room, isSelected, zoom, activeInteriorObjectId);
 
   drawWallObjects(ctx, room, isSelected, zoom, activeWallObjectId);
 

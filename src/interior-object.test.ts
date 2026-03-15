@@ -6,6 +6,8 @@ import {
   interiorObjectToPixelRect,
   hitInteriorObject,
   hitInteriorObjectInRooms,
+  hitInteriorObjectHandle,
+  hitInteriorObjectHandleInRooms,
   clampInteriorObject,
   clampAllInteriorObjects,
   computeInteriorObjectMove,
@@ -172,6 +174,101 @@ describe('computeInteriorObjectMove', () => {
     const result = computeInteriorObjectMove(room, obj, 10, 10, 0, 0);
     expect(result.x).toBe(3); // 5 - 2
     expect(result.y).toBe(2); // 5 - 3
+  });
+});
+
+describe('hitInteriorObjectHandle', () => {
+  it('NWコーナーハンドルをヒットする', () => {
+    const room = makeRoom({ x: 5, y: 5, w: 10, h: 10 });
+    const stairs = createStraightStairs(2, 2, 3, 3);
+    room.interiorObjects = [stairs];
+    // NWコーナーのピクセル座標 = (5+2)*GRID, (5+2)*GRID
+    const px = (5 + 2) * GRID;
+    const py = (5 + 2) * GRID;
+    const hit = hitInteriorObjectHandle(room, px, py, 1);
+    expect(hit).not.toBeNull();
+    expect(hit!.dir).toBe('nw');
+    expect(hit!.obj.id).toBe(stairs.id);
+  });
+
+  it('SEコーナーハンドルをヒットする', () => {
+    const room = makeRoom({ x: 0, y: 0, w: 10, h: 10 });
+    const stairs = createStraightStairs(1, 1, 3, 3);
+    room.interiorObjects = [stairs];
+    // SEコーナー = (0+1+3)*GRID, (0+1+3)*GRID
+    const px = (1 + 3) * GRID;
+    const py = (1 + 3) * GRID;
+    const hit = hitInteriorObjectHandle(room, px, py, 1);
+    expect(hit).not.toBeNull();
+    expect(hit!.dir).toBe('se');
+  });
+
+  it('ハンドル外部はヒットしない', () => {
+    const room = makeRoom({ x: 0, y: 0, w: 10, h: 10 });
+    const stairs = createStraightStairs(2, 2, 3, 3);
+    room.interiorObjects = [stairs];
+    // オブジェクトの中央付近 - ハンドルから遠い
+    const px = (0 + 3.5) * GRID;
+    const py = (0 + 3.5) * GRID;
+    const hit = hitInteriorObjectHandle(room, px, py, 1);
+    expect(hit).toBeNull();
+  });
+
+  it('interiorObjectsがない場合はnull', () => {
+    const room = makeRoom();
+    expect(hitInteriorObjectHandle(room, 0, 0, 1)).toBeNull();
+  });
+
+  it('ズーム時にtolerance範囲が調整される', () => {
+    const room = makeRoom({ x: 0, y: 0, w: 10, h: 10 });
+    const stairs = createStraightStairs(2, 2, 3, 3);
+    room.interiorObjects = [stairs];
+    // NWコーナーから少しずれた位置
+    const cornerPx = 2 * GRID;
+    const cornerPy = 2 * GRID;
+    const offset = 5; // 5px offset
+    // zoom=1ではヒットする
+    const hit1 = hitInteriorObjectHandle(room, cornerPx + offset, cornerPy + offset, 1);
+    expect(hit1).not.toBeNull();
+    // zoom=4ではtoleranceが小さくなるのでヒットしない場合がある
+    const hit4 = hitInteriorObjectHandle(room, cornerPx + offset, cornerPy + offset, 4);
+    expect(hit4).toBeNull();
+  });
+
+  it('複数オブジェクトでは後のものが優先される', () => {
+    const room = makeRoom({ x: 0, y: 0, w: 10, h: 10 });
+    const s1 = createStraightStairs(2, 2, 3, 3);
+    const s2 = createStraightStairs(2, 2, 3, 3);
+    room.interiorObjects = [s1, s2];
+    const px = 2 * GRID;
+    const py = 2 * GRID;
+    const hit = hitInteriorObjectHandle(room, px, py, 1);
+    expect(hit).not.toBeNull();
+    expect(hit!.obj.id).toBe(s2.id);
+  });
+});
+
+describe('hitInteriorObjectHandleInRooms', () => {
+  it('z-order考慮で後の部屋を優先する', () => {
+    const room1 = makeRoom({ id: 'r1', x: 0, y: 0, w: 10, h: 10 });
+    const room2 = makeRoom({ id: 'r2', x: 0, y: 0, w: 10, h: 10 });
+    const s1 = createStraightStairs(2, 2, 3, 3);
+    const s2 = createStraightStairs(2, 2, 3, 3);
+    room1.interiorObjects = [s1];
+    room2.interiorObjects = [s2];
+    const px = 2 * GRID;
+    const py = 2 * GRID;
+    const hit = hitInteriorObjectHandleInRooms([room1, room2], px, py, 1);
+    expect(hit).not.toBeNull();
+    expect(hit!.room.id).toBe('r2');
+    expect(hit!.obj.id).toBe(s2.id);
+  });
+
+  it('ハンドルがない場合はnull', () => {
+    const room = makeRoom({ x: 0, y: 0, w: 10, h: 10 });
+    room.interiorObjects = [];
+    const hit = hitInteriorObjectHandleInRooms([room], 100, 100, 1);
+    expect(hit).toBeNull();
   });
 });
 
