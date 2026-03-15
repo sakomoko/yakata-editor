@@ -34,7 +34,7 @@ Canvas 再描画 + localStorage 保存
 ### 機能モジュール
 
 - **room.ts** — 部屋の生成（`createRoom`）、Canvas描画（`drawRoom`）、ヒット判定（`hitRoom`, `hitHandle`）、リサイズハンドル計算（`getHandles`）
-- **wall-object.ts** — 壁オブジェクト（窓・ドア）の生成（`createWallWindow`, `createWallDoor`）、描画（`drawWallObjects`）、ヒット判定（`hitWallObject`, `hitWallObjectInRooms`）、ピクセル座標変換（`wallObjectToPixelRect`）、壁セグメント分割（`getWallSegments`）。ドアはヒンジ点から弧を描くビジュアルで、扇形エリア全体がヒット対象
+- **wall-object.ts** — 壁オブジェクト（窓・ドア・開口）の生成（`createWallWindow`, `createWallDoor`, `createWallOpening`）、描画（`drawWallObjects`）、ヒット判定（`hitWallObject`, `hitWallObjectInRooms`）、エッジヒット判定（`hitWallObjectEdge`, `hitWallObjectEdgeInRooms`）、リサイズ計算（`computeWallObjectResize`）、オーバーラップ判定（`wouldOverlap`）、ピクセル座標変換（`wallObjectToPixelRect`）、壁セグメント分割（`getWallSegments`）。ドアはヒンジ点から弧を描くビジュアルで、扇形エリア全体がヒット対象
 - **context-menu.ts** / **ContextMenu.tsx** — 壁の右クリックコンテキストメニュー（窓・ドアの追加・削除・開き方向切替）。ReactコンポーネントとしてCanvas上にオーバーレイ表示
 - **link.ts** — 部屋の連結機能。隣接判定（`areAdjacent`）、選択のグループ拡張（`expandWithLinked`）、連結/解除（`linkRooms`, `unlinkRooms`）、孤立グループのクリーンアップ（`cleanupSingletonGroups`）
 - **z-order.ts** — 部屋の重なり順序操作（`bringToFront`, `sendToBack`, `bringForward`, `sendBackward`）。rooms配列のインデックスをin-placeで変更する純粋関数群
@@ -82,7 +82,7 @@ main.ts
 - `rooms: Room[]` — 全部屋データ
 - `selection: Set<string>` — 選択中の部屋ID
 - `history: string[]` — Undoスナップショット（JSON文字列）
-- `drag: DragState` — ドラッグ操作の状態（discriminated union: `create | move | resize | null`）
+- `drag: DragState` — ドラッグ操作の状態（discriminated union: `create | move | resize | moveWallObject | resizeWallObject | pan | null`）
 - `mouse: MouseCoord` — 現在のマウス座標
 
 状態変更は `commitChange()` を通じて行い、Undo履歴の保存・Canvas再描画・localStorage保存をまとめて実行する。
