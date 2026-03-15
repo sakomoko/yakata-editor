@@ -32,9 +32,11 @@ import {
   createWallDoor,
   createWallOpening,
   hitWallObjectInRooms,
+  hitWallObjectEdgeInRooms,
   nearestWallSide,
   clampWallObjects,
   computeWallObjectPosition,
+  computeWallObjectResize,
 } from './wall-object.ts';
 import type { ContextMenuItem } from './context-menu.ts';
 import { bringToFront, sendToBack, bringForward, sendBackward } from './z-order.ts';
@@ -124,7 +126,9 @@ export function initEditor(
     drawGrid(ctx, viewMinX, viewMinY, viewMaxX, viewMaxY);
 
     const activeWallObjectId =
-      state.drag?.type === 'moveWallObject' ? state.drag.objectId : undefined;
+      state.drag?.type === 'moveWallObject' || state.drag?.type === 'resizeWallObject'
+        ? state.drag.objectId
+        : undefined;
     for (const r of state.rooms) {
       const isSelected = state.selection.has(r.id);
       drawRoom(
@@ -263,6 +267,24 @@ export function initEditor(
       return;
     }
 
+    // Check wall object edge hit (resize)
+    const edgeHit = hitWallObjectEdgeInRooms(state.rooms, m.px, m.py, viewport.zoom);
+    if (edgeHit) {
+      pushUndo(state.history, state.rooms);
+      const horizontal = edgeHit.obj.side === 'n' || edgeHit.obj.side === 's';
+      state.drag = {
+        type: 'resizeWallObject',
+        roomId: edgeHit.room.id,
+        objectId: edgeHit.obj.id,
+        edge: edgeHit.edge,
+        origOffset: edgeHit.obj.offset,
+        origWidth: edgeHit.obj.width,
+      };
+      canvas.style.cursor = horizontal ? 'ew-resize' : 'ns-resize';
+      render();
+      return;
+    }
+
     // Check wall object hit (window drag)
     const wallHit = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom);
     if (wallHit) {
@@ -332,12 +354,18 @@ export function initEditor(
       const h = hitHandle(state.rooms, state.selection, m.px, m.py, viewport.zoom);
       if (h) {
         canvas.style.cursor = h.handle.dir + '-resize';
-      } else if (hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom)) {
-        canvas.style.cursor = 'grab';
-      } else if (hitRoom(state.rooms, m.px, m.py)) {
-        canvas.style.cursor = 'move';
       } else {
-        canvas.style.cursor = 'crosshair';
+        const edgeHover = hitWallObjectEdgeInRooms(state.rooms, m.px, m.py, viewport.zoom);
+        if (edgeHover) {
+          const horiz = edgeHover.obj.side === 'n' || edgeHover.obj.side === 's';
+          canvas.style.cursor = horiz ? 'ew-resize' : 'ns-resize';
+        } else if (hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom)) {
+          canvas.style.cursor = 'grab';
+        } else if (hitRoom(state.rooms, m.px, m.py)) {
+          canvas.style.cursor = 'move';
+        } else {
+          canvas.style.cursor = 'crosshair';
+        }
       }
       updateStatus();
       return;
@@ -388,6 +416,25 @@ export function initEditor(
           obj.offset = pos.offset;
         }
       }
+    } else if (state.drag.type === 'resizeWallObject') {
+      const drag = state.drag;
+      const targetRoom = state.rooms.find((r) => r.id === drag.roomId);
+      if (targetRoom) {
+        const obj = targetRoom.wallObjects?.find((o) => o.id === drag.objectId);
+        if (obj) {
+          const result = computeWallObjectResize(
+            targetRoom,
+            obj,
+            drag.edge,
+            m.px,
+            m.py,
+            drag.origOffset,
+            drag.origWidth,
+          );
+          obj.offset = result.offset;
+          obj.width = result.width;
+        }
+      }
     }
 
     render();
@@ -403,7 +450,7 @@ export function initEditor(
       return;
     }
 
-    if (state.drag.type === 'moveWallObject') {
+    if (state.drag.type === 'moveWallObject' || state.drag.type === 'resizeWallObject') {
       selectSingle(state.selection, state.drag.roomId);
       state.drag = null;
       // Cursor will be recalculated on next mousemove; set a reasonable default

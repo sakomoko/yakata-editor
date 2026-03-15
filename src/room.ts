@@ -58,7 +58,7 @@ export function drawRoom(
     ctx.fillText(room.label, x + w / 2, y + h / 2, w * 0.9);
   }
 
-  drawWallObjects(ctx, room, isSelected, zoom, activeWallObjectId);
+  drawWallObjects(ctx, room, isSelected, showHandles, zoom, activeWallObjectId);
 
   if (isSelected && showHandles) {
     const size = HANDLE_SIZE / zoom;
