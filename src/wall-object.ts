@@ -214,6 +214,44 @@ function drawDoor(
   ctx.stroke();
 }
 
+/** Compute color and line width for a wall object based on selection/active state. */
+function getWallObjectStyle(
+  isSelected: boolean,
+  isActive: boolean,
+  zoom: number,
+): { color: string; lineWidth: number } {
+  const baseLineWidth = 1.5 / zoom;
+  const color = isActive ? '#FF9800' : isSelected ? '#2196F3' : '#000';
+  const lineWidth = isActive ? 2.5 / zoom : baseLineWidth;
+  return { color, lineWidth };
+}
+
+/**
+ * Draw outward doors overlay on top of all rooms (2nd pass to prevent occlusion).
+ * Resize handles are NOT redrawn here because they sit on the wall line and
+ * are not occluded by adjacent rooms' fillRect.
+ */
+export function drawOutwardDoorsOverlay(
+  ctx: CanvasRenderingContext2D,
+  room: Room,
+  isSelected: boolean,
+  zoom = 1,
+  activeObjectId?: string,
+): void {
+  if (!room.wallObjects?.length) return;
+
+  const outwardDoors = room.wallObjects.filter(
+    (obj): obj is WallDoor => obj.type === 'door' && obj.swing === 'outward',
+  );
+  if (outwardDoors.length === 0) return;
+
+  for (const obj of outwardDoors) {
+    const isActive = obj.id === activeObjectId;
+    const style = getWallObjectStyle(isSelected, isActive, zoom);
+    drawDoor(ctx, room, obj, style.color, style.lineWidth);
+  }
+}
+
 /** Draw wall object symbols (windows and doors) on wall objects. */
 export function drawWallObjects(
   ctx: CanvasRenderingContext2D,
@@ -225,19 +263,17 @@ export function drawWallObjects(
 ): void {
   if (!room.wallObjects?.length) return;
 
-  const lineWidth = 1.5 / zoom;
   const drawOffset = WINDOW_DRAW_OFFSET / zoom;
 
   for (const obj of room.wallObjects) {
     const isActive = obj.id === activeObjectId;
-    const color = isActive ? '#FF9800' : isSelected ? '#2196F3' : '#000';
-    const objLineWidth = isActive ? 2.5 / zoom : lineWidth;
+    const style = getWallObjectStyle(isSelected, isActive, zoom);
 
     switch (obj.type) {
       case 'window': {
         const rect = wallObjectToPixelRect(room, obj);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = objLineWidth;
+        ctx.strokeStyle = style.color;
+        ctx.lineWidth = style.lineWidth;
         ctx.beginPath();
         if (rect.horizontal) {
           ctx.moveTo(rect.x, rect.y - drawOffset);
@@ -254,7 +290,7 @@ export function drawWallObjects(
         break;
       }
       case 'door': {
-        drawDoor(ctx, room, obj, color, objLineWidth);
+        drawDoor(ctx, room, obj, style.color, style.lineWidth);
         break;
       }
       case 'opening': {

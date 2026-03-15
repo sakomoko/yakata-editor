@@ -37,6 +37,7 @@ import {
   clampWallObjects,
   computeWallObjectPosition,
   computeWallObjectResize,
+  drawOutwardDoorsOverlay,
 } from './wall-object.ts';
 import type { ContextMenuItem } from './context-menu.ts';
 import { bringToFront, sendToBack, bringForward, sendBackward } from './z-order.ts';
@@ -145,6 +146,12 @@ export function initEditor(
         viewport.zoom,
         activeWallObjectId,
       );
+    }
+
+    // 2nd pass: redraw outward doors on top of all rooms to prevent occlusion
+    for (const r of state.rooms) {
+      const isSelected = state.selection.has(r.id);
+      drawOutwardDoorsOverlay(ctx, r, isSelected, viewport.zoom, activeWallObjectId);
     }
 
     if (state.drag && state.drag.type === 'create') {
