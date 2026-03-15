@@ -3,12 +3,15 @@ import { GRID, drawGrid } from './grid.ts';
 import {
   drawRoom,
   drawCreationPreview,
+  drawAreaSelectPreview,
   hitHandle,
   hitRoom,
   isInsideRoom,
   createRoom,
   calcAutoFontSize,
   computeRoomsBoundingBox,
+  findRoomsInArea,
+  normalizeArea,
 } from './room.ts';
 import { toggleSelection, selectSingle, clearSelection, getSingleSelected } from './selection.ts';
 import { pushUndo, popUndo } from './history.ts';
@@ -172,6 +175,11 @@ export function initEditor(
     if (state.drag && state.drag.type === 'create') {
       drawCreationPreview(ctx, state.drag.start, state.drag.cur, viewport.zoom);
     }
+
+    if (state.drag && state.drag.type === 'areaSelect') {
+      drawAreaSelectPreview(ctx, state.drag.start, state.drag.cur, viewport.zoom, state.rooms);
+    }
+
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     updateStatus();
@@ -457,8 +465,16 @@ export function initEditor(
       return;
     }
 
-    if (state.drag.type === 'create') {
+    if (state.drag.type === 'create' || state.drag.type === 'areaSelect') {
       state.drag.cur = m;
+      // ドラッグ矩形が既存の部屋を完全に包含するかチェックしてモード切替
+      const area = normalizeArea(state.drag.start, m);
+      const contained = findRoomsInArea(state.rooms, area);
+      if (contained.length > 0 && state.drag.type === 'create') {
+        state.drag = { type: 'areaSelect', start: state.drag.start, cur: m };
+      } else if (contained.length === 0 && state.drag.type === 'areaSelect') {
+        state.drag = { type: 'create', start: state.drag.start, cur: m };
+      }
     } else if (state.drag.type === 'move') {
       const dx = m.gx - state.drag.start.gx;
       const dy = m.gy - state.drag.start.gy;
@@ -595,12 +611,20 @@ export function initEditor(
       return;
     }
 
-    if (state.drag.type === 'create') {
+    if (state.drag.type === 'areaSelect') {
+      const area = normalizeArea(state.drag.start, state.drag.cur);
+      const contained = findRoomsInArea(state.rooms, area);
+      if (contained.length > 0) {
+        if (!e.shiftKey) {
+          clearSelection(state.selection);
+        }
+        for (const r of contained) {
+          state.selection.add(r.id);
+        }
+      }
+    } else if (state.drag.type === 'create') {
       const m = mousePos(e);
-      const x = Math.min(state.drag.start.gx, m.gx);
-      const y = Math.min(state.drag.start.gy, m.gy);
-      const w = Math.abs(m.gx - state.drag.start.gx);
-      const h = Math.abs(m.gy - state.drag.start.gy);
+      const { x, y, w, h } = normalizeArea(state.drag.start, m);
       if (w > 0 && h > 0) {
         pushUndo(state.history, state.rooms);
         const room = createRoom(x, y, w, h);

@@ -88,6 +88,7 @@ export interface Handle {
 
 export type DragState =
   | { type: 'create'; start: MouseCoord; cur: MouseCoord }
+  | { type: 'areaSelect'; start: MouseCoord; cur: MouseCoord }
   | { type: 'move'; originals: Map<string, { x: number; y: number }>; start: MouseCoord }
   | {
       type: 'resize';
