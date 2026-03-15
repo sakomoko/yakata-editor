@@ -214,6 +214,31 @@ function drawDoor(
   ctx.stroke();
 }
 
+/** Draw outward doors overlay on top of all rooms (2nd pass to prevent occlusion). */
+export function drawOutwardDoorsOverlay(
+  ctx: CanvasRenderingContext2D,
+  room: Room,
+  isSelected: boolean,
+  zoom = 1,
+  activeObjectId?: string,
+): void {
+  if (!room.wallObjects?.length) return;
+
+  const outwardDoors = room.wallObjects.filter(
+    (obj): obj is WallDoor => obj.type === 'door' && obj.swing === 'outward',
+  );
+  if (outwardDoors.length === 0) return;
+
+  const lineWidth = 1.5 / zoom;
+
+  for (const obj of outwardDoors) {
+    const isActive = obj.id === activeObjectId;
+    const color = isActive ? '#FF9800' : isSelected ? '#2196F3' : '#000';
+    const objLineWidth = isActive ? 2.5 / zoom : lineWidth;
+    drawDoor(ctx, room, obj, color, objLineWidth);
+  }
+}
+
 /** Draw wall object symbols (windows and doors) on wall objects. */
 export function drawWallObjects(
   ctx: CanvasRenderingContext2D,
