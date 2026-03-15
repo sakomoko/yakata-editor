@@ -257,7 +257,6 @@ export function drawWallObjects(
   ctx: CanvasRenderingContext2D,
   room: Room,
   isSelected: boolean,
-  showHandles: boolean,
   zoom = 1,
   activeObjectId?: string,
 ): void {
@@ -298,16 +297,23 @@ export function drawWallObjects(
         break;
       }
     }
+  }
+}
 
-    // Draw resize handles at both edges when room is selected
-    if (isSelected && showHandles) {
-      drawWallObjectResizeHandles(ctx, room, obj, zoom);
-    }
+/** Draw resize handles for all wall objects in a room (called after room handles for correct z-order). */
+export function drawWallObjectResizeHandles(
+  ctx: CanvasRenderingContext2D,
+  room: Room,
+  zoom: number,
+): void {
+  if (!room.wallObjects?.length) return;
+  for (const obj of room.wallObjects) {
+    drawSingleWallObjectResizeHandle(ctx, room, obj, zoom);
   }
 }
 
 /** Draw small diamond-shaped handles at both edges of a wall object. */
-function drawWallObjectResizeHandles(
+function drawSingleWallObjectResizeHandle(
   ctx: CanvasRenderingContext2D,
   room: Room,
   obj: WallObject,
