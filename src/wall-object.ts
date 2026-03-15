@@ -297,7 +297,6 @@ export function drawWallObjects(
         break;
       }
     }
-
   }
 }
 
