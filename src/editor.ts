@@ -968,7 +968,7 @@ export function initEditor(
           if (!room) return;
           const result = await callbacks.onMarkerEdit({ label: '' });
           if (!result) return;
-          const mw = Math.max(1, Math.min((result.label?.length || 0) + 1, room.w));
+          const mw = Math.max(1, Math.min(result.label.length + 1, room.w));
           const mh = 1;
           const mx = Math.max(0, Math.min(cursorRelX - mw / 2, room.w - mw));
           const my = Math.max(0, Math.min(cursorRelY - mh / 2, room.h - mh));

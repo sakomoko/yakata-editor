@@ -563,16 +563,20 @@ function drawMarkerLabel(
     return;
   }
 
-  // Auto font size: fit text in the available area
-  const maxFontSize = textH * 0.8;
-  const fontSizeByWidth = (textW * 0.9) / label.length;
-  const fontSize = Math.min(maxFontSize, fontSizeByWidth, textH);
+  // Auto font size: fit text using measureText for accurate CJK support
+  const maxW = textW * 0.95;
+  let fontSize = Math.min(textH * 0.8, textH);
+  ctx.font = `${fontSize}px sans-serif`;
+  const measured = ctx.measureText(label);
+  if (measured.width > maxW) {
+    fontSize = fontSize * (maxW / measured.width);
+  }
 
   ctx.fillStyle = style.color;
   ctx.font = `${fontSize}px sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(label, textX + textW / 2, textY + textH / 2, textW * 0.95);
+  ctx.fillText(label, textX + textW / 2, textY + textH / 2, maxW);
 
   ctx.restore();
 }
