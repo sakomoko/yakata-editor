@@ -45,6 +45,7 @@ import {
 import {
   createStraightStairs,
   createFoldingStairs,
+  createMarker,
   hitInteriorObjectInRooms,
   hitInteriorObjectHandleInRooms,
   computeInteriorObjectMove,
@@ -75,6 +76,10 @@ export interface RoomEditData {
   autoFontSize: number;
 }
 
+export interface MarkerEditData {
+  label: string;
+}
+
 export interface ContextMenuRequest {
   screenX: number;
   screenY: number;
@@ -84,6 +89,7 @@ export interface ContextMenuRequest {
 export interface EditorCallbacks {
   onStatusChange: (text: string) => void;
   onRoomEdit: (data: RoomEditData) => Promise<{ label: string; fontSize?: number } | null>;
+  onMarkerEdit: (data: MarkerEditData) => Promise<{ label: string } | null>;
   onContextMenu: (request: ContextMenuRequest) => void;
 }
 
@@ -115,6 +121,15 @@ export function initEditor(
   const viewport: ViewportState = { zoom: 1, panX: 0, panY: 0 };
   let isPanning = false;
   let activeInteriorObjectId: string | undefined;
+
+  /** CJK文字を2カラム換算した表示幅をグリッド単位で返す */
+  function labelDisplayWidth(label: string): number {
+    const cols = [...label].reduce(
+      (n, c) => n + (/[\u3000-\u9fff\uff00-\uffef]/.test(c) ? 2 : 1),
+      0,
+    );
+    return Math.ceil(cols / 2) + 1;
+  }
 
   function mousePos(e: MouseEvent): MouseCoord {
     const rect = canvas.getBoundingClientRect();
@@ -322,6 +337,7 @@ export function initEditor(
         roomId: intHandleHit.room.id,
         objectId: intHandleHit.obj.id,
         dir: intHandleHit.dir,
+        snapToGrid: intHandleHit.obj.type === 'stairs',
         orig: {
           x: intHandleHit.obj.x,
           y: intHandleHit.obj.y,
@@ -369,14 +385,18 @@ export function initEditor(
       pushUndo(state.history, state.rooms);
       selectSingle(state.selection, intHit.room.id);
       activeInteriorObjectId = intHit.obj.id;
-      const offsetX = m.gx - intHit.room.x - intHit.obj.x;
-      const offsetY = m.gy - intHit.room.y - intHit.obj.y;
+      const snapToGrid = intHit.obj.type === 'stairs';
+      const curGx = snapToGrid ? m.gx : m.px / GRID;
+      const curGy = snapToGrid ? m.gy : m.py / GRID;
+      const offsetX = curGx - intHit.room.x - intHit.obj.x;
+      const offsetY = curGy - intHit.room.y - intHit.obj.y;
       state.drag = {
         type: 'moveInteriorObject',
         roomId: intHit.room.id,
         objectId: intHit.obj.id,
         offsetX,
         offsetY,
+        snapToGrid,
       };
       canvas.style.cursor = 'grabbing';
       render();
@@ -554,11 +574,13 @@ export function initEditor(
       if (targetRoom) {
         const obj = targetRoom.interiorObjects?.find((o) => o.id === drag.objectId);
         if (obj) {
+          const gxF = drag.snapToGrid ? m.gx : m.px / GRID;
+          const gyF = drag.snapToGrid ? m.gy : m.py / GRID;
           const pos = computeInteriorObjectMove(
             targetRoom,
             obj,
-            m.gx,
-            m.gy,
+            gxF,
+            gyF,
             drag.offsetX,
             drag.offsetY,
           );
@@ -572,7 +594,10 @@ export function initEditor(
       if (targetRoom) {
         const obj = targetRoom.interiorObjects?.find((o) => o.id === drag.objectId);
         if (obj) {
-          const result = computeInteriorObjectResize(targetRoom, drag.dir, drag.orig, m.gx, m.gy);
+          const gxF = drag.snapToGrid ? m.gx : m.px / GRID;
+          const gyF = drag.snapToGrid ? m.gy : m.py / GRID;
+          const minSize = drag.snapToGrid ? 1 : 0.25;
+          const result = computeInteriorObjectResize(targetRoom, drag.dir, drag.orig, gxF, gyF, minSize);
           obj.x = result.x;
           obj.y = result.y;
           obj.w = result.w;
@@ -692,6 +717,62 @@ export function initEditor(
         items.push({ separator: true });
         items.push({
           label: '階段を削除',
+          action: () => {
+            const room = state.rooms.find((r) => r.id === roomId);
+            if (!room) return;
+            commitChange(() => {
+              room.interiorObjects = room.interiorObjects?.filter((o) => o.id !== objId);
+              if (room.interiorObjects?.length === 0) room.interiorObjects = undefined;
+            });
+            activeInteriorObjectId = undefined;
+          },
+        });
+      }
+
+      if (intObjHit.obj.type === 'marker') {
+        items.push({
+          label: 'ラベルを変更',
+          action: async () => {
+            const room = state.rooms.find((r) => r.id === roomId);
+            if (!room) return;
+            const obj = room.interiorObjects?.find((o) => o.id === objId);
+            if (!obj || obj.type !== 'marker') return;
+            const result = await callbacks.onMarkerEdit({ label: obj.label ?? '' });
+            if (!result) return;
+            commitChange(() => {
+              obj.label = result.label || undefined;
+            });
+          },
+        });
+
+        if (intObjHit.obj.markerKind === 'body') {
+          items.push({ separator: true });
+          const directions: { label: string; dir: 'n' | 'e' | 's' | 'w' }[] = [
+            { label: '↑ 上向き', dir: 'n' },
+            { label: '→ 右向き', dir: 'e' },
+            { label: '↓ 下向き', dir: 's' },
+            { label: '← 左向き', dir: 'w' },
+          ];
+          for (const d of directions) {
+            items.push({
+              label: d.label,
+              disabled: intObjHit.obj.direction === d.dir,
+              action: () => {
+                const room = state.rooms.find((r) => r.id === roomId);
+                if (!room) return;
+                const obj = room.interiorObjects?.find((o) => o.id === objId);
+                if (!obj || obj.type !== 'marker') return;
+                commitChange(() => {
+                  obj.direction = d.dir;
+                });
+              },
+            });
+          }
+        }
+
+        items.push({ separator: true });
+        items.push({
+          label: 'マーカーを削除',
           action: () => {
             const room = state.rooms.find((r) => r.id === roomId);
             if (!room) return;
@@ -866,6 +947,68 @@ export function initEditor(
         },
       });
 
+      // マーカー配置: カーソル位置を基準にオブジェクトの左上を決定
+      const cursorRelX = m.px / GRID - contextRoom.x;
+      const cursorRelY = m.py / GRID - contextRoom.y;
+
+      const canPlaceBodyMarker = contextRoom.w >= 2 && contextRoom.h >= 1;
+      items.push({
+        label: '死体を配置',
+        disabled: !canPlaceBodyMarker,
+        action: () => {
+          const room = state.rooms.find((r) => r.id === roomId);
+          if (!room) return;
+          const mw = 2,
+            mh = 1;
+          const mx = Math.max(0, Math.min(cursorRelX - mw / 2, room.w - mw));
+          const my = Math.max(0, Math.min(cursorRelY - mh / 2, room.h - mh));
+          const marker = createMarker(mx, my, mw, mh);
+          commitChange(() => {
+            if (!room.interiorObjects) room.interiorObjects = [];
+            room.interiorObjects.push(marker);
+          });
+          activeInteriorObjectId = marker.id;
+        },
+      });
+      items.push({
+        label: 'マーカーを配置',
+        action: async () => {
+          const room = state.rooms.find((r) => r.id === roomId);
+          if (!room) return;
+          const result = await callbacks.onMarkerEdit({ label: '' });
+          if (!result) return;
+          const mw = Math.max(1, Math.min(labelDisplayWidth(result.label), room.w));
+          const mh = 1;
+          const mx = Math.max(0, Math.min(cursorRelX - mw / 2, room.w - mw));
+          const my = Math.max(0, Math.min(cursorRelY - mh / 2, room.h - mh));
+          const marker = createMarker(mx, my, mw, mh, 'e', 'pin', result.label || undefined);
+          commitChange(() => {
+            if (!room.interiorObjects) room.interiorObjects = [];
+            room.interiorObjects.push(marker);
+          });
+          activeInteriorObjectId = marker.id;
+        },
+      });
+      items.push({
+        label: 'テキストを配置',
+        action: async () => {
+          const room = state.rooms.find((r) => r.id === roomId);
+          if (!room) return;
+          const result = await callbacks.onMarkerEdit({ label: '' });
+          if (!result || !result.label) return;
+          const mw = Math.max(1, Math.min(labelDisplayWidth(result.label), room.w));
+          const mh = 1;
+          const mx = Math.max(0, Math.min(cursorRelX - mw / 2, room.w - mw));
+          const my = Math.max(0, Math.min(cursorRelY - mh / 2, room.h - mh));
+          const marker = createMarker(mx, my, mw, mh, 'e', 'text', result.label);
+          commitChange(() => {
+            if (!room.interiorObjects) room.interiorObjects = [];
+            room.interiorObjects.push(marker);
+          });
+          activeInteriorObjectId = marker.id;
+        },
+      });
+
       // 連結/連結解除メニュー
       if (
         state.selection.size >= 2 &&
@@ -941,6 +1084,23 @@ export function initEditor(
 
   async function onDblClick(e: MouseEvent): Promise<void> {
     const m = mousePos(e);
+
+    const intHit = hitInteriorObjectInRooms(state.rooms, m.px, m.py);
+    if (intHit && intHit.obj.type === 'marker') {
+      const roomId = intHit.room.id;
+      const objId = intHit.obj.id;
+      const result = await callbacks.onMarkerEdit({ label: intHit.obj.label ?? '' });
+      if (!result) return;
+      const room = state.rooms.find((r) => r.id === roomId);
+      if (!room) return;
+      const obj = room.interiorObjects?.find((o) => o.id === objId);
+      if (!obj || obj.type !== 'marker') return;
+      commitChange(() => {
+        obj.label = result.label || undefined;
+      });
+      return;
+    }
+
     const r = hitRoom(state.rooms, m.px, m.py);
     if (r) {
       await applyRoomEdit(r);

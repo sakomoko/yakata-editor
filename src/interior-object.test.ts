@@ -3,6 +3,7 @@ import type { Room } from './types.ts';
 import {
   createStraightStairs,
   createFoldingStairs,
+  createMarker,
   interiorObjectToPixelRect,
   hitInteriorObject,
   hitInteriorObjectInRooms,
@@ -307,5 +308,64 @@ describe('computeInteriorObjectResize', () => {
     const result = computeInteriorObjectResize(room, 'se', orig, 10, 10);
     expect(result.x + result.w).toBeLessThanOrEqual(5);
     expect(result.y + result.h).toBeLessThanOrEqual(5);
+  });
+
+  it('minSizeパラメータで最小サイズを変更できる', () => {
+    const room = makeRoom({ x: 0, y: 0, w: 10, h: 10 });
+    const orig = { x: 3, y: 3, w: 2, h: 2 };
+    const result = computeInteriorObjectResize(room, 'se', orig, 3.25, 3.25, 0.25);
+    expect(result.w).toBeCloseTo(0.25);
+    expect(result.h).toBeCloseTo(0.25);
+  });
+
+  it('minSize=0.25で負のサイズにならない', () => {
+    const room = makeRoom({ x: 0, y: 0, w: 10, h: 10 });
+    const orig = { x: 3, y: 3, w: 2, h: 2 };
+    const result = computeInteriorObjectResize(room, 'se', orig, 0, 0, 0.25);
+    expect(result.w).toBeGreaterThanOrEqual(0.25);
+    expect(result.h).toBeGreaterThanOrEqual(0.25);
+  });
+
+  it('minSize=0.25でnw方向リサイズも正しく動作する', () => {
+    const room = makeRoom({ x: 0, y: 0, w: 10, h: 10 });
+    const orig = { x: 3, y: 3, w: 2, h: 2 };
+    const result = computeInteriorObjectResize(room, 'nw', orig, 10, 10, 0.25);
+    expect(result.w).toBeGreaterThanOrEqual(0.25);
+    expect(result.h).toBeGreaterThanOrEqual(0.25);
+  });
+});
+
+describe('createMarker', () => {
+  it('デフォルト値でbodyマーカーを生成する', () => {
+    const marker = createMarker(1, 2);
+    expect(marker.type).toBe('marker');
+    expect(marker.markerKind).toBe('body');
+    expect(marker.direction).toBe('e');
+    expect(marker.x).toBe(1);
+    expect(marker.y).toBe(2);
+    expect(marker.w).toBe(2);
+    expect(marker.h).toBe(1);
+    expect(marker.label).toBeUndefined();
+    expect(marker.id).toBeTruthy();
+  });
+
+  it('カスタム引数でpinマーカーを生成する', () => {
+    const marker = createMarker(0, 0, 3, 2, 'n', 'pin', 'テスト');
+    expect(marker.markerKind).toBe('pin');
+    expect(marker.direction).toBe('n');
+    expect(marker.w).toBe(3);
+    expect(marker.h).toBe(2);
+    expect(marker.label).toBe('テスト');
+  });
+
+  it('空ラベルはlabelプロパティを設定しない', () => {
+    const marker = createMarker(0, 0, 2, 1, 'e', 'text', '');
+    expect(marker.label).toBeUndefined();
+  });
+
+  it('textマーカーを生成できる', () => {
+    const marker = createMarker(0, 0, 2, 1, 'e', 'text', '証拠品A');
+    expect(marker.markerKind).toBe('text');
+    expect(marker.label).toBe('証拠品A');
   });
 });

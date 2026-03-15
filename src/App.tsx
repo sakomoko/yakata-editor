@@ -8,10 +8,12 @@ import {
   initEditor,
   type EditorAPI,
   type RoomEditData,
+  type MarkerEditData,
   type ContextMenuRequest,
 } from './editor.ts';
 import { loadFromFile } from './persistence.ts';
 import RoomDialog from './RoomDialog.tsx';
+import MarkerDialog from './MarkerDialog.tsx';
 import ContextMenu from './ContextMenu.tsx';
 import type { ContextMenuItem } from './context-menu.ts';
 
@@ -31,10 +33,13 @@ export default function App() {
   const roomEditResolveRef = useRef<
     ((v: { label: string; fontSize?: number } | null) => void) | null
   >(null);
+  const markerEditResolveRef = useRef<((v: { label: string } | null) => void) | null>(null);
 
   const [status, setStatus] = useState('準備完了');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogData, setDialogData] = useState<RoomEditData | null>(null);
+  const [markerDialogOpen, setMarkerDialogOpen] = useState(false);
+  const [markerDialogData, setMarkerDialogData] = useState<MarkerEditData | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(
     null,
   );
@@ -56,6 +61,23 @@ export default function App() {
     roomEditResolveRef.current = null;
   }, []);
 
+  const handleMarkerEdit = useCallback(
+    (data: MarkerEditData): Promise<{ label: string } | null> => {
+      setMarkerDialogData(data);
+      setMarkerDialogOpen(true);
+      return new Promise((resolve) => {
+        markerEditResolveRef.current = resolve;
+      });
+    },
+    [],
+  );
+
+  const handleMarkerDialogClose = useCallback((result: { label: string } | null) => {
+    setMarkerDialogOpen(false);
+    markerEditResolveRef.current?.(result);
+    markerEditResolveRef.current = null;
+  }, []);
+
   const handleContextMenu = useCallback((request: ContextMenuRequest) => {
     setCtxMenu({ x: request.screenX, y: request.screenY, items: request.items });
   }, []);
@@ -67,6 +89,7 @@ export default function App() {
     const api = initEditor(canvas, container, {
       onStatusChange: setStatus,
       onRoomEdit: handleRoomEdit,
+      onMarkerEdit: handleMarkerEdit,
       onContextMenu: handleContextMenu,
     });
     editorRef.current = api;
@@ -78,7 +101,7 @@ export default function App() {
       window.removeEventListener('resize', onResize);
       api.destroy();
     };
-  }, [handleRoomEdit, handleContextMenu]);
+  }, [handleRoomEdit, handleMarkerEdit, handleContextMenu]);
 
   const handleLoad = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -199,6 +222,15 @@ export default function App() {
 
       {/* Room dialog */}
       {dialogData && <RoomDialog open={dialogOpen} data={dialogData} onClose={handleDialogClose} />}
+
+      {/* Marker dialog */}
+      {markerDialogData && (
+        <MarkerDialog
+          open={markerDialogOpen}
+          data={markerDialogData}
+          onClose={handleMarkerDialogClose}
+        />
+      )}
 
       {/* Context menu */}
       <ContextMenu

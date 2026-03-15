@@ -26,7 +26,8 @@ export interface WallOpening extends WallObjectBase {
 
 export type WallObject = WallWindow | WallDoor | WallOpening;
 
-export type StairsDirection = 'n' | 'e' | 's' | 'w';
+export type CardinalDirection = 'n' | 'e' | 's' | 'w';
+export type StairsDirection = CardinalDirection;
 
 export interface InteriorObjectBase {
   id: string;
@@ -48,7 +49,16 @@ export interface FoldingStairs extends InteriorObjectBase {
   direction: StairsDirection;
 }
 
-export type RoomInteriorObject = StraightStairs | FoldingStairs;
+export type MarkerKind = 'body' | 'pin' | 'text';
+
+export interface Marker extends InteriorObjectBase {
+  type: 'marker';
+  markerKind: MarkerKind;
+  direction: CardinalDirection;
+  label?: string;
+}
+
+export type RoomInteriorObject = StraightStairs | FoldingStairs | Marker;
 
 export interface Room {
   id: string;
@@ -123,12 +133,14 @@ export type DragState =
       objectId: string;
       offsetX: number;
       offsetY: number;
+      snapToGrid: boolean;
     }
   | {
       type: 'resizeInteriorObject';
       roomId: string;
       objectId: string;
       dir: ResizeDirection;
+      snapToGrid: boolean;
       orig: { x: number; y: number; w: number; h: number };
     }
   | null;

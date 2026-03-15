@@ -45,10 +45,12 @@ type WallObject = WallWindow | WallDoor | WallOpening;
 
 ## RoomInteriorObject
 
-部屋内部に配置されるオブジェクト（階段など）を表すデータ構造。座標は部屋左上からの相対グリッド座標。
+部屋内部に配置されるオブジェクト（階段・マーカーなど）を表すデータ構造。座標は部屋左上からの相対グリッド座標。
 
 ```typescript
-type StairsDirection = 'n' | 'e' | 's' | 'w';
+type CardinalDirection = 'n' | 'e' | 's' | 'w';
+type StairsDirection = CardinalDirection;  // 後方互換エイリアス
+type MarkerKind = 'body' | 'pin' | 'text';
 
 interface InteriorObjectBase {
   id: string;        // UUID
@@ -70,18 +72,29 @@ interface FoldingStairs extends InteriorObjectBase {
   direction: StairsDirection;
 }
 
-type RoomInteriorObject = StraightStairs | FoldingStairs;
+interface Marker extends InteriorObjectBase {
+  type: 'marker';
+  markerKind: MarkerKind;
+  direction: CardinalDirection;
+  label?: string;
+}
+
+type RoomInteriorObject = StraightStairs | FoldingStairs | Marker;
 ```
 
 | プロパティ | 説明 |
 |-----------|------|
-| `x`, `y` | 部屋左上からの相対位置（グリッド単位） |
-| `w`, `h` | オブジェクトのサイズ（グリッド単位） |
-| `type` | オブジェクトの種別（現在は `'stairs'` のみ） |
-| `stairsType` | 階段の形状（`'straight'`: 直線 / `'folding'`: 折り返し） |
-| `direction` | 昇降方向（`'n'`: 上向き / `'e'`: 右向き / `'s'`: 下向き / `'w'`: 左向き） |
+| `x`, `y` | 部屋左上からの相対位置（グリッド単位、マーカーは小数可） |
+| `w`, `h` | オブジェクトのサイズ（グリッド単位、マーカーは小数可） |
+| `type` | オブジェクトの種別（`'stairs'` / `'marker'`） |
+| `stairsType` | 階段の形状（`'straight'`: 直線 / `'folding'`: 折り返し）※階段のみ |
+| `direction` | 方向（階段: 昇降方向、死体マーカー: 頭の向き） |
+| `markerKind` | マーカーの種類（`'body'`: 死体 / `'pin'`: ピンマーカー / `'text'`: テキストのみ）※マーカーのみ |
+| `label` | マーカーのラベルテキスト（任意）※マーカーのみ |
 
-直線階段のデフォルトサイズは2×3グリッド、折り返し階段は4×3グリッド。部屋境界をはみ出さない制約があり、部屋リサイズ時に自動クランプされる。
+直線階段のデフォルトサイズは2×3グリッド、折り返し階段は4×3グリッド。死体マーカーのデフォルトサイズは2×1グリッド。部屋境界をはみ出さない制約があり、部屋リサイズ時に自動クランプされる。
+
+階段はグリッドスナップで移動・リサイズされるが、マーカーはグリッドに縛られず自由に配置・リサイズ可能（最小サイズ0.25グリッド）。
 
 ## Room
 
@@ -128,8 +141,8 @@ type DragState =
   | { type: 'resize'; dir: ResizeDirection; orig: { x: number; y: number; w: number; h: number }; targetId: string; start: MouseCoord }
   | { type: 'moveWallObject'; roomId: string; objectId: string }
   | { type: 'resizeWallObject'; roomId: string; objectId: string; edge: 'start' | 'end'; origOffset: number; origWidth: number }
-  | { type: 'moveInteriorObject'; roomId: string; objectId: string; offsetX: number; offsetY: number }
-  | { type: 'resizeInteriorObject'; roomId: string; objectId: string; dir: ResizeDirection; orig: { x: number; y: number; w: number; h: number } }
+  | { type: 'moveInteriorObject'; roomId: string; objectId: string; offsetX: number; offsetY: number; snapToGrid: boolean }
+  | { type: 'resizeInteriorObject'; roomId: string; objectId: string; dir: ResizeDirection; snapToGrid: boolean; orig: { x: number; y: number; w: number; h: number } }
   | null;
 ```
 
@@ -142,8 +155,8 @@ type DragState =
 | `pan` | 中ボタンドラッグ | キャンバスのパン移動 |
 | `moveWallObject` | 壁オブジェクトをドラッグ | 壁上のオブジェクトを移動（別の壁への移動も可能） |
 | `resizeWallObject` | 壁オブジェクトの端をドラッグ | 壁オブジェクトの幅を伸縮（グリッドスナップ、オーバーラップ防止） |
-| `moveInteriorObject` | 部屋内オブジェクトをドラッグ | 部屋内でオブジェクトを移動（部屋境界内に制約） |
-| `resizeInteriorObject` | 部屋内オブジェクトのハンドルをドラッグ | オブジェクトのサイズを変更（最小1×1、部屋境界内に制約） |
+| `moveInteriorObject` | 部屋内オブジェクトをドラッグ | 部屋内でオブジェクトを移動（部屋境界内に制約、`snapToGrid`で階段はグリッドスナップ、マーカーはフリー） |
+| `resizeInteriorObject` | 部屋内オブジェクトのハンドルをドラッグ | オブジェクトのサイズを変更（`snapToGrid`で階段は最小1×1グリッドスナップ、マーカーは最小0.25グリッドフリー） |
 | `null` | ドラッグなし | 通常状態 |
 
 ## EditorState

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ensureWallObjectIds, ensureInteriorObjectIds } from './persistence.ts';
-import type { WallDoor, StraightStairs, FoldingStairs } from './types.ts';
+import type { WallDoor, StraightStairs, FoldingStairs, Marker } from './types.ts';
 
 describe('ensureWallObjectIds', () => {
   it('窓データを正しく復元する', () => {
@@ -161,5 +161,50 @@ describe('ensureInteriorObjectIds', () => {
     const raw = [{ type: 'stairs', stairsType: 'unknown', direction: 'n', x: 0, y: 0, w: 2, h: 3 }];
     const result = ensureInteriorObjectIds(raw);
     expect((result[0] as StraightStairs).stairsType).toBe('straight');
+  });
+
+  it('bodyマーカーを正しく復元する', () => {
+    const raw = [{ type: 'marker', markerKind: 'body', direction: 'e', x: 1, y: 2, w: 2, h: 1 }];
+    const result = ensureInteriorObjectIds(raw);
+    expect(result).toHaveLength(1);
+    const marker = result[0] as Marker;
+    expect(marker.type).toBe('marker');
+    expect(marker.markerKind).toBe('body');
+    expect(marker.direction).toBe('e');
+    expect(marker.label).toBeUndefined();
+  });
+
+  it('pinマーカーをラベル付きで復元する', () => {
+    const raw = [{ type: 'marker', markerKind: 'pin', direction: 'n', x: 0, y: 0, w: 3, h: 1, label: '証拠品' }];
+    const result = ensureInteriorObjectIds(raw);
+    const marker = result[0] as Marker;
+    expect(marker.markerKind).toBe('pin');
+    expect(marker.label).toBe('証拠品');
+  });
+
+  it('textマーカーを復元する', () => {
+    const raw = [{ type: 'marker', markerKind: 'text', direction: 'e', x: 0, y: 0, w: 2, h: 1, label: 'メモ' }];
+    const result = ensureInteriorObjectIds(raw);
+    const marker = result[0] as Marker;
+    expect(marker.markerKind).toBe('text');
+    expect(marker.label).toBe('メモ');
+  });
+
+  it('markerKindが不正な値の場合bodyにフォールバックする', () => {
+    const raw = [{ type: 'marker', markerKind: 'unknown', direction: 'e', x: 0, y: 0, w: 2, h: 1 }];
+    const result = ensureInteriorObjectIds(raw);
+    expect((result[0] as Marker).markerKind).toBe('body');
+  });
+
+  it('マーカーのdirectionが不正な値の場合eにフォールバックする', () => {
+    const raw = [{ type: 'marker', markerKind: 'body', direction: 'invalid', x: 0, y: 0, w: 2, h: 1 }];
+    const result = ensureInteriorObjectIds(raw);
+    expect((result[0] as Marker).direction).toBe('e');
+  });
+
+  it('空文字のラベルは復元しない', () => {
+    const raw = [{ type: 'marker', markerKind: 'pin', direction: 'e', x: 0, y: 0, w: 2, h: 1, label: '' }];
+    const result = ensureInteriorObjectIds(raw);
+    expect((result[0] as Marker).label).toBeUndefined();
   });
 });
