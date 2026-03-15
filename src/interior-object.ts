@@ -565,12 +565,10 @@ function drawMarkerLabel(
 
   // Auto font size: fit text using measureText for accurate CJK support
   const maxW = textW * 0.95;
-  let fontSize = Math.min(textH * 0.8, textH);
-  ctx.font = `${fontSize}px sans-serif`;
+  const baseFontSize = textH * 0.8;
+  ctx.font = `${baseFontSize}px sans-serif`;
   const measured = ctx.measureText(label);
-  if (measured.width > maxW) {
-    fontSize = fontSize * (maxW / measured.width);
-  }
+  const fontSize = measured.width > maxW ? baseFontSize * (maxW / measured.width) : baseFontSize;
 
   ctx.fillStyle = style.color;
   ctx.font = `${fontSize}px sans-serif`;

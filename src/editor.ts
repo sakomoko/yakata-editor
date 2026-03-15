@@ -122,6 +122,15 @@ export function initEditor(
   let isPanning = false;
   let activeInteriorObjectId: string | undefined;
 
+  /** CJK文字を2カラム換算した表示幅をグリッド単位で返す */
+  function labelDisplayWidth(label: string): number {
+    const cols = [...label].reduce(
+      (n, c) => n + (/[\u3000-\u9fff\uff00-\uffef]/.test(c) ? 2 : 1),
+      0,
+    );
+    return Math.ceil(cols / 2) + 1;
+  }
+
   function mousePos(e: MouseEvent): MouseCoord {
     const rect = canvas.getBoundingClientRect();
     const sx = e.clientX - rect.left;
@@ -968,7 +977,7 @@ export function initEditor(
           if (!room) return;
           const result = await callbacks.onMarkerEdit({ label: '' });
           if (!result) return;
-          const mw = Math.max(1, Math.min(result.label.length + 1, room.w));
+          const mw = Math.max(1, Math.min(labelDisplayWidth(result.label), room.w));
           const mh = 1;
           const mx = Math.max(0, Math.min(cursorRelX - mw / 2, room.w - mw));
           const my = Math.max(0, Math.min(cursorRelY - mh / 2, room.h - mh));
@@ -987,7 +996,7 @@ export function initEditor(
           if (!room) return;
           const result = await callbacks.onMarkerEdit({ label: '' });
           if (!result || !result.label) return;
-          const mw = Math.max(1, Math.min(result.label.length + 1, room.w));
+          const mw = Math.max(1, Math.min(labelDisplayWidth(result.label), room.w));
           const mh = 1;
           const mx = Math.max(0, Math.min(cursorRelX - mw / 2, room.w - mw));
           const my = Math.max(0, Math.min(cursorRelY - mh / 2, room.h - mh));

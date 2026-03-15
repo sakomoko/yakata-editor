@@ -26,7 +26,8 @@ export interface WallOpening extends WallObjectBase {
 
 export type WallObject = WallWindow | WallDoor | WallOpening;
 
-export type StairsDirection = 'n' | 'e' | 's' | 'w';
+export type CardinalDirection = 'n' | 'e' | 's' | 'w';
+export type StairsDirection = CardinalDirection;
 
 export interface InteriorObjectBase {
   id: string;
@@ -53,7 +54,7 @@ export type MarkerKind = 'body' | 'pin' | 'text';
 export interface Marker extends InteriorObjectBase {
   type: 'marker';
   markerKind: MarkerKind;
-  direction: StairsDirection;
+  direction: CardinalDirection;
   label?: string;
 }
 
