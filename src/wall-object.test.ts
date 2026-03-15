@@ -693,6 +693,25 @@ describe('hitWallObjectEdge', () => {
     expect(hitWallObjectEdge(room, 0, 0, 1)).toBeNull();
   });
 
+  it('zoom=2のときhit toleranceがスケールされる', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 3, 2);
+    room.wallObjects = [win];
+    // At zoom=2, tolerance = 5/2 = 2.5px. 3px away from edge should miss.
+    const hit = hitWallObjectEdge(room, 3 * GRID + 3, 0, 2);
+    expect(hit).toBeNull();
+  });
+
+  it('zoom=2のときエッジ近くでヒットする', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 3, 2);
+    room.wallObjects = [win];
+    // At zoom=2, tolerance = 5/2 = 2.5px. 2px away from edge should hit.
+    const hit = hitWallObjectEdge(room, 3 * GRID + 2, 0, 2);
+    expect(hit).not.toBeNull();
+    expect(hit!.edge).toBe('start');
+  });
+
   it('ドアのstart端にヒットする', () => {
     const room = createRoom(0, 0, 10, 5);
     const door = createWallDoor('n', 3, 2);
@@ -867,6 +886,16 @@ describe('computeWallObjectResize', () => {
     const result = computeWallObjectResize(room, win, 'end', 5 * GRID, 6 * GRID, 2, 2);
     expect(result.offset).toBe(2);
     expect(result.width).toBe(4);
+  });
+
+  it('startエッジをorigEndより遠くにドラッグしても幅が負にならない', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 3, 2);
+    room.wallObjects = [win];
+    // Drag start edge far past origEnd (origEnd=5, snapped=8)
+    const result = computeWallObjectResize(room, win, 'start', 8 * GRID, 0, 3, 2);
+    expect(result.offset).toBe(4); // origEnd - 1 = 4
+    expect(result.width).toBe(1); // min width
   });
 
   it('オーバーラップ時は元の値を返す', () => {

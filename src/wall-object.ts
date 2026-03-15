@@ -3,7 +3,7 @@ import { GRID, WALL, WALL_SEL } from './grid.ts';
 
 const WINDOW_DRAW_OFFSET = 4;
 const WALL_OBJECT_HIT_TOLERANCE = 6;
-/** Edge hit tolerance (px). Slightly larger than RESIZE_HANDLE_SIZE/2 to allow easy targeting. */
+/** Edge hit tolerance (px). RESIZE_HANDLE_SIZE/2 (3px) + 2px margin for easy targeting. */
 const WALL_OBJECT_EDGE_HIT_TOLERANCE = 5;
 
 export function createWallWindow(side: WallSide, offset: number, width = 1): WallWindow {
@@ -521,7 +521,8 @@ export function computeWallObjectResize(
     width = Math.max(1, origEnd - offset);
   }
 
-  // Prevent overlap
+  // Prevent overlap: return current values (updated each mousemove) so the object
+  // stays at its last valid position rather than snapping back to drag-start.
   if (wouldOverlap(room, obj.id, obj.side, offset, width)) {
     return { offset: obj.offset, width: obj.width };
   }

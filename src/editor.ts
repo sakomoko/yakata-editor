@@ -272,7 +272,7 @@ export function initEditor(
     const edgeHit = hitWallObjectEdgeInRooms(selectedRoomsForEdge, m.px, m.py, viewport.zoom);
     if (edgeHit) {
       pushUndo(state.history, state.rooms);
-      const horizontal = edgeHit.obj.side === 'n' || edgeHit.obj.side === 's';
+      const horiz = edgeHit.obj.side === 'n' || edgeHit.obj.side === 's';
       state.drag = {
         type: 'resizeWallObject',
         roomId: edgeHit.room.id,
@@ -281,7 +281,7 @@ export function initEditor(
         origOffset: edgeHit.obj.offset,
         origWidth: edgeHit.obj.width,
       };
-      canvas.style.cursor = horizontal ? 'ew-resize' : 'ns-resize';
+      canvas.style.cursor = horiz ? 'ew-resize' : 'ns-resize';
       render();
       return;
     }
