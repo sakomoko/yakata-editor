@@ -37,9 +37,12 @@ export default function ContextMenu({ open, anchorPosition, items, onClose }: Co
           <MenuItem
             key={`${i}-${item.label}`}
             disabled={item.disabled}
-            onClick={() => {
-              item.action();
-              onClose();
+            onClick={async () => {
+              try {
+                await item.action();
+              } finally {
+                onClose();
+              }
             }}
             sx={{
               fontSize: 13,
