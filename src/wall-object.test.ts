@@ -557,6 +557,128 @@ describe('ドアのヒット判定', () => {
       { start: 3 * GRID, end: 5 * GRID },
     ]);
   });
+
+  describe('hinge=end のドアヒット判定', () => {
+    it('北壁・hinge=end・内開きの扇形内でヒットする', () => {
+      // hinge=end → ヒンジ=(3*GRID, 0), closedAngle=π(左向き)
+      // inward mirror: openAngle=π-π/2=π/2(下向き), anticlockwise=true
+      // 扇形はπ→π/2の反時計回り（左から下）
+      const room = createRoom(0, 0, 5, 5);
+      const door = createWallDoor('n', 2, 1, 'inward', 'end');
+      room.wallObjects = [door];
+      // 角度3π/4(左下45度)の内部点
+      const hingeX = 3 * GRID;
+      const px = hingeX + Math.cos((3 * Math.PI) / 4) * GRID * 0.5;
+      const py = 0 + Math.sin((3 * Math.PI) / 4) * GRID * 0.5;
+      const hit = hitWallObject(room, px, py, 1);
+      expect(hit).toBe(door);
+    });
+
+    it('北壁・hinge=end・外開きの扇形内でヒットする', () => {
+      // hinge=end → closedAngle=π(左向き)
+      // outward mirror: openAngle=π-(-π/2)=3π/2(上向き), anticlockwise=false
+      const room = createRoom(0, 0, 5, 5);
+      const door = createWallDoor('n', 2, 1, 'outward', 'end');
+      room.wallObjects = [door];
+      const hingeX = 3 * GRID;
+      // 角度5π/4(左上45度)の内部点
+      const px = hingeX + Math.cos((5 * Math.PI) / 4) * GRID * 0.5;
+      const py = 0 + Math.sin((5 * Math.PI) / 4) * GRID * 0.5;
+      const hit = hitWallObject(room, px, py, 1);
+      expect(hit).toBe(door);
+    });
+
+    it('西壁・hinge=end・内開きの扇形内でヒットする', () => {
+      // hinge=end → ヒンジ=(0, 3*GRID), closedAngle=-π/2(上向き)
+      // inward mirror: openAngle=-0=0(右向き), anticlockwise=false
+      const room = createRoom(0, 0, 5, 5);
+      const door = createWallDoor('w', 2, 1, 'inward', 'end');
+      room.wallObjects = [door];
+      const hingeY = 3 * GRID;
+      // 角度-π/4(右上45度)の内部点
+      const px = 0 + Math.cos(-Math.PI / 4) * GRID * 0.5;
+      const py = hingeY + Math.sin(-Math.PI / 4) * GRID * 0.5;
+      const hit = hitWallObject(room, px, py, 1);
+      expect(hit).toBe(door);
+    });
+
+    it('南壁・hinge=end・内開きの扇形内でヒットする', () => {
+      // 南壁 start: closedAngle=0, inward=-π/2, inwardCCW=true
+      // hinge=end → ヒンジ=(3*GRID, 5*GRID), closedAngle=π(左向き)
+      // inward mirror: openAngle=π-(-π/2)=3π/2(上向き), anticlockwise=false
+      const room = createRoom(0, 0, 5, 5);
+      const door = createWallDoor('s', 2, 1, 'inward', 'end');
+      room.wallObjects = [door];
+      const hingeX = 3 * GRID;
+      const hingeY = 5 * GRID;
+      // 角度5π/4(左上45度)の内部点
+      const px = hingeX + Math.cos((5 * Math.PI) / 4) * GRID * 0.5;
+      const py = hingeY + Math.sin((5 * Math.PI) / 4) * GRID * 0.5;
+      const hit = hitWallObject(room, px, py, 1);
+      expect(hit).toBe(door);
+    });
+
+    it('東壁・hinge=end・内開きの扇形内でヒットする', () => {
+      // 東壁 start: closedAngle=π/2, inward=π, inwardCCW=false
+      // hinge=end → ヒンジ=(5*GRID, 3*GRID), closedAngle=-π/2(上向き)
+      // inward mirror: openAngle=-π(左向き), anticlockwise=true
+      const room = createRoom(0, 0, 5, 5);
+      const door = createWallDoor('e', 2, 1, 'inward', 'end');
+      room.wallObjects = [door];
+      const hingeX = 5 * GRID;
+      const hingeY = 3 * GRID;
+      // 角度-3π/4(左上)の内部点
+      const px = hingeX + Math.cos((-3 * Math.PI) / 4) * GRID * 0.5;
+      const py = hingeY + Math.sin((-3 * Math.PI) / 4) * GRID * 0.5;
+      const hit = hitWallObject(room, px, py, 1);
+      expect(hit).toBe(door);
+    });
+
+    it('南壁・hinge=end・外開きの扇形内でヒットする', () => {
+      // 南壁 start: closedAngle=0, outward=π/2, outwardCCW=false
+      // hinge=end → closedAngle=π(左向き), outward mirror: π-π/2=π/2(下向き), anticlockwise=true
+      // 扇形はπ→π/2の反時計回り（左から下）
+      const room = createRoom(0, 0, 5, 5);
+      const door = createWallDoor('s', 2, 1, 'outward', 'end');
+      room.wallObjects = [door];
+      const hingeX = 3 * GRID;
+      const hingeY = 5 * GRID;
+      // 角度3π/4(左下45度)の内部点
+      const px = hingeX + Math.cos((3 * Math.PI) / 4) * GRID * 0.5;
+      const py = hingeY + Math.sin((3 * Math.PI) / 4) * GRID * 0.5;
+      const hit = hitWallObject(room, px, py, 1);
+      expect(hit).toBe(door);
+    });
+
+    it('東壁・hinge=end・外開きの扇形内でヒットする', () => {
+      // 東壁 start: closedAngle=π/2, outward=0, outwardCCW=true
+      // hinge=end → closedAngle=-π/2(上向き), outward mirror: -0=0(右向き), anticlockwise=false
+      // 扇形は-π/2→0の時計回り（上から右）
+      const room = createRoom(0, 0, 5, 5);
+      const door = createWallDoor('e', 2, 1, 'outward', 'end');
+      room.wallObjects = [door];
+      const hingeX = 5 * GRID;
+      const hingeY = 3 * GRID;
+      // 角度-π/4(右上45度)の内部点
+      const px = hingeX + Math.cos(-Math.PI / 4) * GRID * 0.5;
+      const py = hingeY + Math.sin(-Math.PI / 4) * GRID * 0.5;
+      const hit = hitWallObject(room, px, py, 1);
+      expect(hit).toBe(door);
+    });
+
+    it('hinge=end の扇形範囲外ではヒットしない', () => {
+      // 北壁 hinge=end → ヒンジ=(3*GRID, 0)、扇形はπ→π/2(左下方向)
+      // 右下方向（角度π/4）はヒンジから見て扇形の外
+      const room = createRoom(0, 0, 5, 5);
+      const door = createWallDoor('n', 2, 1, 'inward', 'end');
+      room.wallObjects = [door];
+      const hingeX = 3 * GRID;
+      const px = hingeX + Math.cos(Math.PI / 4) * GRID * 0.5;
+      const py = 0 + Math.sin(Math.PI / 4) * GRID * 0.5;
+      const hit = hitWallObject(room, px, py, 1);
+      expect(hit).toBeNull();
+    });
+  });
 });
 
 describe('createWallOpening', () => {

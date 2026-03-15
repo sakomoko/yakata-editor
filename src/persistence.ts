@@ -19,6 +19,7 @@ const VIEWPORT_KEY = 'madori_viewport';
 const VALID_SIDES = new Set(['n', 'e', 's', 'w']);
 const VALID_WALL_OBJECT_TYPES = new Set(['window', 'door', 'opening']);
 const VALID_DOOR_SWINGS = new Set(['inward', 'outward']);
+const VALID_DOOR_HINGES = new Set(['start', 'end']);
 const VALID_INTERIOR_OBJECT_TYPES = new Set(['stairs']);
 const VALID_STAIRS_TYPES = new Set(['straight', 'folding']);
 const VALID_STAIRS_DIRECTIONS = new Set(['n', 'e', 's', 'w']);
@@ -81,7 +82,10 @@ export function ensureWallObjectIds(objects: unknown[]): WallObject[] {
         const swing = VALID_DOOR_SWINGS.has(obj.swing as string)
           ? (obj.swing as 'inward' | 'outward')
           : 'inward';
-        const result: WallDoor = { id, type: 'door', side, offset, width, swing };
+        const hinge = VALID_DOOR_HINGES.has(obj.hinge as string)
+          ? (obj.hinge as 'start' | 'end')
+          : 'start';
+        const result: WallDoor = { id, type: 'door', side, offset, width, swing, hinge };
         if (pairedWith) result.pairedWith = pairedWith;
         return result;
       }

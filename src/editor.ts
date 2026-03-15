@@ -714,6 +714,18 @@ export function initEditor(
             });
           },
         });
+        items.push({
+          label: 'ヒンジ位置を切替',
+          action: () => {
+            const room = state.rooms.find((r) => r.id === roomId);
+            if (!room) return;
+            const door = room.wallObjects?.find((o) => o.id === objId);
+            if (!door || door.type !== 'door') return;
+            commitChange(() => {
+              door.hinge = door.hinge === 'start' ? 'end' : 'start';
+            });
+          },
+        });
         items.push({ label: 'ドアを削除', action: removeWallObject });
       } else if (hitObj.type === 'opening') {
         items.push({ label: '開口を削除', action: removeWallObject });

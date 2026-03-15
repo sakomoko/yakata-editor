@@ -15,6 +15,7 @@ export interface WallWindow extends WallObjectBase {
 export interface WallDoor extends WallObjectBase {
   type: 'door';
   swing: 'inward' | 'outward';
+  hinge: 'start' | 'end';
 }
 
 export interface WallOpening extends WallObjectBase {
