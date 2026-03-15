@@ -37,6 +37,28 @@ describe('ensureWallObjectIds', () => {
     expect((result[0] as WallDoor).swing).toBe('inward');
   });
 
+  it('hinge=end のドアがシリアライズ後も復元される', () => {
+    const raw = [{ type: 'door', side: 'n', offset: 1, width: 1, swing: 'inward', hinge: 'end' }];
+    const json = JSON.parse(JSON.stringify(raw));
+    const result = ensureWallObjectIds(json);
+    expect(result).toHaveLength(1);
+    expect((result[0] as WallDoor).hinge).toBe('end');
+  });
+
+  it('hinge が欠損したドアデータは start にフォールバックする', () => {
+    const raw = [{ type: 'door', side: 'n', offset: 2, width: 1, swing: 'inward' }];
+    const result = ensureWallObjectIds(raw);
+    expect(result).toHaveLength(1);
+    expect((result[0] as WallDoor).hinge).toBe('start');
+  });
+
+  it('hinge が不正な値のドアデータは start にフォールバックする', () => {
+    const raw = [{ type: 'door', side: 'n', offset: 2, width: 1, swing: 'inward', hinge: 'middle' }];
+    const result = ensureWallObjectIds(raw);
+    expect(result).toHaveLength(1);
+    expect((result[0] as WallDoor).hinge).toBe('start');
+  });
+
   it('不正な type のデータはフィルタで除外される', () => {
     const raw = [{ type: 'unknown', side: 'n', offset: 0, width: 1 }];
     const result = ensureWallObjectIds(raw);
