@@ -622,24 +622,22 @@ export function initEditor(
       return;
     }
 
-    if (state.drag.type === 'areaSelect') {
+    if (state.drag.type === 'areaSelect' || state.drag.type === 'create') {
       const m = mousePos(e);
       const area = normalizeArea(state.drag.start, m);
       const contained = findRoomsInArea(state.rooms, area);
       if (contained.length > 0) {
+        // 範囲選択: 包含された部屋を選択
         if (!e.shiftKey) {
           clearSelection(state.selection);
         }
         for (const r of contained) {
           state.selection.add(r.id);
         }
-      }
-    } else if (state.drag.type === 'create') {
-      const m = mousePos(e);
-      const { x, y, w, h } = normalizeArea(state.drag.start, m);
-      if (w > 0 && h > 0) {
+      } else if (area.w > 0 && area.h > 0) {
+        // 部屋作成: 包含する部屋がなければ新規作成にフォールバック
         pushUndo(state.history, state.rooms);
-        const room = createRoom(x, y, w, h);
+        const room = createRoom(area.x, area.y, area.w, area.h);
         state.rooms.push(room);
         clearSelection(state.selection);
         state.selection.add(room.id);
@@ -649,6 +647,7 @@ export function initEditor(
       syncAllPairedOpenings(state.rooms);
     }
 
+    // 共通クリーンアップ: areaSelect / create / move / resize すべてここを通る
     state.drag = null;
     render();
     persistToStorage(state.rooms);
