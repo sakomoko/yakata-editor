@@ -3,12 +3,15 @@ import { GRID, drawGrid } from './grid.ts';
 import {
   drawRoom,
   drawCreationPreview,
+  drawAreaSelectPreview,
   hitHandle,
   hitRoom,
   isInsideRoom,
   createRoom,
   calcAutoFontSize,
   computeRoomsBoundingBox,
+  findRoomsInArea,
+  normalizeArea,
 } from './room.ts';
 import { toggleSelection, selectSingle, clearSelection, getSingleSelected } from './selection.ts';
 import { pushUndo, popUndo } from './history.ts';
@@ -173,6 +176,10 @@ export function initEditor(
       drawCreationPreview(ctx, state.drag.start, state.drag.cur, viewport.zoom);
     }
 
+    if (state.drag && state.drag.type === 'areaSelect') {
+      drawAreaSelectPreview(ctx, state.drag.start, state.drag.cur, viewport.zoom, state.rooms);
+    }
+
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     updateStatus();
   }
@@ -306,12 +313,7 @@ export function initEditor(
     }
 
     // Check interior object handle hit (resize)
-    const intHandleHit = hitInteriorObjectHandleInRooms(
-      selectedRooms,
-      m.px,
-      m.py,
-      viewport.zoom,
-    );
+    const intHandleHit = hitInteriorObjectHandleInRooms(selectedRooms, m.px, m.py, viewport.zoom);
     if (intHandleHit) {
       pushUndo(state.history, state.rooms);
       activeInteriorObjectId = intHandleHit.obj.id;
@@ -320,7 +322,12 @@ export function initEditor(
         roomId: intHandleHit.room.id,
         objectId: intHandleHit.obj.id,
         dir: intHandleHit.dir,
-        orig: { x: intHandleHit.obj.x, y: intHandleHit.obj.y, w: intHandleHit.obj.w, h: intHandleHit.obj.h },
+        orig: {
+          x: intHandleHit.obj.x,
+          y: intHandleHit.obj.y,
+          w: intHandleHit.obj.w,
+          h: intHandleHit.obj.h,
+        },
       };
       canvas.style.cursor = intHandleHit.dir + '-resize';
       render();
@@ -435,7 +442,12 @@ export function initEditor(
         const horiz = edgeHover.obj.side === 'n' || edgeHover.obj.side === 's';
         canvas.style.cursor = horiz ? 'ew-resize' : 'ns-resize';
       } else {
-        const intHandleHover = hitInteriorObjectHandleInRooms(selectedRooms, m.px, m.py, viewport.zoom);
+        const intHandleHover = hitInteriorObjectHandleInRooms(
+          selectedRooms,
+          m.px,
+          m.py,
+          viewport.zoom,
+        );
         if (intHandleHover) {
           canvas.style.cursor = intHandleHover.dir + '-resize';
         } else {
@@ -457,8 +469,16 @@ export function initEditor(
       return;
     }
 
-    if (state.drag.type === 'create') {
+    if (state.drag.type === 'create' || state.drag.type === 'areaSelect') {
       state.drag.cur = m;
+      // ドラッグ矩形が既存の部屋を完全に包含するかチェックしてモード切替
+      const area = normalizeArea(state.drag.start, m);
+      const contained = findRoomsInArea(state.rooms, area);
+      if (contained.length > 0 && state.drag.type === 'create') {
+        state.drag = { type: 'areaSelect', start: state.drag.start, cur: m };
+      } else if (contained.length === 0 && state.drag.type === 'areaSelect') {
+        state.drag = { type: 'create', start: state.drag.start, cur: m };
+      }
     } else if (state.drag.type === 'move') {
       const dx = m.gx - state.drag.start.gx;
       const dy = m.gy - state.drag.start.gy;
@@ -534,7 +554,14 @@ export function initEditor(
       if (targetRoom) {
         const obj = targetRoom.interiorObjects?.find((o) => o.id === drag.objectId);
         if (obj) {
-          const pos = computeInteriorObjectMove(targetRoom, obj, m.gx, m.gy, drag.offsetX, drag.offsetY);
+          const pos = computeInteriorObjectMove(
+            targetRoom,
+            obj,
+            m.gx,
+            m.gy,
+            drag.offsetX,
+            drag.offsetY,
+          );
           obj.x = pos.x;
           obj.y = pos.y;
         }
@@ -595,15 +622,24 @@ export function initEditor(
       return;
     }
 
-    if (state.drag.type === 'create') {
+    if (state.drag.type === 'areaSelect' || state.drag.type === 'create') {
+      // mouseup 時点の最終座標で判定する。ドラッグ中のプレビューモード（areaSelect/create）
+      // と mouseup 時の包含判定が異なる場合があるが、最終座標での判定を優先する。
       const m = mousePos(e);
-      const x = Math.min(state.drag.start.gx, m.gx);
-      const y = Math.min(state.drag.start.gy, m.gy);
-      const w = Math.abs(m.gx - state.drag.start.gx);
-      const h = Math.abs(m.gy - state.drag.start.gy);
-      if (w > 0 && h > 0) {
+      const area = normalizeArea(state.drag.start, m);
+      const contained = findRoomsInArea(state.rooms, area);
+      if (contained.length > 0) {
+        // 範囲選択: 包含された部屋を選択
+        if (!e.shiftKey) {
+          clearSelection(state.selection);
+        }
+        for (const r of contained) {
+          state.selection.add(r.id);
+        }
+      } else if (area.w > 0 && area.h > 0) {
+        // 部屋作成: 包含する部屋がなければ新規作成にフォールバック
         pushUndo(state.history, state.rooms);
-        const room = createRoom(x, y, w, h);
+        const room = createRoom(area.x, area.y, area.w, area.h);
         state.rooms.push(room);
         clearSelection(state.selection);
         state.selection.add(room.id);
@@ -613,6 +649,7 @@ export function initEditor(
       syncAllPairedOpenings(state.rooms);
     }
 
+    // 共通クリーンアップ: areaSelect / create / move / resize すべてここを通る
     state.drag = null;
     render();
     persistToStorage(state.rooms);
@@ -798,7 +835,8 @@ export function initEditor(
         action: () => {
           const room = state.rooms.find((r) => r.id === roomId);
           if (!room) return;
-          const sw = 2, sh = 3;
+          const sw = 2,
+            sh = 3;
           const sx = Math.max(0, Math.min(Math.floor((room.w - sw) / 2), room.w - sw));
           const sy = Math.max(0, Math.min(Math.floor((room.h - sh) / 2), room.h - sh));
           const stairs = createStraightStairs(sx, sy, sw, sh);
@@ -815,7 +853,8 @@ export function initEditor(
         action: () => {
           const room = state.rooms.find((r) => r.id === roomId);
           if (!room) return;
-          const fw = 4, fh = 3;
+          const fw = 4,
+            fh = 3;
           const fx = Math.max(0, Math.min(Math.floor((room.w - fw) / 2), room.w - fw));
           const fy = Math.max(0, Math.min(Math.floor((room.h - fh) / 2), room.h - fh));
           const stairs = createFoldingStairs(fx, fy, fw, fh);
@@ -968,10 +1007,7 @@ export function initEditor(
       return;
     }
 
-    if (
-      (e.key === 'Delete' || e.key === 'Backspace') &&
-      document.activeElement === document.body
-    ) {
+    if ((e.key === 'Delete' || e.key === 'Backspace') && document.activeElement === document.body) {
       // Delete active interior object first
       if (activeInteriorObjectId) {
         e.preventDefault();

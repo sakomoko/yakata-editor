@@ -78,16 +78,26 @@ export function drawRoom(
   }
 }
 
+/** start/cur のMouseCoordペアから正規化された矩形（グリッド座標）を返す */
+export function normalizeArea(
+  start: MouseCoord,
+  cur: MouseCoord,
+): { x: number; y: number; w: number; h: number } {
+  return {
+    x: Math.min(start.gx, cur.gx),
+    y: Math.min(start.gy, cur.gy),
+    w: Math.abs(cur.gx - start.gx),
+    h: Math.abs(cur.gy - start.gy),
+  };
+}
+
 export function drawCreationPreview(
   ctx: CanvasRenderingContext2D,
   start: MouseCoord,
   cur: MouseCoord,
   zoom = 1,
 ): void {
-  const x = Math.min(start.gx, cur.gx);
-  const y = Math.min(start.gy, cur.gy);
-  const w = Math.abs(cur.gx - start.gx);
-  const h = Math.abs(cur.gy - start.gy);
+  const { x, y, w, h } = normalizeArea(start, cur);
   if (w <= 0 || h <= 0) return;
 
   ctx.fillStyle = 'rgba(33,150,243,0.08)';
@@ -97,6 +107,49 @@ export function drawCreationPreview(
   ctx.setLineDash([4 / zoom, 3 / zoom]);
   ctx.strokeRect(x * GRID, y * GRID, w * GRID, h * GRID);
   ctx.setLineDash([]);
+}
+
+export function drawAreaSelectPreview(
+  ctx: CanvasRenderingContext2D,
+  start: MouseCoord,
+  cur: MouseCoord,
+  zoom: number,
+  rooms: Room[],
+): void {
+  const area = normalizeArea(start, cur);
+  if (area.w <= 0 || area.h <= 0) return;
+
+  const px = area.x * GRID,
+    py = area.y * GRID,
+    pw = area.w * GRID,
+    ph = area.h * GRID;
+
+  ctx.fillStyle = 'rgba(51, 153, 255, 0.1)';
+  ctx.fillRect(px, py, pw, ph);
+  ctx.strokeStyle = 'rgba(51, 153, 255, 0.6)';
+  ctx.lineWidth = 1.5 / zoom;
+  ctx.setLineDash([4 / zoom, 3 / zoom]);
+  ctx.strokeRect(px, py, pw, ph);
+  ctx.setLineDash([]);
+
+  for (const r of findRoomsInArea(rooms, area)) {
+    ctx.fillStyle = 'rgba(51, 153, 255, 0.15)';
+    ctx.fillRect(r.x * GRID, r.y * GRID, r.w * GRID, r.h * GRID);
+  }
+}
+
+/** ドラッグ矩形に完全に包含される部屋を返す（グリッド座標） */
+export function findRoomsInArea(
+  rooms: Room[],
+  area: { x: number; y: number; w: number; h: number },
+): Room[] {
+  return rooms.filter(
+    (r) =>
+      r.x >= area.x &&
+      r.y >= area.y &&
+      r.x + r.w <= area.x + area.w &&
+      r.y + r.h <= area.y + area.h,
+  );
 }
 
 export function hitHandle(

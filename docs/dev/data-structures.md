@@ -123,6 +123,7 @@ interface Project {
 ```typescript
 type DragState =
   | { type: 'create'; start: MouseCoord; cur: MouseCoord }
+  | { type: 'areaSelect'; start: MouseCoord; cur: MouseCoord }
   | { type: 'move'; originals: Map<string, { x: number; y: number }>; start: MouseCoord }
   | { type: 'resize'; dir: ResizeDirection; orig: { x: number; y: number; w: number; h: number }; targetId: string; start: MouseCoord }
   | { type: 'moveWallObject'; roomId: string; objectId: string }
@@ -134,7 +135,8 @@ type DragState =
 
 | type | 発生条件 | 動作 |
 |------|---------|------|
-| `create` | 空白エリアをドラッグ | 新しい部屋の矩形を描画 |
+| `create` | 空白エリアをドラッグ（包含される部屋なし） | 新しい部屋の矩形を描画 |
+| `areaSelect` | 空白エリアをドラッグ（既存部屋を包含） | 包含される部屋を範囲選択 |
 | `move` | 選択中の部屋をドラッグ | 部屋を移動（複数選択時は一括移動） |
 | `resize` | ハンドルをドラッグ | 部屋のリサイズ（単一選択時のみ） |
 | `pan` | 中ボタンドラッグ | キャンバスのパン移動 |

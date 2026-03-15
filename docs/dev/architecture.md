@@ -33,7 +33,7 @@ Canvas 再描画 + localStorage 保存
 
 ### 機能モジュール
 
-- **room.ts** — 部屋の生成（`createRoom`）、Canvas描画（`drawRoom`）、ヒット判定（`hitRoom`, `hitHandle`）、リサイズハンドル計算（`getHandles`）
+- **room.ts** — 部屋の生成（`createRoom`）、Canvas描画（`drawRoom`）、ヒット判定（`hitRoom`, `hitHandle`）、リサイズハンドル計算（`getHandles`）、矩形包含判定（`findRoomsInArea`）、ドラッグ矩形の正規化（`normalizeArea`）、範囲選択プレビュー描画（`drawAreaSelectPreview`）
 - **interior-object.ts** — 部屋内オブジェクト（階段）の生成（`createStraightStairs`, `createFoldingStairs`）、描画（`drawInteriorObjects`）、ヒット判定（`hitInteriorObject`, `hitInteriorObjectInRooms`）、ハンドルヒット判定（`hitInteriorObjectHandle`, `hitInteriorObjectHandleInRooms`）、クランプ処理（`clampInteriorObject`, `clampAllInteriorObjects`）、移動/リサイズ計算（`computeInteriorObjectMove`, `computeInteriorObjectResize`）
 - **wall-object.ts** — 壁オブジェクト（窓・ドア・開口）の生成（`createWallWindow`, `createWallDoor`, `createWallOpening`）、描画（`drawWallObjects`）、ヒット判定（`hitWallObject`, `hitWallObjectInRooms`）、エッジヒット判定（`hitWallObjectEdge`, `hitWallObjectEdgeInRooms`）、リサイズ計算（`computeWallObjectResize`）、オーバーラップ判定（`wouldOverlap`）、ピクセル座標変換（`wallObjectToPixelRect`）、壁セグメント分割（`getWallSegments`）。ドアはヒンジ点から弧を描くビジュアルで、扇形エリア全体がヒット対象
 - **context-menu.ts** / **ContextMenu.tsx** — 壁の右クリックコンテキストメニュー（窓・ドアの追加・削除・開き方向切替）。ReactコンポーネントとしてCanvas上にオーバーレイ表示
@@ -86,7 +86,7 @@ main.ts
 - `rooms: Room[]` — 全部屋データ
 - `selection: Set<string>` — 選択中の部屋ID
 - `history: string[]` — Undoスナップショット（JSON文字列）
-- `drag: DragState` — ドラッグ操作の状態（discriminated union: `create | move | resize | moveWallObject | resizeWallObject | moveInteriorObject | resizeInteriorObject | pan | null`）
+- `drag: DragState` — ドラッグ操作の状態（discriminated union: `create | areaSelect | move | resize | moveWallObject | resizeWallObject | moveInteriorObject | resizeInteriorObject | pan | null`）
 - `mouse: MouseCoord` — 現在のマウス座標
 
 状態変更は `commitChange()` を通じて行い、Undo履歴の保存・Canvas再描画・localStorage保存をまとめて実行する。
