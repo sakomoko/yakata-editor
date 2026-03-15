@@ -21,8 +21,9 @@ export function createWallDoor(
   offset: number,
   width = 1,
   swing: 'inward' | 'outward' = 'inward',
+  hinge: 'start' | 'end' = 'start',
 ): WallDoor {
-  return { id: crypto.randomUUID(), type: 'door', side, offset, width, swing };
+  return { id: crypto.randomUUID(), type: 'door', side, offset, width, swing, hinge };
 }
 
 export function wallSideLength(room: Room, side: WallSide): number {
@@ -178,6 +179,26 @@ interface DoorGeometry {
 function getDoorGeometry(room: Room, obj: WallDoor): DoorGeometry {
   const rect = wallObjectToPixelRect(room, obj);
   const angles = DOOR_ANGLES[obj.side];
+
+  if (obj.hinge === 'end') {
+    const isHorizontal = obj.side === 'n' || obj.side === 's';
+    const hingeX = isHorizontal ? rect.x + rect.length : rect.x;
+    const hingeY = isHorizontal ? rect.y : rect.y + rect.length;
+    const mirror = isHorizontal
+      ? (a: number) => Math.PI - a
+      : (a: number) => -a;
+    const openAngle = obj.swing === 'inward' ? angles.inward : angles.outward;
+    const ccw = obj.swing === 'inward' ? angles.inwardCCW : angles.outwardCCW;
+    return {
+      hingeX,
+      hingeY,
+      radius: rect.length,
+      closedAngle: mirror(angles.closedAngle),
+      openAngle: mirror(openAngle),
+      anticlockwise: !ccw,
+    };
+  }
+
   return {
     hingeX: rect.x,
     hingeY: rect.y,
