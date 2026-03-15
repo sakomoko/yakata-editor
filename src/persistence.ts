@@ -9,7 +9,9 @@ const VALID_SIDES = new Set(['n', 'e', 's', 'w']);
 const VALID_WALL_OBJECT_TYPES = new Set(['window', 'door', 'opening']);
 const VALID_DOOR_SWINGS = new Set(['inward', 'outward']);
 
-function restorePairedWith(value: unknown): { roomId: string; objectId: string } | undefined {
+function restorePairedWithEntry(
+  value: unknown,
+): { roomId: string; objectId: string } | undefined {
   if (
     value &&
     typeof value === 'object' &&
@@ -22,6 +24,21 @@ function restorePairedWith(value: unknown): { roomId: string; objectId: string }
     };
   }
   return undefined;
+}
+
+function restorePairedWith(
+  value: unknown,
+): { roomId: string; objectId: string }[] | undefined {
+  // 新形式: 配列
+  if (Array.isArray(value)) {
+    const entries = value
+      .map((v) => restorePairedWithEntry(v))
+      .filter((v): v is { roomId: string; objectId: string } => v !== undefined);
+    return entries.length > 0 ? entries : undefined;
+  }
+  // 旧形式: 単一オブジェクト → 配列に変換（後方互換）
+  const single = restorePairedWithEntry(value);
+  return single ? [single] : undefined;
 }
 
 /** @internal Exported for testing */

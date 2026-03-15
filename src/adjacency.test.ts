@@ -133,7 +133,7 @@ describe('convertOffset', () => {
 describe('isPairedAutoOpening', () => {
   it('pairedWithありのopeningはtrue', () => {
     const opening = createWallOpening('n', 0, 1);
-    opening.pairedWith = { roomId: 'r1', objectId: 'o1' };
+    opening.pairedWith = [{ roomId: 'r1', objectId: 'o1' }];
     expect(isPairedAutoOpening(opening)).toBe(true);
   });
 
@@ -144,13 +144,13 @@ describe('isPairedAutoOpening', () => {
 
   it('windowはfalse', () => {
     const win = createWallWindow('n', 0, 1);
-    win.pairedWith = { roomId: 'r1', objectId: 'o1' };
+    win.pairedWith = [{ roomId: 'r1', objectId: 'o1' }];
     expect(isPairedAutoOpening(win)).toBe(false);
   });
 
   it('doorはfalse', () => {
     const door = createWallDoor('n', 0, 1);
-    door.pairedWith = { roomId: 'r1', objectId: 'o1' };
+    door.pairedWith = [{ roomId: 'r1', objectId: 'o1' }];
     expect(isPairedAutoOpening(door)).toBe(false);
   });
 });
@@ -173,10 +173,10 @@ describe('syncPairedOpening', () => {
     expect(paired.side).toBe('w');
     expect(paired.offset).toBe(1);
     expect(paired.width).toBe(2);
-    expect(paired.pairedWith).toEqual({ roomId: roomA.id, objectId: door.id });
+    expect(paired.pairedWith).toEqual([{ roomId: roomA.id, objectId: door.id }]);
 
     // ソースにもpairedWithが設定されていること
-    expect(door.pairedWith).toEqual({ roomId: roomB.id, objectId: paired.id });
+    expect(door.pairedWith).toEqual([{ roomId: roomB.id, objectId: paired.id }]);
   });
 
   it('隣接がない場合はペアを作成しない', () => {
@@ -314,6 +314,27 @@ describe('syncAllPairedOpenings', () => {
     // 手動開口は残っている（pairedWithがないので消されない）
     expect(roomA.wallObjects).toHaveLength(1);
     expect(roomA.wallObjects![0].id).toBe(manualOpening.id);
+  });
+
+  it('1つの壁オブジェクトが複数の隣接部屋にまたがる場合、ドア削除で全ての開口が削除される', () => {
+    const roomA = makeRoom({ x: 0, y: 0, w: 5, h: 10 });
+    const roomB = makeRoom({ x: 5, y: 0, w: 5, h: 5 });
+    const roomC = makeRoom({ x: 5, y: 5, w: 5, h: 5 });
+    const rooms = [roomA, roomB, roomC];
+
+    const door = createWallDoor('e', 1, 8); // roomBとroomC両方にまたがる
+    roomA.wallObjects = [door];
+
+    syncAllPairedOpenings(rooms);
+    expect(roomB.wallObjects).toHaveLength(1);
+    expect(roomC.wallObjects).toHaveLength(1);
+
+    removePairedOpening(rooms, door);
+
+    // 両方の部屋から開口が削除されるべき
+    expect(roomB.wallObjects).toBeUndefined();
+    expect(roomC.wallObjects).toBeUndefined();
+    expect(door.pairedWith).toBeUndefined();
   });
 
   it('複数の部屋が同一壁に隣接する場合、各隣接部屋に開口を作成する', () => {

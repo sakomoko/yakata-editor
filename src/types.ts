@@ -5,7 +5,7 @@ export interface WallObjectBase {
   side: WallSide;
   offset: number;
   width: number;
-  pairedWith?: { roomId: string; objectId: string };
+  pairedWith?: { roomId: string; objectId: string }[];
 }
 
 export interface WallWindow extends WallObjectBase {

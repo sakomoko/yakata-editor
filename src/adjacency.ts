@@ -115,7 +115,7 @@ export function convertOffset(
 
 /** 自動生成された開口かどうか判定 */
 export function isPairedAutoOpening(obj: WallObject): boolean {
-  return obj.type === 'opening' && obj.pairedWith !== undefined;
+  return obj.type === 'opening' && obj.pairedWith !== undefined && obj.pairedWith.length > 0;
 }
 
 /**
@@ -164,26 +164,27 @@ export function syncPairedOpening(rooms: Room[], sourceRoom: Room, wallObject: W
 
     // 3. 開口を作成
     const opening = createWallOpening(adjInfo.side, finalOffset, finalWidth);
-    opening.pairedWith = { roomId: sourceRoom.id, objectId: wallObject.id };
+    opening.pairedWith = [{ roomId: sourceRoom.id, objectId: wallObject.id }];
 
     if (!targetRoom.wallObjects) targetRoom.wallObjects = [];
     targetRoom.wallObjects.push(opening);
 
-    // 4. ソースにもpairedWithを設定
-    wallObject.pairedWith = { roomId: targetRoom.id, objectId: opening.id };
+    // 4. ソースにもpairedWithを追加（配列に蓄積）
+    if (!wallObject.pairedWith) wallObject.pairedWith = [];
+    wallObject.pairedWith.push({ roomId: targetRoom.id, objectId: opening.id });
   }
 }
 
 /** ペアの開口を削除する */
 export function removePairedOpening(rooms: Room[], wallObject: WallObject): void {
-  if (!wallObject.pairedWith) return;
+  if (!wallObject.pairedWith || wallObject.pairedWith.length === 0) return;
 
-  const targetRoom = rooms.find((r) => r.id === wallObject.pairedWith!.roomId);
-  if (targetRoom?.wallObjects) {
-    targetRoom.wallObjects = targetRoom.wallObjects.filter(
-      (o) => o.id !== wallObject.pairedWith!.objectId,
-    );
-    if (targetRoom.wallObjects.length === 0) targetRoom.wallObjects = undefined;
+  for (const pair of wallObject.pairedWith) {
+    const targetRoom = rooms.find((r) => r.id === pair.roomId);
+    if (targetRoom?.wallObjects) {
+      targetRoom.wallObjects = targetRoom.wallObjects.filter((o) => o.id !== pair.objectId);
+      if (targetRoom.wallObjects.length === 0) targetRoom.wallObjects = undefined;
+    }
   }
 
   wallObject.pairedWith = undefined;
