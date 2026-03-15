@@ -267,8 +267,9 @@ export function initEditor(
       return;
     }
 
-    // Check wall object edge hit (resize)
-    const edgeHit = hitWallObjectEdgeInRooms(state.rooms, m.px, m.py, viewport.zoom);
+    // Check wall object edge hit (resize) — only for selected rooms (matches handle visibility)
+    const selectedRoomsForEdge = state.rooms.filter((r) => state.selection.has(r.id));
+    const edgeHit = hitWallObjectEdgeInRooms(selectedRoomsForEdge, m.px, m.py, viewport.zoom);
     if (edgeHit) {
       pushUndo(state.history, state.rooms);
       const horizontal = edgeHit.obj.side === 'n' || edgeHit.obj.side === 's';
@@ -355,7 +356,8 @@ export function initEditor(
       if (h) {
         canvas.style.cursor = h.handle.dir + '-resize';
       } else {
-        const edgeHover = hitWallObjectEdgeInRooms(state.rooms, m.px, m.py, viewport.zoom);
+        const selectedRooms = state.rooms.filter((r) => state.selection.has(r.id));
+        const edgeHover = hitWallObjectEdgeInRooms(selectedRooms, m.px, m.py, viewport.zoom);
         if (edgeHover) {
           const horiz = edgeHover.obj.side === 'n' || edgeHover.obj.side === 's';
           canvas.style.cursor = horiz ? 'ew-resize' : 'ns-resize';

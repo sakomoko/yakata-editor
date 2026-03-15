@@ -692,6 +692,46 @@ describe('hitWallObjectEdge', () => {
     const room = createRoom(0, 0, 5, 5);
     expect(hitWallObjectEdge(room, 0, 0, 1)).toBeNull();
   });
+
+  it('ドアのstart端にヒットする', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const door = createWallDoor('n', 3, 2);
+    room.wallObjects = [door];
+    const hit = hitWallObjectEdge(room, 3 * GRID, 0, 1);
+    expect(hit).not.toBeNull();
+    expect(hit!.obj).toBe(door);
+    expect(hit!.edge).toBe('start');
+  });
+
+  it('ドアのend端にヒットする', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const door = createWallDoor('n', 3, 2);
+    room.wallObjects = [door];
+    const hit = hitWallObjectEdge(room, 5 * GRID, 0, 1);
+    expect(hit).not.toBeNull();
+    expect(hit!.obj).toBe(door);
+    expect(hit!.edge).toBe('end');
+  });
+
+  it('開口のstart端にヒットする', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const opening = createWallOpening('n', 3, 2);
+    room.wallObjects = [opening];
+    const hit = hitWallObjectEdge(room, 3 * GRID, 0, 1);
+    expect(hit).not.toBeNull();
+    expect(hit!.obj).toBe(opening);
+    expect(hit!.edge).toBe('start');
+  });
+
+  it('開口のend端にヒットする', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const opening = createWallOpening('s', 3, 2);
+    room.wallObjects = [opening];
+    const hit = hitWallObjectEdge(room, 5 * GRID, 5 * GRID, 1);
+    expect(hit).not.toBeNull();
+    expect(hit!.obj).toBe(opening);
+    expect(hit!.edge).toBe('end');
+  });
 });
 
 describe('hitWallObjectEdgeInRooms', () => {
@@ -747,6 +787,15 @@ describe('wouldOverlap', () => {
     const win2 = createWallWindow('n', 5, 1);
     room.wallObjects = [win1, win2];
     expect(wouldOverlap(room, win1.id, 'n', 2, 2)).toBe(false);
+  });
+
+  it('接触するが重ならない場合はfalse（newOffset + newWidth === other.offset）', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win1 = createWallWindow('n', 2, 1);
+    const win2 = createWallWindow('n', 5, 1);
+    room.wallObjects = [win1, win2];
+    // win1をoffset=2, width=3にリサイズ → newOffset+newWidth=5 === win2.offset → 接触のみ
+    expect(wouldOverlap(room, win1.id, 'n', 2, 3)).toBe(false);
   });
 });
 

@@ -3,6 +3,7 @@ import { GRID, WALL, WALL_SEL } from './grid.ts';
 
 const WINDOW_DRAW_OFFSET = 4;
 const WALL_OBJECT_HIT_TOLERANCE = 6;
+/** Edge hit tolerance (px). Slightly larger than RESIZE_HANDLE_SIZE/2 to allow easy targeting. */
 const WALL_OBJECT_EDGE_HIT_TOLERANCE = 5;
 
 export function createWallWindow(side: WallSide, offset: number, width = 1): WallWindow {
@@ -211,6 +212,7 @@ function drawDoor(
   ctx.stroke();
 }
 
+/** Resize handle diameter (px). Hit tolerance is WALL_OBJECT_EDGE_HIT_TOLERANCE. */
 const RESIZE_HANDLE_SIZE = 6;
 
 /** Draw wall object symbols (windows and doors) on wall objects. */
@@ -509,17 +511,14 @@ export function computeWallObjectResize(
 
   if (edge === 'end') {
     offset = origOffset;
-    width = Math.max(1, snapped - origOffset);
-    // Clamp to wall boundary
-    if (offset + width > sideLen) {
-      width = sideLen - offset;
-    }
+    const rawWidth = snapped - origOffset;
+    width = Math.max(1, Math.min(rawWidth, sideLen - origOffset));
   } else {
     // Start edge: move offset, adjust width
     const origEnd = origOffset + origWidth;
     const newStart = Math.min(snapped, origEnd - 1); // min width = 1
     offset = Math.max(0, newStart);
-    width = origEnd - offset;
+    width = Math.max(1, origEnd - offset);
   }
 
   // Prevent overlap
