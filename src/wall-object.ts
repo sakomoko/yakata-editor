@@ -3,6 +3,10 @@ import { GRID, WALL, WALL_SEL } from './grid.ts';
 
 const WINDOW_DRAW_OFFSET = 4;
 const WALL_OBJECT_HIT_TOLERANCE = 6;
+/** Resize handle diameter (px). */
+const RESIZE_HANDLE_SIZE = 6;
+/** Edge hit tolerance (px), derived from handle size + margin for easy targeting. */
+const WALL_OBJECT_EDGE_HIT_TOLERANCE = RESIZE_HANDLE_SIZE / 2 + 2; // 5px
 
 export function createWallWindow(side: WallSide, offset: number, width = 1): WallWindow {
   return { id: crypto.randomUUID(), type: 'window', side, offset, width };
@@ -215,6 +219,7 @@ export function drawWallObjects(
   ctx: CanvasRenderingContext2D,
   room: Room,
   isSelected: boolean,
+  showHandles: boolean,
   zoom = 1,
   activeObjectId?: string,
 ): void {
@@ -257,6 +262,42 @@ export function drawWallObjects(
         break;
       }
     }
+
+    // Draw resize handles at both edges when room is selected
+    if (isSelected && showHandles) {
+      drawWallObjectResizeHandles(ctx, room, obj, zoom);
+    }
+  }
+}
+
+/** Draw small diamond-shaped handles at both edges of a wall object. */
+function drawWallObjectResizeHandles(
+  ctx: CanvasRenderingContext2D,
+  room: Room,
+  obj: WallObject,
+  zoom: number,
+): void {
+  const rect = wallObjectToPixelRect(room, obj);
+  const r = RESIZE_HANDLE_SIZE / 2 / zoom;
+
+  const points: { x: number; y: number }[] = [];
+  if (rect.horizontal) {
+    points.push({ x: rect.x, y: rect.y });
+    points.push({ x: rect.x + rect.length, y: rect.y });
+  } else {
+    points.push({ x: rect.x, y: rect.y });
+    points.push({ x: rect.x, y: rect.y + rect.length });
+  }
+
+  ctx.fillStyle = '#FF9800';
+  for (const p of points) {
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y - r);
+    ctx.lineTo(p.x + r, p.y);
+    ctx.lineTo(p.x, p.y + r);
+    ctx.lineTo(p.x - r, p.y);
+    ctx.closePath();
+    ctx.fill();
   }
 }
 
@@ -376,6 +417,116 @@ export function computeWallObjectPosition(
   const offsetGrid = Math.round(along / GRID - objWidth / 2);
   const sideLen = side === 'n' || side === 's' ? room.w : room.h;
   return { side, offset: Math.max(0, Math.min(offsetGrid, sideLen - objWidth)) };
+}
+
+/** Hit test for wall object edge (start or end) for resize dragging. */
+export function hitWallObjectEdge(
+  room: Room,
+  px: number,
+  py: number,
+  zoom = 1,
+): { obj: WallObject; edge: 'start' | 'end' } | null {
+  if (!room.wallObjects?.length) return null;
+  const edgeTol = WALL_OBJECT_EDGE_HIT_TOLERANCE / zoom;
+  const wallTol = WALL_OBJECT_HIT_TOLERANCE / zoom;
+
+  for (let i = room.wallObjects.length - 1; i >= 0; i--) {
+    const obj = room.wallObjects[i];
+    const rect = wallObjectToPixelRect(room, obj);
+
+    if (rect.horizontal) {
+      // Check wall-line proximity first
+      if (Math.abs(py - rect.y) > wallTol) continue;
+      const startX = rect.x;
+      const endX = rect.x + rect.length;
+      // Start edge
+      if (Math.abs(px - startX) <= edgeTol) return { obj, edge: 'start' };
+      // End edge
+      if (Math.abs(px - endX) <= edgeTol) return { obj, edge: 'end' };
+    } else {
+      // Vertical wall
+      if (Math.abs(px - rect.x) > wallTol) continue;
+      const startY = rect.y;
+      const endY = rect.y + rect.length;
+      if (Math.abs(py - startY) <= edgeTol) return { obj, edge: 'start' };
+      if (Math.abs(py - endY) <= edgeTol) return { obj, edge: 'end' };
+    }
+  }
+  return null;
+}
+
+/** Find a wall object edge hit across all rooms, respecting z-order. */
+export function hitWallObjectEdgeInRooms(
+  rooms: Room[],
+  px: number,
+  py: number,
+  zoom = 1,
+): { room: Room; obj: WallObject; edge: 'start' | 'end' } | null {
+  for (let i = rooms.length - 1; i >= 0; i--) {
+    const room = rooms[i];
+    const hit = hitWallObjectEdge(room, px, py, zoom);
+    if (hit) return { room, ...hit };
+  }
+  return null;
+}
+
+/** Check if resizing would cause overlap with another object on the same wall. */
+export function wouldOverlap(
+  room: Room,
+  objId: string,
+  side: WallSide,
+  newOffset: number,
+  newWidth: number,
+): boolean {
+  if (!room.wallObjects) return false;
+  for (const other of room.wallObjects) {
+    if (other.id === objId || other.side !== side) continue;
+    if (newOffset < other.offset + other.width && newOffset + newWidth > other.offset) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Compute new offset and width when resizing a wall object by dragging an edge. */
+export function computeWallObjectResize(
+  room: Room,
+  obj: WallObject,
+  edge: 'start' | 'end',
+  px: number,
+  py: number,
+  origOffset: number,
+  origWidth: number,
+): { offset: number; width: number } {
+  const rx = room.x * GRID;
+  const ry = room.y * GRID;
+  const horizontal = obj.side === 'n' || obj.side === 's';
+  const along = horizontal ? px - rx : py - ry;
+  const snapped = Math.round(along / GRID);
+  const sideLen = wallSideLength(room, obj.side);
+
+  let offset: number;
+  let width: number;
+
+  if (edge === 'end') {
+    offset = origOffset;
+    const rawWidth = snapped - origOffset;
+    width = Math.max(1, Math.min(rawWidth, sideLen - origOffset));
+  } else {
+    // Start edge: move offset, adjust width
+    const origEnd = origOffset + origWidth;
+    const newStart = Math.min(snapped, origEnd - 1); // min width = 1
+    offset = Math.max(0, newStart);
+    width = Math.max(1, origEnd - offset);
+  }
+
+  // Prevent overlap: return current values (updated each mousemove) so the object
+  // stays at its last valid position rather than snapping back to drag-start.
+  if (wouldOverlap(room, obj.id, obj.side, offset, width)) {
+    return { offset: obj.offset, width: obj.width };
+  }
+
+  return { offset, width };
 }
 
 export function nearestWallSide(

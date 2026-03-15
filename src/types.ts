@@ -79,6 +79,14 @@ export type DragState =
       roomId: string;
       objectId: string;
     }
+  | {
+      type: 'resizeWallObject';
+      roomId: string;
+      objectId: string;
+      edge: 'start' | 'end';
+      origOffset: number;
+      origWidth: number;
+    }
   | null;
 
 export interface EditorState {

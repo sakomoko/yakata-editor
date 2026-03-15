@@ -10,6 +10,10 @@ import {
   getWallSegments,
   hitWallObject,
   hitWallObjectInRooms,
+  hitWallObjectEdge,
+  hitWallObjectEdgeInRooms,
+  wouldOverlap,
+  computeWallObjectResize,
   nearestWallSide,
   computeWallObjectPosition,
 } from './wall-object.ts';
@@ -603,5 +607,305 @@ describe('開口のヒット判定', () => {
     room.wallObjects = [createWallOpening('n', 2, 1)];
     const hit = hitWallObject(room, 2.5 * GRID, GRID, 1);
     expect(hit).toBeNull();
+  });
+});
+
+describe('hitWallObjectEdge', () => {
+  it('水平壁オブジェクトのstart端にヒットする', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 3, 2);
+    room.wallObjects = [win];
+    // start edge is at x = 3 * GRID = 60
+    const hit = hitWallObjectEdge(room, 3 * GRID, 0, 1);
+    expect(hit).not.toBeNull();
+    expect(hit!.obj).toBe(win);
+    expect(hit!.edge).toBe('start');
+  });
+
+  it('水平壁オブジェクトのend端にヒットする', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 3, 2);
+    room.wallObjects = [win];
+    // end edge is at x = (3+2) * GRID = 100
+    const hit = hitWallObjectEdge(room, 5 * GRID, 0, 1);
+    expect(hit).not.toBeNull();
+    expect(hit!.obj).toBe(win);
+    expect(hit!.edge).toBe('end');
+  });
+
+  it('オブジェクトの中央ではエッジヒットしない', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 3, 3);
+    room.wallObjects = [win];
+    // center is at x = 4.5 * GRID = 90
+    const hit = hitWallObjectEdge(room, 4.5 * GRID, 0, 1);
+    expect(hit).toBeNull();
+  });
+
+  it('垂直壁オブジェクトのstart端にヒットする', () => {
+    const room = createRoom(0, 0, 5, 10);
+    const win = createWallWindow('e', 3, 2);
+    room.wallObjects = [win];
+    // start edge at y = 3 * GRID
+    const hit = hitWallObjectEdge(room, 5 * GRID, 3 * GRID, 1);
+    expect(hit).not.toBeNull();
+    expect(hit!.edge).toBe('start');
+  });
+
+  it('垂直壁オブジェクトのend端にヒットする', () => {
+    const room = createRoom(0, 0, 5, 10);
+    const win = createWallWindow('e', 3, 2);
+    room.wallObjects = [win];
+    // end edge at y = 5 * GRID
+    const hit = hitWallObjectEdge(room, 5 * GRID, 5 * GRID, 1);
+    expect(hit).not.toBeNull();
+    expect(hit!.edge).toBe('end');
+  });
+
+  it('width=1でもstart端にヒットする', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 3, 1);
+    room.wallObjects = [win];
+    const hit = hitWallObjectEdge(room, 3 * GRID, 0, 1);
+    expect(hit).not.toBeNull();
+    expect(hit!.edge).toBe('start');
+  });
+
+  it('width=1でもend端にヒットする', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 3, 1);
+    room.wallObjects = [win];
+    const hit = hitWallObjectEdge(room, 4 * GRID, 0, 1);
+    expect(hit).not.toBeNull();
+    expect(hit!.edge).toBe('end');
+  });
+
+  it('壁線から離れた位置ではヒットしない', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 3, 2);
+    room.wallObjects = [win];
+    const hit = hitWallObjectEdge(room, 3 * GRID, GRID, 1);
+    expect(hit).toBeNull();
+  });
+
+  it('wallObjectsがない場合はnull', () => {
+    const room = createRoom(0, 0, 5, 5);
+    expect(hitWallObjectEdge(room, 0, 0, 1)).toBeNull();
+  });
+
+  it('zoom=2のときhit toleranceがスケールされる', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 3, 2);
+    room.wallObjects = [win];
+    // At zoom=2, tolerance = 5/2 = 2.5px. 3px away from edge should miss.
+    const hit = hitWallObjectEdge(room, 3 * GRID + 3, 0, 2);
+    expect(hit).toBeNull();
+  });
+
+  it('zoom=2のときエッジ近くでヒットする', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 3, 2);
+    room.wallObjects = [win];
+    // At zoom=2, tolerance = 5/2 = 2.5px. 2px away from edge should hit.
+    const hit = hitWallObjectEdge(room, 3 * GRID + 2, 0, 2);
+    expect(hit).not.toBeNull();
+    expect(hit!.edge).toBe('start');
+  });
+
+  it('ドアのstart端にヒットする', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const door = createWallDoor('n', 3, 2);
+    room.wallObjects = [door];
+    const hit = hitWallObjectEdge(room, 3 * GRID, 0, 1);
+    expect(hit).not.toBeNull();
+    expect(hit!.obj).toBe(door);
+    expect(hit!.edge).toBe('start');
+  });
+
+  it('ドアのend端にヒットする', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const door = createWallDoor('n', 3, 2);
+    room.wallObjects = [door];
+    const hit = hitWallObjectEdge(room, 5 * GRID, 0, 1);
+    expect(hit).not.toBeNull();
+    expect(hit!.obj).toBe(door);
+    expect(hit!.edge).toBe('end');
+  });
+
+  it('開口のstart端にヒットする', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const opening = createWallOpening('n', 3, 2);
+    room.wallObjects = [opening];
+    const hit = hitWallObjectEdge(room, 3 * GRID, 0, 1);
+    expect(hit).not.toBeNull();
+    expect(hit!.obj).toBe(opening);
+    expect(hit!.edge).toBe('start');
+  });
+
+  it('開口のend端にヒットする', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const opening = createWallOpening('s', 3, 2);
+    room.wallObjects = [opening];
+    const hit = hitWallObjectEdge(room, 5 * GRID, 5 * GRID, 1);
+    expect(hit).not.toBeNull();
+    expect(hit!.obj).toBe(opening);
+    expect(hit!.edge).toBe('end');
+  });
+});
+
+describe('hitWallObjectEdgeInRooms', () => {
+  it('z-orderで上の部屋を優先する', () => {
+    const room1 = createRoom(0, 0, 10, 5);
+    const win1 = createWallWindow('n', 3, 2);
+    room1.wallObjects = [win1];
+
+    const room2 = createRoom(0, 0, 10, 5);
+    const win2 = createWallWindow('n', 3, 2);
+    room2.wallObjects = [win2];
+
+    const hit = hitWallObjectEdgeInRooms([room1, room2], 3 * GRID, 0, 1);
+    expect(hit).not.toBeNull();
+    expect(hit!.obj).toBe(win2);
+    expect(hit!.room).toBe(room2);
+  });
+
+  it('ヒットしない場合はnull', () => {
+    const room = createRoom(0, 0, 5, 5);
+    expect(hitWallObjectEdgeInRooms([room], GRID, GRID, 1)).toBeNull();
+  });
+});
+
+describe('wouldOverlap', () => {
+  it('同じ壁で重なるオブジェクトを検出する', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win1 = createWallWindow('n', 2, 1);
+    const win2 = createWallWindow('n', 5, 1);
+    room.wallObjects = [win1, win2];
+    // win1をoffset=4, width=2にリサイズ → win2(offset=5)と重なる
+    expect(wouldOverlap(room, win1.id, 'n', 4, 2)).toBe(true);
+  });
+
+  it('自身は除外する', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 2, 2);
+    room.wallObjects = [win];
+    expect(wouldOverlap(room, win.id, 'n', 2, 3)).toBe(false);
+  });
+
+  it('異なる壁のオブジェクトは無視する', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win1 = createWallWindow('n', 2, 2);
+    const win2 = createWallWindow('s', 3, 2);
+    room.wallObjects = [win1, win2];
+    expect(wouldOverlap(room, win1.id, 'n', 2, 4)).toBe(false);
+  });
+
+  it('重ならない場合はfalse', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win1 = createWallWindow('n', 2, 1);
+    const win2 = createWallWindow('n', 5, 1);
+    room.wallObjects = [win1, win2];
+    expect(wouldOverlap(room, win1.id, 'n', 2, 2)).toBe(false);
+  });
+
+  it('接触するが重ならない場合はfalse（newOffset + newWidth === other.offset）', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win1 = createWallWindow('n', 2, 1);
+    const win2 = createWallWindow('n', 5, 1);
+    room.wallObjects = [win1, win2];
+    // win1をoffset=2, width=3にリサイズ → newOffset+newWidth=5 === win2.offset → 接触のみ
+    expect(wouldOverlap(room, win1.id, 'n', 2, 3)).toBe(false);
+  });
+});
+
+describe('computeWallObjectResize', () => {
+  it('endエッジのドラッグで幅が増える', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 2, 1);
+    room.wallObjects = [win];
+    // Drag end edge to x = 5*GRID (grid pos 5)
+    const result = computeWallObjectResize(room, win, 'end', 5 * GRID, 0, 2, 1);
+    expect(result.offset).toBe(2);
+    expect(result.width).toBe(3);
+  });
+
+  it('startエッジのドラッグでoffsetが減りwidthが増える', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 3, 2);
+    room.wallObjects = [win];
+    // Drag start edge to x = 1*GRID (grid pos 1)
+    const result = computeWallObjectResize(room, win, 'start', 1 * GRID, 0, 3, 2);
+    expect(result.offset).toBe(1);
+    expect(result.width).toBe(4); // origEnd=5, newStart=1 → width=4
+  });
+
+  it('最小幅1を保証する（endエッジ）', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 3, 2);
+    room.wallObjects = [win];
+    // Drag end edge back to x = 2*GRID (before start)
+    const result = computeWallObjectResize(room, win, 'end', 2 * GRID, 0, 3, 2);
+    expect(result.width).toBe(1);
+  });
+
+  it('最小幅1を保証する（startエッジ）', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 3, 2);
+    room.wallObjects = [win];
+    // Drag start edge past end to x = 6*GRID
+    const result = computeWallObjectResize(room, win, 'start', 6 * GRID, 0, 3, 2);
+    expect(result.offset).toBe(4); // origEnd=5, min width=1 → offset=4
+    expect(result.width).toBe(1);
+  });
+
+  it('壁境界を超えない（endエッジ）', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 8, 1);
+    room.wallObjects = [win];
+    // Drag end edge to x = 15*GRID (way past wall end of 10)
+    const result = computeWallObjectResize(room, win, 'end', 15 * GRID, 0, 8, 1);
+    expect(result.offset).toBe(8);
+    expect(result.width).toBe(2); // sideLen=10, offset=8 → max width=2
+  });
+
+  it('壁境界を超えない（startエッジ）', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 1, 2);
+    room.wallObjects = [win];
+    // Drag start edge to x = -3*GRID
+    const result = computeWallObjectResize(room, win, 'start', -3 * GRID, 0, 1, 2);
+    expect(result.offset).toBe(0);
+    expect(result.width).toBe(3); // origEnd=3, offset clamped to 0
+  });
+
+  it('垂直壁のリサイズが正しく動作する', () => {
+    const room = createRoom(0, 0, 5, 10);
+    const win = createWallWindow('e', 2, 2);
+    room.wallObjects = [win];
+    // Drag end edge to y = 6*GRID
+    const result = computeWallObjectResize(room, win, 'end', 5 * GRID, 6 * GRID, 2, 2);
+    expect(result.offset).toBe(2);
+    expect(result.width).toBe(4);
+  });
+
+  it('startエッジをorigEndより遠くにドラッグしても幅が負にならない', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 3, 2);
+    room.wallObjects = [win];
+    // Drag start edge far past origEnd (origEnd=5, snapped=8)
+    const result = computeWallObjectResize(room, win, 'start', 8 * GRID, 0, 3, 2);
+    expect(result.offset).toBe(4); // origEnd - 1 = 4
+    expect(result.width).toBe(1); // min width
+  });
+
+  it('オーバーラップ時は元の値を返す', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win1 = createWallWindow('n', 2, 1);
+    const win2 = createWallWindow('n', 5, 1);
+    room.wallObjects = [win1, win2];
+    // Drag win1 end to x = 6*GRID → would overlap win2
+    const result = computeWallObjectResize(room, win1, 'end', 6 * GRID, 0, 2, 1);
+    expect(result.offset).toBe(win1.offset);
+    expect(result.width).toBe(win1.width);
   });
 });
