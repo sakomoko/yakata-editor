@@ -47,8 +47,7 @@ export function linkRooms(rooms: Room[], roomIds: Set<string>): void {
   }
 
   // 統合先のグループID（既存があればその1つ、なければ新規）
-  const targetGroup =
-    existingGroups.size > 0 ? [...existingGroups][0] : crypto.randomUUID();
+  const targetGroup = existingGroups.size > 0 ? [...existingGroups][0] : crypto.randomUUID();
 
   // 選択した部屋に付与
   for (const room of rooms) {

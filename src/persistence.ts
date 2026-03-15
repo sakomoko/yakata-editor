@@ -9,6 +9,21 @@ const VALID_SIDES = new Set(['n', 'e', 's', 'w']);
 const VALID_WALL_OBJECT_TYPES = new Set(['window', 'door', 'opening']);
 const VALID_DOOR_SWINGS = new Set(['inward', 'outward']);
 
+function restorePairedWith(value: unknown): { roomId: string; objectId: string } | undefined {
+  if (
+    value &&
+    typeof value === 'object' &&
+    typeof (value as Record<string, unknown>).roomId === 'string' &&
+    typeof (value as Record<string, unknown>).objectId === 'string'
+  ) {
+    return {
+      roomId: (value as Record<string, unknown>).roomId as string,
+      objectId: (value as Record<string, unknown>).objectId as string,
+    };
+  }
+  return undefined;
+}
+
 /** @internal Exported for testing */
 export function ensureWallObjectIds(objects: unknown[]): WallObject[] {
   return objects
@@ -28,16 +43,25 @@ export function ensureWallObjectIds(objects: unknown[]): WallObject[] {
       const offset = obj.offset as number;
       const width = obj.width as number;
 
+      // pairedWith の復元（全typeで共通）
+      const pairedWith = restorePairedWith(obj.pairedWith);
+
       if (obj.type === 'door') {
         const swing = VALID_DOOR_SWINGS.has(obj.swing as string)
           ? (obj.swing as 'inward' | 'outward')
           : 'inward';
-        return { id, type: 'door', side, offset, width, swing } satisfies WallDoor;
+        const result: WallDoor = { id, type: 'door', side, offset, width, swing };
+        if (pairedWith) result.pairedWith = pairedWith;
+        return result;
       }
       if (obj.type === 'opening') {
-        return { id, type: 'opening', side, offset, width } satisfies WallOpening;
+        const result: WallOpening = { id, type: 'opening', side, offset, width };
+        if (pairedWith) result.pairedWith = pairedWith;
+        return result;
       }
-      return { id, type: 'window', side, offset, width } satisfies WallWindow;
+      const result: WallWindow = { id, type: 'window', side, offset, width };
+      if (pairedWith) result.pairedWith = pairedWith;
+      return result;
     });
 }
 

@@ -49,6 +49,12 @@ import {
   hasLinkedRoom,
   allAlreadyLinked,
 } from './link.ts';
+import {
+  syncPairedOpening,
+  removePairedOpening,
+  syncAllPairedOpenings,
+  isPairedAutoOpening,
+} from './adjacency.ts';
 
 export interface RoomEditData {
   label: string;
@@ -271,6 +277,8 @@ export function initEditor(
     const selectedRooms = state.rooms.filter((r) => state.selection.has(r.id));
     const edgeHit = hitWallObjectEdgeInRooms(selectedRooms, m.px, m.py, viewport.zoom);
     if (edgeHit) {
+      // 自動生成された開口はリサイズ不可
+      if (isPairedAutoOpening(edgeHit.obj)) return;
       pushUndo(state.history, state.rooms);
       const horiz = edgeHit.obj.side === 'n' || edgeHit.obj.side === 's';
       state.drag = {
@@ -289,6 +297,8 @@ export function initEditor(
     // Check wall object hit (window drag)
     const wallHit = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom);
     if (wallHit) {
+      // 自動生成された開口は移動不可
+      if (isPairedAutoOpening(wallHit.obj)) return;
       pushUndo(state.history, state.rooms);
       state.drag = {
         type: 'moveWallObject',
@@ -453,8 +463,16 @@ export function initEditor(
     }
 
     if (state.drag.type === 'moveWallObject' || state.drag.type === 'resizeWallObject') {
-      selectSingle(state.selection, state.drag.roomId);
+      const dragRoomId = state.drag.roomId;
+      const dragObjId = state.drag.objectId;
+      selectSingle(state.selection, dragRoomId);
       state.drag = null;
+      // 壁オブジェクトの同期
+      const dragRoom = state.rooms.find((r) => r.id === dragRoomId);
+      const dragObj = dragRoom?.wallObjects?.find((o) => o.id === dragObjId);
+      if (dragRoom && dragObj) {
+        syncPairedOpening(state.rooms, dragRoom, dragObj);
+      }
       // Cursor will be recalculated on next mousemove; set a reasonable default
       const m = mousePos(e);
       const stillOnWallObj = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom);
@@ -477,6 +495,9 @@ export function initEditor(
         clearSelection(state.selection);
         state.selection.add(room.id);
       }
+    } else if (state.drag.type === 'move' || state.drag.type === 'resize') {
+      // 部屋の移動・リサイズ後にペア開口を再同期
+      syncAllPairedOpenings(state.rooms);
     }
 
     state.drag = null;
@@ -496,10 +517,23 @@ export function initEditor(
       const objId = wallHit.obj.id;
       const hitObj = wallHit.obj;
 
+      // 自動生成された開口は操作不可
+      if (isPairedAutoOpening(hitObj)) {
+        items.push({
+          label: 'この開口は隣室と連動しています',
+          disabled: true,
+          action: () => {},
+        });
+        callbacks.onContextMenu({ screenX: e.clientX, screenY: e.clientY, items });
+        return;
+      }
+
       const removeWallObject = () => {
         const room = state.rooms.find((r) => r.id === roomId);
         if (!room) return;
         commitChange(() => {
+          const obj = room.wallObjects?.find((o) => o.id === objId);
+          if (obj) removePairedOpening(state.rooms, obj);
           room.wallObjects = room.wallObjects?.filter((o) => o.id !== objId);
           if (room.wallObjects?.length === 0) room.wallObjects = undefined;
         });
@@ -550,7 +584,9 @@ export function initEditor(
         if (!room) return;
         commitChange(() => {
           if (!room.wallObjects) room.wallObjects = [];
-          room.wallObjects.push(factory());
+          const obj = factory();
+          room.wallObjects.push(obj);
+          syncPairedOpening(state.rooms, room, obj);
         });
       };
       items.push({
@@ -715,6 +751,7 @@ export function initEditor(
       commitChange(() => {
         state.rooms = state.rooms.filter((r) => !state.selection.has(r.id));
         cleanupSingletonGroups(state.rooms);
+        syncAllPairedOpenings(state.rooms);
         clearSelection(state.selection);
       });
     }
