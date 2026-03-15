@@ -205,6 +205,7 @@ export function initEditor(
     if (!restored) return;
     state.rooms = restored;
     clearSelection(state.selection);
+    activeInteriorObjectId = undefined;
     render();
     persistToStorage(state.rooms);
   }
@@ -658,8 +659,8 @@ export function initEditor(
             commitChange(() => {
               room.interiorObjects = room.interiorObjects?.filter((o) => o.id !== objId);
               if (room.interiorObjects?.length === 0) room.interiorObjects = undefined;
-              activeInteriorObjectId = undefined;
             });
+            activeInteriorObjectId = undefined;
           },
         });
       }
@@ -777,12 +778,12 @@ export function initEditor(
           const sw = 2, sh = 3;
           const sx = Math.max(0, Math.min(Math.floor((room.w - sw) / 2), room.w - sw));
           const sy = Math.max(0, Math.min(Math.floor((room.h - sh) / 2), room.h - sh));
+          const stairs = createStraightStairs(sx, sy, sw, sh);
           commitChange(() => {
             if (!room.interiorObjects) room.interiorObjects = [];
-            const stairs = createStraightStairs(sx, sy, sw, sh);
             room.interiorObjects.push(stairs);
-            activeInteriorObjectId = stairs.id;
           });
+          activeInteriorObjectId = stairs.id;
         },
       });
       items.push({
@@ -794,12 +795,12 @@ export function initEditor(
           const fw = 4, fh = 3;
           const fx = Math.max(0, Math.min(Math.floor((room.w - fw) / 2), room.w - fw));
           const fy = Math.max(0, Math.min(Math.floor((room.h - fh) / 2), room.h - fh));
+          const stairs = createFoldingStairs(fx, fy, fw, fh);
           commitChange(() => {
             if (!room.interiorObjects) room.interiorObjects = [];
-            const stairs = createFoldingStairs(fx, fy, fw, fh);
             room.interiorObjects.push(stairs);
-            activeInteriorObjectId = stairs.id;
           });
+          activeInteriorObjectId = stairs.id;
         },
       });
 
@@ -951,13 +952,13 @@ export function initEditor(
         commitChange(() => {
           for (const room of state.rooms) {
             if (room.interiorObjects?.some((o) => o.id === activeId)) {
-              room.interiorObjects = room.interiorObjects.filter((o) => o.id !== activeId);
-              if (room.interiorObjects.length === 0) room.interiorObjects = undefined;
+              room.interiorObjects = room.interiorObjects?.filter((o) => o.id !== activeId);
+              if (room.interiorObjects?.length === 0) room.interiorObjects = undefined;
               break;
             }
           }
-          activeInteriorObjectId = undefined;
         });
+        activeInteriorObjectId = undefined;
         return;
       }
       if (state.selection.size > 0) {

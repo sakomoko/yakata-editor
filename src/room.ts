@@ -73,8 +73,8 @@ export function drawRoom(
     }
     // Wall object resize handles drawn AFTER room handles so they appear on top
     drawWallObjectResizeHandles(ctx, room, zoom);
-    // Interior object resize handles
-    drawInteriorObjectHandles(ctx, room, zoom);
+    // Interior object resize handles (only for active object)
+    drawInteriorObjectHandles(ctx, room, zoom, activeInteriorObjectId);
   }
 }
 

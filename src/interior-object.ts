@@ -385,11 +385,17 @@ export function drawInteriorObjectHandles(
   ctx: CanvasRenderingContext2D,
   room: Room,
   zoom: number,
+  activeId?: string,
 ): void {
   if (!room.interiorObjects?.length) return;
   const size = HANDLE_SIZE / zoom;
 
-  for (const obj of room.interiorObjects) {
+  // Only draw handles for the active object to reduce visual noise
+  const targets = activeId
+    ? room.interiorObjects.filter((o) => o.id === activeId)
+    : room.interiorObjects;
+
+  for (const obj of targets) {
     const rect = interiorObjectToPixelRect(room, obj);
     const corners = [
       { x: rect.x, y: rect.y },
@@ -545,6 +551,10 @@ export function computeInteriorObjectResize(
   if (dir.includes('s')) {
     h = Math.max(MIN_INTERIOR_SIZE, Math.min(relGy - orig.y, room.h - orig.y));
   }
+
+  // Final boundary safety: ensure object stays within room bounds
+  w = Math.min(w, room.w - x);
+  h = Math.min(h, room.h - y);
 
   return { x, y, w, h };
 }
