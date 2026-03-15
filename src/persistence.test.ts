@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { ensureWallObjectIds } from './persistence.ts';
-import type { WallDoor } from './types.ts';
+import { ensureWallObjectIds, ensureInteriorObjectIds } from './persistence.ts';
+import type { WallDoor, StraightStairs, FoldingStairs } from './types.ts';
 
 describe('ensureWallObjectIds', () => {
   it('窓データを正しく復元する', () => {
@@ -68,5 +68,76 @@ describe('ensureWallObjectIds', () => {
     expect((result[1] as WallDoor).swing).toBe('outward');
     expect(result[2].type).toBe('door');
     expect((result[2] as WallDoor).swing).toBe('inward');
+  });
+});
+
+describe('ensureInteriorObjectIds', () => {
+  it('階段データを正しく復元する', () => {
+    const raw = [{ type: 'stairs', stairsType: 'straight', direction: 'n', x: 1, y: 2, w: 2, h: 3 }];
+    const result = ensureInteriorObjectIds(raw);
+    expect(result).toHaveLength(1);
+    expect(result[0].type).toBe('stairs');
+    const stairs = result[0] as StraightStairs;
+    expect(stairs.stairsType).toBe('straight');
+    expect(stairs.direction).toBe('n');
+    expect(stairs.x).toBe(1);
+    expect(stairs.y).toBe(2);
+    expect(stairs.w).toBe(2);
+    expect(stairs.h).toBe(3);
+    expect(stairs.id).toBeTruthy();
+  });
+
+  it('既存のidを保持する', () => {
+    const raw = [{ id: 'test-id', type: 'stairs', stairsType: 'straight', direction: 's', x: 0, y: 0, w: 2, h: 3 }];
+    const result = ensureInteriorObjectIds(raw);
+    expect(result[0].id).toBe('test-id');
+  });
+
+  it('不正なtypeのデータはフィルタで除外される', () => {
+    const raw = [{ type: 'unknown', x: 0, y: 0, w: 2, h: 3 }];
+    const result = ensureInteriorObjectIds(raw);
+    expect(result).toHaveLength(0);
+  });
+
+  it('必須プロパティが欠損したデータはフィルタで除外される', () => {
+    const raw = [{ type: 'stairs', x: 0, y: 0 }];
+    const result = ensureInteriorObjectIds(raw);
+    expect(result).toHaveLength(0);
+  });
+
+  it('stairsTypeが欠損した場合straightにフォールバックする', () => {
+    const raw = [{ type: 'stairs', direction: 'e', x: 0, y: 0, w: 2, h: 3 }];
+    const result = ensureInteriorObjectIds(raw);
+    expect(result).toHaveLength(1);
+    expect((result[0] as StraightStairs).stairsType).toBe('straight');
+  });
+
+  it('directionが欠損した場合nにフォールバックする', () => {
+    const raw = [{ type: 'stairs', stairsType: 'straight', x: 0, y: 0, w: 2, h: 3 }];
+    const result = ensureInteriorObjectIds(raw);
+    expect(result).toHaveLength(1);
+    expect((result[0] as StraightStairs).direction).toBe('n');
+  });
+
+  it('directionが不正な値の場合nにフォールバックする', () => {
+    const raw = [{ type: 'stairs', stairsType: 'straight', direction: 'invalid', x: 0, y: 0, w: 2, h: 3 }];
+    const result = ensureInteriorObjectIds(raw);
+    expect((result[0] as StraightStairs).direction).toBe('n');
+  });
+
+  it('折り返し階段データを正しく復元する', () => {
+    const raw = [{ type: 'stairs', stairsType: 'folding', direction: 'e', x: 0, y: 0, w: 4, h: 3 }];
+    const result = ensureInteriorObjectIds(raw);
+    expect(result).toHaveLength(1);
+    const stairs = result[0] as FoldingStairs;
+    expect(stairs.stairsType).toBe('folding');
+    expect(stairs.direction).toBe('e');
+    expect(stairs.w).toBe(4);
+  });
+
+  it('stairsTypeが不正な値の場合straightにフォールバックする', () => {
+    const raw = [{ type: 'stairs', stairsType: 'unknown', direction: 'n', x: 0, y: 0, w: 2, h: 3 }];
+    const result = ensureInteriorObjectIds(raw);
+    expect((result[0] as StraightStairs).stairsType).toBe('straight');
   });
 });

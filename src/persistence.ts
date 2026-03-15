@@ -1,4 +1,15 @@
-import type { Room, WallObject, WallWindow, WallDoor, WallOpening, WallSide } from './types.ts';
+import type {
+  Room,
+  WallObject,
+  WallWindow,
+  WallDoor,
+  WallOpening,
+  WallSide,
+  RoomInteriorObject,
+  StraightStairs,
+  FoldingStairs,
+  StairsDirection,
+} from './types.ts';
 import type { ViewportState } from './viewport.ts';
 import { clampZoom } from './viewport.ts';
 
@@ -8,6 +19,9 @@ const VIEWPORT_KEY = 'madori_viewport';
 const VALID_SIDES = new Set(['n', 'e', 's', 'w']);
 const VALID_WALL_OBJECT_TYPES = new Set(['window', 'door', 'opening']);
 const VALID_DOOR_SWINGS = new Set(['inward', 'outward']);
+const VALID_INTERIOR_OBJECT_TYPES = new Set(['stairs']);
+const VALID_STAIRS_TYPES = new Set(['straight', 'folding']);
+const VALID_STAIRS_DIRECTIONS = new Set(['n', 'e', 's', 'w']);
 
 function restorePairedWithEntry(
   value: unknown,
@@ -85,6 +99,45 @@ export function ensureWallObjectIds(objects: unknown[]): WallObject[] {
     });
 }
 
+/** @internal Exported for testing */
+export function ensureInteriorObjectIds(objects: unknown[]): RoomInteriorObject[] {
+  return objects
+    .filter((o) => {
+      const obj = o as Record<string, unknown>;
+      return (
+        typeof obj.x === 'number' &&
+        typeof obj.y === 'number' &&
+        typeof obj.w === 'number' &&
+        typeof obj.h === 'number' &&
+        VALID_INTERIOR_OBJECT_TYPES.has(obj.type as string)
+      );
+    })
+    .map((o): RoomInteriorObject => {
+      const obj = o as Record<string, unknown>;
+      const id = typeof obj.id === 'string' ? obj.id : crypto.randomUUID();
+      const x = obj.x as number;
+      const y = obj.y as number;
+      const w = obj.w as number;
+      const h = obj.h as number;
+
+      if (obj.type === 'stairs') {
+        const direction = VALID_STAIRS_DIRECTIONS.has(obj.direction as string)
+          ? (obj.direction as StairsDirection)
+          : 'n';
+        const stairsType = VALID_STAIRS_TYPES.has(obj.stairsType as string)
+          ? (obj.stairsType as string)
+          : 'straight';
+        if (stairsType === 'folding') {
+          return { id, type: 'stairs', stairsType: 'folding', direction, x, y, w, h } satisfies FoldingStairs;
+        }
+        return { id, type: 'stairs', stairsType: 'straight', direction, x, y, w, h } satisfies StraightStairs;
+      }
+
+      // Fallback (shouldn't reach here due to filter, but TypeScript needs it)
+      return { id, type: 'stairs', stairsType: 'straight', direction: 'n', x, y, w, h };
+    });
+}
+
 function ensureIds(rooms: unknown[]): Room[] {
   return rooms.map((r) => {
     const room = r as Record<string, unknown>;
@@ -104,6 +157,9 @@ function ensureIds(rooms: unknown[]): Room[] {
     }
     if (Array.isArray(room.wallObjects) && room.wallObjects.length > 0) {
       result.wallObjects = ensureWallObjectIds(room.wallObjects);
+    }
+    if (Array.isArray(room.interiorObjects) && room.interiorObjects.length > 0) {
+      result.interiorObjects = ensureInteriorObjectIds(room.interiorObjects);
     }
     return result;
   });

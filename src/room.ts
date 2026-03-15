@@ -1,6 +1,7 @@
 import type { Room, Handle, MouseCoord } from './types.ts';
 import { GRID, HANDLE_SIZE, HANDLE_HIT } from './grid.ts';
 import { drawWallSegments, drawWallObjects, drawWallObjectResizeHandles } from './wall-object.ts';
+import { drawInteriorObjects, drawInteriorObjectHandles } from './interior-object.ts';
 
 export function createRoom(x: number, y: number, w: number, h: number, label = ''): Room {
   return { id: crypto.randomUUID(), x, y, w, h, label };
@@ -37,6 +38,7 @@ export function drawRoom(
   showHandles: boolean,
   zoom = 1,
   activeWallObjectId?: string,
+  activeInteriorObjectId?: string,
 ): void {
   const x = room.x * GRID,
     y = room.y * GRID;
@@ -58,6 +60,9 @@ export function drawRoom(
     ctx.fillText(room.label, x + w / 2, y + h / 2, w * 0.9);
   }
 
+  // Interior objects drawn before wall objects (wall objects appear on top)
+  drawInteriorObjects(ctx, room, isSelected, showHandles, zoom, activeInteriorObjectId);
+
   drawWallObjects(ctx, room, isSelected, zoom, activeWallObjectId);
 
   if (isSelected && showHandles) {
@@ -68,6 +73,8 @@ export function drawRoom(
     }
     // Wall object resize handles drawn AFTER room handles so they appear on top
     drawWallObjectResizeHandles(ctx, room, zoom);
+    // Interior object resize handles
+    drawInteriorObjectHandles(ctx, room, zoom);
   }
 }
 
