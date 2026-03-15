@@ -151,14 +151,7 @@ export function initEditor(
     // 2nd pass: redraw outward doors on top of all rooms to prevent occlusion
     for (const r of state.rooms) {
       const isSelected = state.selection.has(r.id);
-      drawOutwardDoorsOverlay(
-        ctx,
-        r,
-        isSelected,
-        isSelected && state.selection.size === 1,
-        viewport.zoom,
-        activeWallObjectId,
-      );
+      drawOutwardDoorsOverlay(ctx, r, isSelected, viewport.zoom, activeWallObjectId);
     }
 
     if (state.drag && state.drag.type === 'create') {

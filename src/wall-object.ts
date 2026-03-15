@@ -226,12 +226,15 @@ function getWallObjectStyle(
   return { color, lineWidth };
 }
 
-/** Draw outward doors overlay on top of all rooms (2nd pass to prevent occlusion). */
+/**
+ * Draw outward doors overlay on top of all rooms (2nd pass to prevent occlusion).
+ * Resize handles are NOT redrawn here because they sit on the wall line and
+ * are not occluded by adjacent rooms' fillRect.
+ */
 export function drawOutwardDoorsOverlay(
   ctx: CanvasRenderingContext2D,
   room: Room,
   isSelected: boolean,
-  showHandles: boolean,
   zoom = 1,
   activeObjectId?: string,
 ): void {
@@ -246,10 +249,6 @@ export function drawOutwardDoorsOverlay(
     const isActive = obj.id === activeObjectId;
     const style = getWallObjectStyle(isSelected, isActive, zoom);
     drawDoor(ctx, room, obj, style.color, style.lineWidth);
-
-    if (isSelected && showHandles) {
-      drawWallObjectResizeHandles(ctx, room, obj, zoom);
-    }
   }
 }
 
