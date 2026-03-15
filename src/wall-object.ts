@@ -214,6 +214,7 @@ function drawDoor(
   obj: WallDoor,
   color: string,
   lineWidth: number,
+  zoom = 1,
 ): void {
   const { hingeX, hingeY, radius, closedAngle, openAngle, anticlockwise } = getDoorGeometry(
     room,
@@ -228,10 +229,15 @@ function drawDoor(
   ctx.lineTo(hingeX + Math.cos(openAngle) * radius, hingeY + Math.sin(openAngle) * radius);
   ctx.stroke();
 
-  // Draw arc (from closed position to open position)
+  // Draw arc (from closed position to open position) — thinner & lighter than walls
+  const arcColor = color === '#000' ? '#888' : color;
+  ctx.save();
+  ctx.strokeStyle = arcColor;
+  ctx.lineWidth = 0.8 / zoom;
   ctx.beginPath();
   ctx.arc(hingeX, hingeY, radius, closedAngle, openAngle, anticlockwise);
   ctx.stroke();
+  ctx.restore();
 }
 
 /** Compute color and line width for a wall object based on selection/active state. */
@@ -268,7 +274,7 @@ export function drawOutwardDoorsOverlay(
   for (const obj of outwardDoors) {
     const isActive = obj.id === activeObjectId;
     const style = getWallObjectStyle(isSelected, isActive, zoom);
-    drawDoor(ctx, room, obj, style.color, style.lineWidth);
+    drawDoor(ctx, room, obj, style.color, style.lineWidth, zoom);
   }
 }
 
@@ -309,7 +315,7 @@ export function drawWallObjects(
         break;
       }
       case 'door': {
-        drawDoor(ctx, room, obj, style.color, style.lineWidth);
+        drawDoor(ctx, room, obj, style.color, style.lineWidth, zoom);
         break;
       }
       case 'opening': {
