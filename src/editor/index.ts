@@ -47,10 +47,10 @@ export function initEditor(
   };
 
   const viewport: ViewportState = { zoom: 1, panX: 0, panY: 0 };
-  const flags = {
+  const flags: EditorContext['flags'] = {
     isPanning: false,
-    activeInteriorObjectId: undefined as string | undefined,
-    activeFreeTextId: undefined as string | undefined,
+    activeInteriorObjectId: undefined,
+    activeFreeTextId: undefined,
   };
 
   const mousePos = createMousePos(canvas, viewport);
@@ -97,7 +97,9 @@ export function initEditor(
   const handleMouseDown = (e: MouseEvent) => onMouseDown(ec, e);
   const handleMouseMove = (e: MouseEvent) => onMouseMove(ec, e);
   const handleMouseUp = (e: MouseEvent) => onMouseUp(ec, e);
-  const handleDblClick = (e: MouseEvent) => onDblClick(ec, e);
+  const handleDblClick = (e: MouseEvent) => {
+    onDblClick(ec, e).catch(console.error);
+  };
   const handleContextMenu = (e: MouseEvent) => onContextMenu(ec, e);
   const handleKeyDown = (e: KeyboardEvent) => onKeyDown(ec, e);
   const handleKeyUp = (e: KeyboardEvent) => onKeyUp(ec, e);
