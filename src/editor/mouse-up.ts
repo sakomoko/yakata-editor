@@ -93,11 +93,13 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
   ) {
     // 部屋の移動・リサイズ後にペア開口を再同期
     syncAllPairedOpenings(state.rooms);
+    if (state.drag.type === 'groupResize') {
+      canvas.style.cursor = 'crosshair';
+    }
   }
 
   // 共通クリーンアップ: areaSelect / create / move / resize / groupResize すべてここを通る
   state.drag = null;
-  canvas.style.cursor = 'crosshair';
   ec.render();
   persistToStorage(state.rooms, state.freeTexts);
 }
