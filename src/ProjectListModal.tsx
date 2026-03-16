@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -31,7 +32,10 @@ export default function ProjectListModal({
   onDelete,
   onClose,
 }: ProjectListModalProps) {
-  const sorted = [...projects].sort((a, b) => b.updatedAt - a.updatedAt);
+  const sorted = useMemo(
+    () => [...projects].sort((a, b) => b.updatedAt - a.updatedAt),
+    [projects],
+  );
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -54,6 +58,7 @@ export default function ProjectListModal({
                         size="small"
                         onClick={() => onDelete(p.id)}
                         title="削除"
+                        aria-label="プロジェクトを削除"
                         sx={{ color: '#999' }}
                       >
                         🗑

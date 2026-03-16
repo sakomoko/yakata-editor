@@ -95,6 +95,8 @@ export default function App() {
   );
 
   // Multi-project state
+  // tabState: React state (レンダリング用), tabStateRef: ref (コールバック内での最新値参照用)
+  // 状態変更は必ず updateTabState() を通すこと（両方を同期更新する）
   const [projectIndex, setProjectIndex] = useState<ProjectMeta[]>([]);
   const [tabState, setTabState] = useState<TabState>({ openTabs: [], activeTabId: '' });
   const tabStateRef = useRef<TabState>({ openTabs: [], activeTabId: '' });
@@ -438,6 +440,7 @@ export default function App() {
         <Box
           component="span"
           sx={{ fontSize: 14, lineHeight: 1 }}
+          aria-hidden="true"
         >
           🏚
         </Box>
