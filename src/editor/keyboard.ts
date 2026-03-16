@@ -1,5 +1,5 @@
 import { zoomAtCenter as zoomAtCenterFn } from '../viewport.ts';
-import { pushUndo } from '../history.ts';
+import { pushUndo, cancelLastUndo } from '../history.ts';
 import { clearSelection } from '../selection.ts';
 import { persistToStorage, persistViewport } from '../persistence.ts';
 import { bringToFront, sendToBack, bringForward, sendBackward } from '../z-order.ts';
@@ -67,7 +67,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
       ec.render();
       persistToStorage(state.rooms, state.freeTexts);
     } else {
-      state.history.pop();
+      cancelLastUndo(state.history);
     }
     return;
   }

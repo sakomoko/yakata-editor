@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pushUndo, popUndo } from './history.ts';
+import { pushUndo, popUndo, cancelLastUndo } from './history.ts';
 import { createRoom } from './room.ts';
 
 describe('pushUndo / popUndo', () => {
@@ -63,6 +63,27 @@ describe('pushUndo / popUndo', () => {
     expect(second!.rooms[0].label).toBe('after');
     const first = popUndo(history);
     expect(first!.rooms[0].label).toBe('before');
+  });
+
+  it('cancelLastUndo on empty history should be a no-op', () => {
+    const history: string[] = [];
+    expect(() => cancelLastUndo(history)).not.toThrow();
+    expect(history).toHaveLength(0);
+  });
+
+  it('cancelLastUndo should remove the last entry', () => {
+    const history: string[] = [];
+    const rooms = [createRoom(0, 0, 1, 1, 'first')];
+    pushUndo(history, rooms);
+    rooms[0].label = 'second';
+    pushUndo(history, rooms);
+    expect(history).toHaveLength(2);
+
+    cancelLastUndo(history);
+    expect(history).toHaveLength(1);
+
+    const restored = popUndo(history);
+    expect(restored!.rooms[0].label).toBe('first');
   });
 
   it('should handle legacy format (array of rooms)', () => {
