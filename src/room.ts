@@ -263,7 +263,7 @@ export function getAnchorForDir(
   }
 }
 
-/** グループスケーリングのスケール値を計算する */
+/** グループスケーリングのスケール値を計算する。originals は一回のみ反復される */
 export function computeGroupScale<T extends { w: number; h: number }>(
   origBB: { w: number; h: number },
   rawW: number,

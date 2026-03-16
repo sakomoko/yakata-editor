@@ -95,8 +95,9 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
     syncAllPairedOpenings(state.rooms);
   }
 
-  // 共通クリーンアップ: areaSelect / create / move / resize すべてここを通る
+  // 共通クリーンアップ: areaSelect / create / move / resize / groupResize すべてここを通る
   state.drag = null;
+  canvas.style.cursor = 'crosshair';
   ec.render();
   persistToStorage(state.rooms, state.freeTexts);
 }
