@@ -5,6 +5,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- `context-menu-handler.ts` のメニュー構築ロジックを5つのbuild関数に分割し、配置パターンの共通化・型改善を実施
+
 ### Added
 
 - 部屋に防犯カメラ（SecurityCamera）を配置できる機能
