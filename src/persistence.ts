@@ -10,9 +10,11 @@ import type {
   StraightStairs,
   FoldingStairs,
   Marker,
+  SecurityCamera,
   StairsDirection,
   MarkerKind,
 } from './types.ts';
+import { CAMERA_COLOR_PRESETS } from './camera.ts';
 import type { ViewportState } from './viewport.ts';
 import { clampZoom } from './viewport.ts';
 
@@ -23,10 +25,15 @@ const VALID_SIDES = new Set(['n', 'e', 's', 'w']);
 const VALID_WALL_OBJECT_TYPES = new Set(['window', 'door', 'opening']);
 const VALID_DOOR_SWINGS = new Set(['inward', 'outward']);
 const VALID_DOOR_HINGES = new Set(['start', 'end']);
-const VALID_INTERIOR_OBJECT_TYPES = new Set(['stairs', 'marker']);
+const VALID_INTERIOR_OBJECT_TYPES = new Set(['stairs', 'marker', 'camera']);
 const VALID_STAIRS_TYPES = new Set(['straight', 'folding']);
 const VALID_STAIRS_DIRECTIONS = new Set(['n', 'e', 's', 'w']);
 const VALID_MARKER_KINDS = new Set(['body', 'pin', 'text']);
+/** プリセットカラー値のホワイトリスト。現時点ではプリセット以外のカスタム色は禁止。
+ * 将来カラーピッカー等で任意色を許可する場合は、このバリデーションを緩和すること。 */
+const VALID_CAMERA_COLORS = new Set(
+  Object.values(CAMERA_COLOR_PRESETS).flatMap((c) => [c.fovColor, c.fovStrokeColor]),
+);
 
 function restorePairedWithEntry(value: unknown): { roomId: string; objectId: string } | undefined {
   if (
@@ -163,6 +170,42 @@ export function ensureInteriorObjectIds(objects: unknown[]): RoomInteriorObject[
         const result: Marker = { id, type: 'marker', markerKind, direction, x, y, w, h };
         if (typeof obj.label === 'string' && obj.label) result.label = obj.label;
         return result;
+      }
+
+      if (obj.type === 'camera') {
+        const defaults = CAMERA_COLOR_PRESETS.blue;
+        const angle =
+          typeof obj.angle === 'number' && Number.isFinite(obj.angle) ? obj.angle : 0;
+        const fovAngle =
+          typeof obj.fovAngle === 'number' && Number.isFinite(obj.fovAngle)
+            ? Math.max(Math.PI / 36, Math.min(Math.PI / 2, obj.fovAngle))
+            : Math.PI / 6;
+        // NaN/Infinity → デフォルト値5にフォールバック、有限の範囲外値 → [1, 20]にクランプ
+        const fovRange =
+          typeof obj.fovRange === 'number' && Number.isFinite(obj.fovRange)
+            ? Math.max(1, Math.min(20, obj.fovRange))
+            : 5;
+        const fovColor =
+          typeof obj.fovColor === 'string' && VALID_CAMERA_COLORS.has(obj.fovColor)
+            ? obj.fovColor
+            : defaults.fovColor;
+        const fovStrokeColor =
+          typeof obj.fovStrokeColor === 'string' && VALID_CAMERA_COLORS.has(obj.fovStrokeColor)
+            ? obj.fovStrokeColor
+            : defaults.fovStrokeColor;
+        return {
+          id,
+          type: 'camera',
+          x,
+          y,
+          w,
+          h,
+          angle,
+          fovAngle,
+          fovRange,
+          fovColor,
+          fovStrokeColor,
+        } satisfies SecurityCamera;
       }
 
       // Fallback (shouldn't reach here due to filter, but TypeScript needs it)
