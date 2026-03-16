@@ -6,6 +6,7 @@ import {
   computeCameraFovAngle,
   computeCameraFovRange,
   hitCameraHandle,
+  hitCameraHandleInRooms,
   getCameraHandlePositions,
   findCameraInRoom,
 } from './camera.ts';
@@ -232,6 +233,61 @@ describe('hitCameraHandle', () => {
     const cam = makeCam();
     const hit = hitCameraHandle(room, cam, 0, 0, 1);
     expect(hit).toBeNull();
+  });
+});
+
+describe('hitCameraHandleInRooms', () => {
+  it('detects handle hit across multiple rooms', () => {
+    const cam1 = makeCam({ id: 'cam-1' });
+    const cam2 = makeCam({ id: 'cam-2', x: 1, y: 1 });
+    const room1: Room = { ...makeRoom(), id: 'room-1', interiorObjects: [cam1] };
+    const room2: Room = { ...makeRoom(), id: 'room-2', x: 10, y: 0, interiorObjects: [cam2] };
+    const handles = getCameraHandlePositions(room1, cam1);
+
+    const result = hitCameraHandleInRooms([room1, room2], handles.rotate.x, handles.rotate.y, 1);
+    expect(result).not.toBeNull();
+    expect(result!.cam.id).toBe('cam-1');
+    expect(result!.hit.type).toBe('rotate');
+  });
+
+  it('filters by activeId when provided', () => {
+    const cam1 = makeCam({ id: 'cam-1', x: 0, y: 0 });
+    const cam2 = makeCam({ id: 'cam-2', x: 3, y: 3 });
+    const room: Room = { ...makeRoom(), interiorObjects: [cam1, cam2] };
+    const handles1 = getCameraHandlePositions(room, cam1);
+
+    // cam1のハンドル位置だがactiveIdがcam-2なのでヒットしない
+    const result = hitCameraHandleInRooms(
+      [room],
+      handles1.rotate.x,
+      handles1.rotate.y,
+      1,
+      'cam-2',
+    );
+    expect(result).toBeNull();
+  });
+
+  it('skips rooms with no interiorObjects', () => {
+    const emptyRoom: Room = makeRoom();
+    const cam = makeCam();
+    const roomWithCam: Room = { ...makeRoom(), id: 'room-2', interiorObjects: [cam] };
+    const handles = getCameraHandlePositions(roomWithCam, cam);
+
+    const result = hitCameraHandleInRooms(
+      [emptyRoom, roomWithCam],
+      handles.rotate.x,
+      handles.rotate.y,
+      1,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.room.id).toBe('room-2');
+  });
+
+  it('returns null when no handles are hit', () => {
+    const cam = makeCam();
+    const room: Room = { ...makeRoom(), interiorObjects: [cam] };
+    const result = hitCameraHandleInRooms([room], 9999, 9999, 1);
+    expect(result).toBeNull();
   });
 });
 

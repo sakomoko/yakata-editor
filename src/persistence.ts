@@ -16,6 +16,12 @@ import type {
 } from './types.ts';
 import { CAMERA_COLOR_PRESETS } from './camera.ts';
 import type { ViewportState } from './viewport.ts';
+
+/** プリセットカラー値のホワイトリスト。現時点ではプリセット以外のカスタム色は禁止。
+ * 将来カラーピッカー等で任意色を許可する場合は、このバリデーションを緩和すること。 */
+const VALID_CAMERA_COLORS = new Set(
+  Object.values(CAMERA_COLOR_PRESETS).flatMap((c) => [c.fovColor, c.fovStrokeColor]),
+);
 import { clampZoom } from './viewport.ts';
 
 const STORAGE_KEY = 'madori_data';
@@ -175,19 +181,17 @@ export function ensureInteriorObjectIds(objects: unknown[]): RoomInteriorObject[
           typeof obj.fovAngle === 'number' && Number.isFinite(obj.fovAngle)
             ? Math.max(Math.PI / 36, Math.min(Math.PI / 2, obj.fovAngle))
             : Math.PI / 6;
+        // NaN/Infinity → デフォルト値5にフォールバック、有限の範囲外値 → [1, 20]にクランプ
         const fovRange =
           typeof obj.fovRange === 'number' && Number.isFinite(obj.fovRange)
             ? Math.max(1, Math.min(20, obj.fovRange))
             : 5;
-        const validColors = new Set(
-          Object.values(CAMERA_COLOR_PRESETS).flatMap((c) => [c.fovColor, c.fovStrokeColor]),
-        );
         const fovColor =
-          typeof obj.fovColor === 'string' && validColors.has(obj.fovColor)
+          typeof obj.fovColor === 'string' && VALID_CAMERA_COLORS.has(obj.fovColor)
             ? obj.fovColor
             : defaults.fovColor;
         const fovStrokeColor =
-          typeof obj.fovStrokeColor === 'string' && validColors.has(obj.fovStrokeColor)
+          typeof obj.fovStrokeColor === 'string' && VALID_CAMERA_COLORS.has(obj.fovStrokeColor)
             ? obj.fovStrokeColor
             : defaults.fovStrokeColor;
         return {
