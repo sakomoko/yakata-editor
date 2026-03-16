@@ -139,7 +139,9 @@ export function initEditor(
         flags.activeInteriorObjectId = undefined;
         flags.activeFreeTextId = undefined;
       }
+      canvas.style.cursor = on ? 'crosshair' : 'default';
       ec.render();
+      ec.callbacks.onPaintModeChange?.(on);
     },
     setPaintColor: (color: string) => {
       state.paintColor = color;

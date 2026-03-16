@@ -558,9 +558,7 @@ export default function App() {
             }),
           }}
           onClick={() => {
-            const next = !paintMode;
-            setPaintMode(next);
-            editorRef.current?.setPaintMode(next);
+            editorRef.current?.setPaintMode(!paintMode);
           }}
         >
           ペン (P)

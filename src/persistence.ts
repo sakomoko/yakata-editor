@@ -240,7 +240,7 @@ export function ensureFreeTextIds(objects: unknown[]): FreeText[] {
     });
 }
 
-const VALID_HEX_COLOR = /^#[0-9a-fA-F]{3,8}$/;
+const VALID_HEX_COLOR = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 
 /** @internal Exported for testing */
 export function ensureFreeStrokeIds(objects: unknown[]): FreeStroke[] {
