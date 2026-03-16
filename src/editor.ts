@@ -1,4 +1,4 @@
-import type { EditorState, MouseCoord, Room, WallObject } from './types.ts';
+import type { EditorState, MouseCoord, Room, FreeText, WallObject } from './types.ts';
 import { GRID, drawGrid } from './grid.ts';
 import {
   drawRoom,
@@ -52,6 +52,16 @@ import {
   computeInteriorObjectResize,
   clampAllInteriorObjects,
 } from './interior-object.ts';
+import {
+  createFreeText,
+  drawFreeText,
+  drawFreeTextHandles,
+  hitFreeText,
+  hitFreeTextHandle,
+  findFreeTextsInArea,
+  computeFreeTextResize,
+} from './free-text.ts';
+import type { FreeTextEditData } from './FreeTextDialog.tsx';
 import type { ContextMenuItem } from './context-menu.ts';
 import { bringToFront, sendToBack, bringForward, sendBackward } from './z-order.ts';
 import {
@@ -90,13 +100,14 @@ export interface EditorCallbacks {
   onStatusChange: (text: string) => void;
   onRoomEdit: (data: RoomEditData) => Promise<{ label: string; fontSize?: number } | null>;
   onMarkerEdit: (data: MarkerEditData) => Promise<{ label: string } | null>;
+  onFreeTextEdit: (data: FreeTextEditData) => Promise<{ label: string; fontSize: number } | null>;
   onContextMenu: (request: ContextMenuRequest) => void;
 }
 
 export interface EditorAPI {
   undo: () => void;
   newProject: () => void;
-  loadProject: (rooms: Room[]) => void;
+  loadProject: (data: { rooms: Room[]; freeTexts: FreeText[] }) => void;
   saveProject: () => void;
   exportAsPng: () => void;
   resize: () => void;
@@ -112,6 +123,7 @@ export function initEditor(
 
   const state: EditorState = {
     rooms: [],
+    freeTexts: [],
     selection: new Set(),
     history: [],
     drag: null,
@@ -121,6 +133,7 @@ export function initEditor(
   const viewport: ViewportState = { zoom: 1, panX: 0, panY: 0 };
   let isPanning = false;
   let activeInteriorObjectId: string | undefined;
+  let activeFreeTextId: string | undefined;
 
   /** CJK文字を2カラム換算した表示幅をグリッド単位で返す */
   function labelDisplayWidth(label: string): number {
@@ -160,6 +173,21 @@ export function initEditor(
     const viewMaxY = viewport.panY + canvas.height / viewport.zoom;
     drawGrid(ctx, viewMinX, viewMinY, viewMaxX, viewMaxY);
 
+    function drawFreeTextLayer(layer: 'front' | 'back'): void {
+      for (const ft of state.freeTexts) {
+        if (ft.zLayer !== layer) continue;
+        drawFreeText(
+          ctx,
+          ft,
+          state.selection.has(ft.id),
+          ft.id === activeFreeTextId,
+          viewport.zoom,
+        );
+      }
+    }
+
+    drawFreeTextLayer('back');
+
     const activeWallObjectId =
       state.drag?.type === 'moveWallObject' || state.drag?.type === 'resizeWallObject'
         ? state.drag.objectId
@@ -185,6 +213,16 @@ export function initEditor(
     for (const r of state.rooms) {
       const isSelected = state.selection.has(r.id);
       drawOutwardDoorsOverlay(ctx, r, isSelected, viewport.zoom, activeWallObjectId);
+    }
+
+    drawFreeTextLayer('front');
+
+    // active FreeText handles
+    if (activeFreeTextId) {
+      const activeFt = state.freeTexts.find((ft) => ft.id === activeFreeTextId);
+      if (activeFt) {
+        drawFreeTextHandles(ctx, activeFt, viewport.zoom);
+      }
     }
 
     if (state.drag && state.drag.type === 'create') {
@@ -216,47 +254,59 @@ export function initEditor(
   /* eslint-enable no-irregular-whitespace */
 
   function commitChange(fn: () => void): void {
-    pushUndo(state.history, state.rooms);
+    pushUndo(state.history, state.rooms, state.freeTexts);
     fn();
     render();
-    persistToStorage(state.rooms);
+    persistToStorage(state.rooms, state.freeTexts);
   }
 
   function undo(): void {
     const restored = popUndo(state.history);
     if (!restored) return;
-    state.rooms = restored;
+    state.rooms = restored.rooms;
+    state.freeTexts = restored.freeTexts;
     clearSelection(state.selection);
     activeInteriorObjectId = undefined;
+    activeFreeTextId = undefined;
     render();
-    persistToStorage(state.rooms);
+    persistToStorage(state.rooms, state.freeTexts);
   }
 
   function newProject(): void {
-    if (state.rooms.length && !confirm('現在の間取り図をクリアしますか？')) return;
+    if (
+      (state.rooms.length || state.freeTexts.length) &&
+      !confirm('現在の間取り図をクリアしますか？')
+    )
+      return;
     commitChange(() => {
       state.rooms = [];
+      state.freeTexts = [];
       clearSelection(state.selection);
     });
     activeInteriorObjectId = undefined;
+    activeFreeTextId = undefined;
   }
 
-  function loadProjectData(rooms: Room[]): void {
+  function loadProjectData(data: { rooms: Room[]; freeTexts: FreeText[] }): void {
     commitChange(() => {
-      state.rooms = rooms;
+      state.rooms = data.rooms;
+      state.freeTexts = data.freeTexts;
       clearSelection(state.selection);
       syncAllPairedOpenings(state.rooms);
     });
     activeInteriorObjectId = undefined;
+    activeFreeTextId = undefined;
   }
 
   function saveProject(): void {
-    saveAsJson(state.rooms);
+    saveAsJson(state.rooms, state.freeTexts);
   }
 
   function exportAsPng(): void {
     const prevSelection = new Set(state.selection);
     clearSelection(state.selection);
+    const savedActiveFreeTextId = activeFreeTextId;
+    activeFreeTextId = undefined;
 
     const savedViewport = { ...viewport };
     const savedW = canvas.width;
@@ -264,6 +314,23 @@ export function initEditor(
 
     try {
       const bbox = computeRoomsBoundingBox(state.rooms);
+      // FreeText もバウンディングボックスに含める
+      for (const ft of state.freeTexts) {
+        const ftX = ft.gx * GRID;
+        const ftY = ft.gy * GRID;
+        const ftR = ftX + ft.w * GRID;
+        const ftB = ftY + ft.h * GRID;
+        if (ftX < bbox.x) {
+          bbox.w += bbox.x - ftX;
+          bbox.x = ftX;
+        }
+        if (ftY < bbox.y) {
+          bbox.h += bbox.y - ftY;
+          bbox.y = ftY;
+        }
+        if (ftR > bbox.x + bbox.w) bbox.w = ftR - bbox.x;
+        if (ftB > bbox.y + bbox.h) bbox.h = ftB - bbox.y;
+      }
       const maxDim = Math.max(bbox.w, bbox.h);
       const MAX_EXPORT_SIZE = 16384;
       const exportScale = maxDim > MAX_EXPORT_SIZE ? MAX_EXPORT_SIZE / maxDim : 1;
@@ -285,6 +352,7 @@ export function initEditor(
       canvas.height = savedH;
       Object.assign(viewport, savedViewport);
       for (const id of prevSelection) state.selection.add(id);
+      activeFreeTextId = savedActiveFreeTextId;
       render();
     }
   }
@@ -311,7 +379,7 @@ export function initEditor(
     const selectedRooms = state.rooms.filter((r) => state.selection.has(r.id));
     const edgeHit = hitWallObjectEdgeInRooms(selectedRooms, m.px, m.py, viewport.zoom, true);
     if (edgeHit) {
-      pushUndo(state.history, state.rooms);
+      pushUndo(state.history, state.rooms, state.freeTexts);
       activeInteriorObjectId = undefined;
       const horiz = edgeHit.obj.side === 'n' || edgeHit.obj.side === 's';
       state.drag = {
@@ -327,10 +395,30 @@ export function initEditor(
       return;
     }
 
+    // Check FreeText handle hit (resize) — only for active FreeText
+    if (activeFreeTextId) {
+      const activeFt = state.freeTexts.find((ft) => ft.id === activeFreeTextId);
+      if (activeFt) {
+        const ftHandleDir = hitFreeTextHandle(activeFt, m.px, m.py, viewport.zoom);
+        if (ftHandleDir) {
+          pushUndo(state.history, state.rooms, state.freeTexts);
+          state.drag = {
+            type: 'resizeFreeText',
+            freeTextId: activeFt.id,
+            dir: ftHandleDir,
+            orig: { gx: activeFt.gx, gy: activeFt.gy, w: activeFt.w, h: activeFt.h },
+          };
+          canvas.style.cursor = ftHandleDir + '-resize';
+          render();
+          return;
+        }
+      }
+    }
+
     // Check interior object handle hit (resize)
     const intHandleHit = hitInteriorObjectHandleInRooms(selectedRooms, m.px, m.py, viewport.zoom);
     if (intHandleHit) {
-      pushUndo(state.history, state.rooms);
+      pushUndo(state.history, state.rooms, state.freeTexts);
       activeInteriorObjectId = intHandleHit.obj.id;
       state.drag = {
         type: 'resizeInteriorObject',
@@ -352,7 +440,7 @@ export function initEditor(
 
     const handleHit = hitHandle(state.rooms, state.selection, m.px, m.py, viewport.zoom);
     if (handleHit) {
-      pushUndo(state.history, state.rooms);
+      pushUndo(state.history, state.rooms, state.freeTexts);
       const { handle, room } = handleHit;
       state.drag = {
         type: 'resize',
@@ -367,7 +455,7 @@ export function initEditor(
     // Check wall object hit (window drag) — skip auto-generated openings
     const wallHit = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom, true);
     if (wallHit) {
-      pushUndo(state.history, state.rooms);
+      pushUndo(state.history, state.rooms, state.freeTexts);
       activeInteriorObjectId = undefined;
       state.drag = {
         type: 'moveWallObject',
@@ -382,7 +470,7 @@ export function initEditor(
     // Check interior object hit (move)
     const intHit = hitInteriorObjectInRooms(state.rooms, m.px, m.py);
     if (intHit) {
-      pushUndo(state.history, state.rooms);
+      pushUndo(state.history, state.rooms, state.freeTexts);
       selectSingle(state.selection, intHit.room.id);
       activeInteriorObjectId = intHit.obj.id;
       const snapToGrid = intHit.obj.type === 'stairs';
@@ -404,6 +492,33 @@ export function initEditor(
     }
 
     activeInteriorObjectId = undefined;
+
+    function startFreeTextDrag(ft: FreeText): void {
+      activeFreeTextId = ft.id;
+      if (shift) {
+        toggleSelection(state.selection, ft.id);
+      } else {
+        selectSingle(state.selection, ft.id);
+      }
+      pushUndo(state.history, state.rooms, state.freeTexts);
+      state.drag = {
+        type: 'moveFreeText',
+        freeTextId: ft.id,
+        offsetGx: m.gx - ft.gx,
+        offsetGy: m.gy - ft.gy,
+      };
+      canvas.style.cursor = 'grabbing';
+      render();
+    }
+
+    // Check front-layer FreeText hit
+    const frontFtHit = hitFreeText(state.freeTexts, m.px, m.py, 'front');
+    if (frontFtHit) {
+      startFreeTextDrag(frontFtHit);
+      return;
+    }
+
+    activeFreeTextId = undefined;
     const r = hitRoom(state.rooms, m.px, m.py);
     if (r) {
       if (shift) {
@@ -417,7 +532,7 @@ export function initEditor(
         render();
         return;
       }
-      pushUndo(state.history, state.rooms);
+      pushUndo(state.history, state.rooms, state.freeTexts);
       const expanded = expandWithLinked(state.rooms, state.selection);
       const originals = new Map<string, { x: number; y: number }>();
       for (const room of state.rooms) {
@@ -427,6 +542,13 @@ export function initEditor(
       }
       state.drag = { type: 'move', originals, start: m };
       render();
+      return;
+    }
+
+    // Check back-layer FreeText hit
+    const backFtHit = hitFreeText(state.freeTexts, m.px, m.py, 'back');
+    if (backFtHit) {
+      startFreeTextDrag(backFtHit);
       return;
     }
 
@@ -462,6 +584,18 @@ export function initEditor(
         const horiz = edgeHover.obj.side === 'n' || edgeHover.obj.side === 's';
         canvas.style.cursor = horiz ? 'ew-resize' : 'ns-resize';
       } else {
+        // FreeText handle hover
+        if (activeFreeTextId) {
+          const activeFt = state.freeTexts.find((ft) => ft.id === activeFreeTextId);
+          if (activeFt) {
+            const ftDir = hitFreeTextHandle(activeFt, m.px, m.py, viewport.zoom);
+            if (ftDir) {
+              canvas.style.cursor = ftDir + '-resize';
+              updateStatus();
+              return;
+            }
+          }
+        }
         const intHandleHover = hitInteriorObjectHandleInRooms(
           selectedRooms,
           m.px,
@@ -477,6 +611,8 @@ export function initEditor(
           } else if (hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom, true)) {
             canvas.style.cursor = 'grab';
           } else if (hitInteriorObjectInRooms(state.rooms, m.px, m.py)) {
+            canvas.style.cursor = 'grab';
+          } else if (hitFreeText(state.freeTexts, m.px, m.py)) {
             canvas.style.cursor = 'grab';
           } else if (hitRoom(state.rooms, m.px, m.py)) {
             canvas.style.cursor = 'move';
@@ -597,12 +733,36 @@ export function initEditor(
           const gxF = drag.snapToGrid ? m.gx : m.px / GRID;
           const gyF = drag.snapToGrid ? m.gy : m.py / GRID;
           const minSize = drag.snapToGrid ? 1 : 0.25;
-          const result = computeInteriorObjectResize(targetRoom, drag.dir, drag.orig, gxF, gyF, minSize);
+          const result = computeInteriorObjectResize(
+            targetRoom,
+            drag.dir,
+            drag.orig,
+            gxF,
+            gyF,
+            minSize,
+          );
           obj.x = result.x;
           obj.y = result.y;
           obj.w = result.w;
           obj.h = result.h;
         }
+      }
+    } else if (state.drag.type === 'moveFreeText') {
+      const drag = state.drag;
+      const ft = state.freeTexts.find((f) => f.id === drag.freeTextId);
+      if (ft) {
+        ft.gx = m.gx - drag.offsetGx;
+        ft.gy = m.gy - drag.offsetGy;
+      }
+    } else if (state.drag.type === 'resizeFreeText') {
+      const drag = state.drag;
+      const ft = state.freeTexts.find((f) => f.id === drag.freeTextId);
+      if (ft) {
+        const result = computeFreeTextResize(drag.dir, drag.orig, m.gx, m.gy);
+        ft.gx = result.gx;
+        ft.gy = result.gy;
+        ft.w = result.w;
+        ft.h = result.h;
       }
     }
 
@@ -635,7 +795,7 @@ export function initEditor(
       const stillOnWallObj = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom, true);
       canvas.style.cursor = stillOnWallObj ? 'grab' : 'crosshair';
       render();
-      persistToStorage(state.rooms);
+      persistToStorage(state.rooms, state.freeTexts);
       return;
     }
 
@@ -643,7 +803,15 @@ export function initEditor(
       state.drag = null;
       canvas.style.cursor = 'crosshair';
       render();
-      persistToStorage(state.rooms);
+      persistToStorage(state.rooms, state.freeTexts);
+      return;
+    }
+
+    if (state.drag.type === 'moveFreeText' || state.drag.type === 'resizeFreeText') {
+      state.drag = null;
+      canvas.style.cursor = 'crosshair';
+      render();
+      persistToStorage(state.rooms, state.freeTexts);
       return;
     }
 
@@ -653,17 +821,21 @@ export function initEditor(
       const m = mousePos(e);
       const area = normalizeArea(state.drag.start, m);
       const contained = findRoomsInArea(state.rooms, area);
-      if (contained.length > 0) {
-        // 範囲選択: 包含された部屋を選択
+      const containedFt = findFreeTextsInArea(state.freeTexts, area);
+      if (contained.length > 0 || containedFt.length > 0) {
+        // 範囲選択: 包含された部屋・FreeTextを選択
         if (!e.shiftKey) {
           clearSelection(state.selection);
         }
         for (const r of contained) {
           state.selection.add(r.id);
         }
+        for (const ft of containedFt) {
+          state.selection.add(ft.id);
+        }
       } else if (area.w > 0 && area.h > 0) {
         // 部屋作成: 包含する部屋がなければ新規作成にフォールバック
-        pushUndo(state.history, state.rooms);
+        pushUndo(state.history, state.rooms, state.freeTexts);
         const room = createRoom(area.x, area.y, area.w, area.h);
         state.rooms.push(room);
         clearSelection(state.selection);
@@ -677,13 +849,62 @@ export function initEditor(
     // 共通クリーンアップ: areaSelect / create / move / resize すべてここを通る
     state.drag = null;
     render();
-    persistToStorage(state.rooms);
+    persistToStorage(state.rooms, state.freeTexts);
   }
 
   function onContextMenu(e: MouseEvent): void {
     e.preventDefault();
     const m = mousePos(e);
     const items: ContextMenuItem[] = [];
+
+    // Check if right-clicking on a FreeText
+    const ftHit = hitFreeText(state.freeTexts, m.px, m.py);
+    if (ftHit) {
+      const ftId = ftHit.id;
+      activeFreeTextId = ftId;
+      selectSingle(state.selection, ftId);
+
+      items.push({
+        label: 'テキストを変更',
+        action: async () => {
+          const ft = state.freeTexts.find((f) => f.id === ftId);
+          if (!ft) return;
+          const result = await callbacks.onFreeTextEdit({ label: ft.label, fontSize: ft.fontSize });
+          if (!result) return;
+          commitChange(() => {
+            const current = state.freeTexts.find((f) => f.id === ftId);
+            if (!current) return;
+            current.label = result.label;
+            current.fontSize = result.fontSize;
+          });
+        },
+      });
+      items.push({ separator: true });
+      items.push({
+        label: ftHit.zLayer === 'front' ? '最背面へ切替' : '最前面へ切替',
+        action: () => {
+          const ft = state.freeTexts.find((f) => f.id === ftId);
+          if (!ft) return;
+          commitChange(() => {
+            ft.zLayer = ft.zLayer === 'front' ? 'back' : 'front';
+          });
+        },
+      });
+      items.push({ separator: true });
+      items.push({
+        label: 'テキストを削除',
+        action: () => {
+          commitChange(() => {
+            state.freeTexts = state.freeTexts.filter((f) => f.id !== ftId);
+          });
+          activeFreeTextId = undefined;
+        },
+      });
+
+      callbacks.onContextMenu({ screenX: e.clientX, screenY: e.clientY, items });
+      render();
+      return;
+    }
 
     // Check if right-clicking on an interior object
     const intObjHit = hitInteriorObjectInRooms(state.rooms, m.px, m.py);
@@ -1065,7 +1286,25 @@ export function initEditor(
       });
 
       callbacks.onContextMenu({ screenX: e.clientX, screenY: e.clientY, items });
+      return;
     }
+
+    // 空白エリアの右クリック: テキストを配置
+    items.push({
+      label: 'テキストを配置',
+      action: async () => {
+        const result = await callbacks.onFreeTextEdit({ label: '', fontSize: 14 });
+        if (!result || !result.label) return;
+        const ft = createFreeText(m.gx, m.gy, result.label, result.fontSize);
+        commitChange(() => {
+          state.freeTexts.push(ft);
+        });
+        activeFreeTextId = ft.id;
+        selectSingle(state.selection, ft.id);
+        render();
+      },
+    });
+    callbacks.onContextMenu({ screenX: e.clientX, screenY: e.clientY, items });
   }
 
   async function applyRoomEdit(room: Room): Promise<void> {
@@ -1084,6 +1323,24 @@ export function initEditor(
 
   async function onDblClick(e: MouseEvent): Promise<void> {
     const m = mousePos(e);
+
+    // FreeText double-click → edit
+    const ftHit = hitFreeText(state.freeTexts, m.px, m.py);
+    if (ftHit) {
+      const ftId = ftHit.id;
+      const result = await callbacks.onFreeTextEdit({
+        label: ftHit.label,
+        fontSize: ftHit.fontSize,
+      });
+      if (!result || !result.label) return;
+      commitChange(() => {
+        const ft = state.freeTexts.find((f) => f.id === ftId);
+        if (!ft) return;
+        ft.label = result.label;
+        ft.fontSize = result.fontSize;
+      });
+      return;
+    }
 
     const intHit = hitInteriorObjectInRooms(state.rooms, m.px, m.py);
     if (intHit && intHit.obj.type === 'marker') {
@@ -1156,11 +1413,11 @@ export function initEditor(
         : forward
           ? bringForward
           : sendBackward;
-      pushUndo(state.history, state.rooms);
+      pushUndo(state.history, state.rooms, state.freeTexts);
       const changed = fn(state.rooms, roomId);
       if (changed) {
         render();
-        persistToStorage(state.rooms);
+        persistToStorage(state.rooms, state.freeTexts);
       } else {
         state.history.pop();
       }
@@ -1168,7 +1425,17 @@ export function initEditor(
     }
 
     if ((e.key === 'Delete' || e.key === 'Backspace') && document.activeElement === document.body) {
-      // Delete active interior object first
+      // Delete active FreeText first
+      if (activeFreeTextId) {
+        e.preventDefault();
+        const activeId = activeFreeTextId;
+        commitChange(() => {
+          state.freeTexts = state.freeTexts.filter((f) => f.id !== activeId);
+        });
+        activeFreeTextId = undefined;
+        return;
+      }
+      // Delete active interior object
       if (activeInteriorObjectId) {
         e.preventDefault();
         const activeId = activeInteriorObjectId;
@@ -1187,6 +1454,8 @@ export function initEditor(
       if (state.selection.size > 0) {
         e.preventDefault();
         commitChange(() => {
+          // 選択中のFreeTextも削除
+          state.freeTexts = state.freeTexts.filter((f) => !state.selection.has(f.id));
           state.rooms = state.rooms.filter((r) => !state.selection.has(r.id));
           cleanupSingletonGroups(state.rooms);
           syncAllPairedOpenings(state.rooms);
@@ -1241,7 +1510,9 @@ export function initEditor(
 
   // Initialize
   resizeCanvas();
-  state.rooms = loadFromStorage();
+  const loaded = loadFromStorage();
+  state.rooms = loaded.rooms;
+  state.freeTexts = loaded.freeTexts;
   // 旧データにautoGeneratedフラグがない可能性があるため、ロード時にペア開口を再構築
   syncAllPairedOpenings(state.rooms);
 

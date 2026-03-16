@@ -10,9 +10,33 @@ describe('pushUndo / popUndo', () => {
 
     const restored = popUndo(history);
     expect(restored).not.toBeNull();
-    expect(restored!).toHaveLength(1);
-    expect(restored![0].label).toBe('A');
-    expect(restored![0].x).toBe(1);
+    expect(restored!.rooms).toHaveLength(1);
+    expect(restored!.rooms[0].label).toBe('A');
+    expect(restored!.rooms[0].x).toBe(1);
+    expect(restored!.freeTexts).toHaveLength(0);
+  });
+
+  it('should save and restore freeTexts', () => {
+    const history: string[] = [];
+    const rooms = [createRoom(0, 0, 1, 1)];
+    const freeTexts = [
+      {
+        id: 'ft1',
+        gx: 5,
+        gy: 5,
+        w: 3,
+        h: 2,
+        label: 'Hello',
+        fontSize: 14,
+        zLayer: 'front' as const,
+      },
+    ];
+    pushUndo(history, rooms, freeTexts);
+
+    const restored = popUndo(history);
+    expect(restored).not.toBeNull();
+    expect(restored!.freeTexts).toHaveLength(1);
+    expect(restored!.freeTexts[0].label).toBe('Hello');
   });
 
   it('should return null when history is empty', () => {
@@ -36,8 +60,20 @@ describe('pushUndo / popUndo', () => {
     pushUndo(history, rooms);
 
     const second = popUndo(history);
-    expect(second![0].label).toBe('after');
+    expect(second!.rooms[0].label).toBe('after');
     const first = popUndo(history);
-    expect(first![0].label).toBe('before');
+    expect(first!.rooms[0].label).toBe('before');
+  });
+
+  it('should handle legacy format (array of rooms)', () => {
+    const history: string[] = [];
+    // Simulate old format: just an array
+    history.push(JSON.stringify([{ id: 'r1', x: 0, y: 0, w: 5, h: 5, label: 'old' }]));
+
+    const restored = popUndo(history);
+    expect(restored).not.toBeNull();
+    expect(restored!.rooms).toHaveLength(1);
+    expect(restored!.rooms[0].label).toBe('old');
+    expect(restored!.freeTexts).toHaveLength(0);
   });
 });

@@ -74,11 +74,23 @@ export interface Room {
   interiorObjects?: RoomInteriorObject[];
 }
 
+export interface FreeText {
+  id: string;
+  gx: number;
+  gy: number;
+  w: number;
+  h: number;
+  label: string;
+  fontSize: number;
+  zLayer: 'front' | 'back';
+}
+
 export interface Project {
   version: number;
   name: string;
   gridSize: number;
   rooms: Room[];
+  freeTexts?: FreeText[];
 }
 
 export interface MouseCoord {
@@ -143,10 +155,23 @@ export type DragState =
       snapToGrid: boolean;
       orig: { x: number; y: number; w: number; h: number };
     }
+  | {
+      type: 'moveFreeText';
+      freeTextId: string;
+      offsetGx: number;
+      offsetGy: number;
+    }
+  | {
+      type: 'resizeFreeText';
+      freeTextId: string;
+      dir: ResizeDirection;
+      orig: { gx: number; gy: number; w: number; h: number };
+    }
   | null;
 
 export interface EditorState {
   rooms: Room[];
+  freeTexts: FreeText[];
   selection: Set<string>;
   history: string[];
   drag: DragState;

@@ -1,5 +1,6 @@
 import type {
   Room,
+  FreeText,
   WallObject,
   WallWindow,
   WallDoor,
@@ -27,9 +28,7 @@ const VALID_STAIRS_TYPES = new Set(['straight', 'folding']);
 const VALID_STAIRS_DIRECTIONS = new Set(['n', 'e', 's', 'w']);
 const VALID_MARKER_KINDS = new Set(['body', 'pin', 'text']);
 
-function restorePairedWithEntry(
-  value: unknown,
-): { roomId: string; objectId: string } | undefined {
+function restorePairedWithEntry(value: unknown): { roomId: string; objectId: string } | undefined {
   if (
     value &&
     typeof value === 'object' &&
@@ -44,9 +43,7 @@ function restorePairedWithEntry(
   return undefined;
 }
 
-function restorePairedWith(
-  value: unknown,
-): { roomId: string; objectId: string }[] | undefined {
+function restorePairedWith(value: unknown): { roomId: string; objectId: string }[] | undefined {
   // 新形式: 配列
   if (Array.isArray(value)) {
     const entries = value
@@ -135,9 +132,27 @@ export function ensureInteriorObjectIds(objects: unknown[]): RoomInteriorObject[
           ? (obj.stairsType as 'straight' | 'folding')
           : 'straight';
         if (stairsType === 'folding') {
-          return { id, type: 'stairs', stairsType: 'folding', direction, x, y, w, h } satisfies FoldingStairs;
+          return {
+            id,
+            type: 'stairs',
+            stairsType: 'folding',
+            direction,
+            x,
+            y,
+            w,
+            h,
+          } satisfies FoldingStairs;
         }
-        return { id, type: 'stairs', stairsType: 'straight', direction, x, y, w, h } satisfies StraightStairs;
+        return {
+          id,
+          type: 'stairs',
+          stairsType: 'straight',
+          direction,
+          x,
+          y,
+          w,
+          h,
+        } satisfies StraightStairs;
       }
 
       if (obj.type === 'marker') {
@@ -154,6 +169,38 @@ export function ensureInteriorObjectIds(objects: unknown[]): RoomInteriorObject[
 
       // Fallback (shouldn't reach here due to filter, but TypeScript needs it)
       return { id, type: 'stairs', stairsType: 'straight', direction: 'n', x, y, w, h };
+    });
+}
+
+const VALID_Z_LAYERS = new Set(['front', 'back']);
+
+/** @internal Exported for testing */
+export function ensureFreeTextIds(objects: unknown[]): FreeText[] {
+  return objects
+    .filter((o) => {
+      const obj = o as Record<string, unknown>;
+      return (
+        typeof obj.gx === 'number' &&
+        typeof obj.gy === 'number' &&
+        typeof obj.w === 'number' &&
+        typeof obj.h === 'number' &&
+        typeof obj.label === 'string'
+      );
+    })
+    .map((o): FreeText => {
+      const obj = o as Record<string, unknown>;
+      return {
+        id: typeof obj.id === 'string' ? obj.id : crypto.randomUUID(),
+        gx: obj.gx as number,
+        gy: obj.gy as number,
+        w: obj.w as number,
+        h: obj.h as number,
+        label: obj.label as string,
+        fontSize: typeof obj.fontSize === 'number' ? obj.fontSize : 14,
+        zLayer: VALID_Z_LAYERS.has(obj.zLayer as string)
+          ? (obj.zLayer as 'front' | 'back')
+          : 'front',
+      };
     });
 }
 
@@ -184,44 +231,60 @@ function ensureIds(rooms: unknown[]): Room[] {
   });
 }
 
-export function persistToStorage(rooms: Room[]): void {
+interface StorageData {
+  rooms: Room[];
+  freeTexts: FreeText[];
+}
+
+function parseStorageData(parsed: unknown): StorageData {
+  // 旧形式: 配列（rooms only）
+  if (Array.isArray(parsed)) {
+    return { rooms: ensureIds(parsed), freeTexts: [] };
+  }
+  // 新形式: { rooms, freeTexts }
+  if (parsed && typeof parsed === 'object') {
+    const obj = parsed as Record<string, unknown>;
+    const rooms = Array.isArray(obj.rooms) ? ensureIds(obj.rooms) : [];
+    const freeTexts = Array.isArray(obj.freeTexts) ? ensureFreeTextIds(obj.freeTexts) : [];
+    return { rooms, freeTexts };
+  }
+  return { rooms: [], freeTexts: [] };
+}
+
+export function persistToStorage(rooms: Room[], freeTexts: FreeText[] = []): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(rooms));
+    const data: StorageData = { rooms, freeTexts };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch {
     // storage full or unavailable
   }
 }
 
-export function loadFromStorage(): Room[] {
+export function loadFromStorage(): StorageData {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
-    if (!data) return [];
+    if (!data) return { rooms: [], freeTexts: [] };
     const parsed: unknown = JSON.parse(data);
-    if (Array.isArray(parsed)) {
-      return ensureIds(parsed);
-    }
+    return parseStorageData(parsed);
   } catch {
     // corrupt data
   }
-  return [];
+  return { rooms: [], freeTexts: [] };
 }
 
-export function saveAsJson(rooms: Room[]): void {
-  const blob = new Blob([JSON.stringify(rooms, null, 2)], { type: 'application/json' });
+export function saveAsJson(rooms: Room[], freeTexts: FreeText[] = []): void {
+  const data = { rooms, freeTexts };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   triggerDownload(URL.createObjectURL(blob), '間取り図.json');
 }
 
-export function loadFromFile(file: File): Promise<Room[]> {
+export function loadFromFile(file: File): Promise<StorageData> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
         const parsed: unknown = JSON.parse(ev.target!.result as string);
-        if (Array.isArray(parsed)) {
-          resolve(ensureIds(parsed));
-        } else {
-          reject(new Error('Invalid format'));
-        }
+        resolve(parseStorageData(parsed));
       } catch (err) {
         reject(err);
       }
