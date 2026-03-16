@@ -84,6 +84,10 @@ describe('findFreeTextById', () => {
   it('returns undefined when not found', () => {
     expect(findFreeTextById(freeTexts, 'ft999')).toBeUndefined();
   });
+
+  it('returns undefined for empty array', () => {
+    expect(findFreeTextById([], 'ft1')).toBeUndefined();
+  });
 });
 
 describe('findWallObjectById', () => {
