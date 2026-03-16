@@ -152,8 +152,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
         pushUndo(state.history, state.rooms, state.freeTexts);
         const expanded = expandWithLinked(state.rooms, state.selection);
         const expandedRooms = state.rooms.filter((r) => expanded.has(r.id));
-        // BB をリンク拡張後の全部屋から再計算
-        const bb = computeGroupBoundingBox(expandedRooms);
+        // origBB/anchor は表示BBと一致する selBB を使用（ハンドル位置とスケール基準を統一）
         const originals = new Map<string, GroupScaleOriginal>();
         for (const room of expandedRooms) {
           originals.set(room.id, {
@@ -177,11 +176,11 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
             })),
           });
         }
-        const anchor = getAnchorForDir(bb, groupHandle.dir);
+        const anchor = getAnchorForDir(selBB, groupHandle.dir);
         state.drag = {
           type: 'groupResize',
           dir: groupHandle.dir,
-          origBB: bb,
+          origBB: selBB,
           anchor,
           originals,
         };

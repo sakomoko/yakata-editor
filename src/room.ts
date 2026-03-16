@@ -271,6 +271,7 @@ export function computeGroupScale<T extends { w: number; h: number }>(
   originals: Iterable<T>,
 ): number | null {
   if (rawW < 1 || rawH < 1) return null;
+  if (origBB.w === 0 || origBB.h === 0) return null;
   const scale = Math.min(rawW / origBB.w, rawH / origBB.h);
   let minScale = 0;
   for (const orig of originals) {

@@ -200,6 +200,7 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
       room.w = scaled.w;
       room.h = scaled.h;
 
+      // fontSize: 未設定(undefined)の場合は部屋サイズから自動計算されるためスケール不要
       if (orig.fontSize !== undefined) {
         room.fontSize = Math.max(1, Math.round(orig.fontSize * scale));
       }

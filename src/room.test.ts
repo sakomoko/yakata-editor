@@ -259,6 +259,11 @@ describe('computeGroupScale', () => {
     const scale = computeGroupScale(origBB, 1, 1, originals);
     expect(scale).toBe(0.5); // clamped to minScale
   });
+
+  it('should return null when origBB has zero dimension', () => {
+    expect(computeGroupScale({ w: 0, h: 5 }, 10, 10, [{ x: 0, y: 0, w: 2, h: 2 }])).toBeNull();
+    expect(computeGroupScale({ w: 5, h: 0 }, 10, 10, [{ x: 0, y: 0, w: 2, h: 2 }])).toBeNull();
+  });
 });
 
 describe('applyGroupScale', () => {
