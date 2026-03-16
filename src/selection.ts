@@ -1,4 +1,4 @@
-import type { Room, FreeText } from './types.ts';
+import type { Room } from './types.ts';
 
 export function toggleSelection(selection: Set<string>, roomId: string): void {
   if (selection.has(roomId)) {
@@ -27,6 +27,3 @@ export function getSelectedRooms(rooms: Room[], selection: Set<string>): Room[] 
   return rooms.filter((r) => selection.has(r.id));
 }
 
-export function getSelectedFreeTexts(freeTexts: FreeText[], selection: Set<string>): FreeText[] {
-  return freeTexts.filter((ft) => selection.has(ft.id));
-}

@@ -313,24 +313,39 @@ export function initEditor(
     const savedH = canvas.height;
 
     try {
-      const bbox = computeRoomsBoundingBox(state.rooms);
-      // FreeText もバウンディングボックスに含める
+      // rooms と FreeText の両方を含むバウンディングボックスを計算
+      const bbox =
+        state.rooms.length > 0
+          ? computeRoomsBoundingBox(state.rooms)
+          : { x: Infinity, y: Infinity, w: 0, h: 0 };
+      let maxX = bbox.x === Infinity ? -Infinity : bbox.x + bbox.w;
+      let maxY = bbox.y === Infinity ? -Infinity : bbox.y + bbox.h;
+      let minX = bbox.x === Infinity ? Infinity : bbox.x;
+      let minY = bbox.y === Infinity ? Infinity : bbox.y;
+
       for (const ft of state.freeTexts) {
         const ftX = ft.gx * GRID;
         const ftY = ft.gy * GRID;
         const ftR = ftX + ft.w * GRID;
         const ftB = ftY + ft.h * GRID;
-        if (ftX < bbox.x) {
-          bbox.w += bbox.x - ftX;
-          bbox.x = ftX;
-        }
-        if (ftY < bbox.y) {
-          bbox.h += bbox.y - ftY;
-          bbox.y = ftY;
-        }
-        if (ftR > bbox.x + bbox.w) bbox.w = ftR - bbox.x;
-        if (ftB > bbox.y + bbox.h) bbox.h = ftB - bbox.y;
+        if (ftX < minX) minX = ftX;
+        if (ftY < minY) minY = ftY;
+        if (ftR > maxX) maxX = ftR;
+        if (ftB > maxY) maxY = ftB;
       }
+
+      // rooms も FreeText もない場合のフォールバック
+      if (minX === Infinity) {
+        minX = 0;
+        minY = 0;
+        maxX = 40 * GRID;
+        maxY = 30 * GRID;
+      }
+
+      bbox.x = minX;
+      bbox.y = minY;
+      bbox.w = maxX - minX;
+      bbox.h = maxY - minY;
       const maxDim = Math.max(bbox.w, bbox.h);
       const MAX_EXPORT_SIZE = 16384;
       const exportScale = maxDim > MAX_EXPORT_SIZE ? MAX_EXPORT_SIZE / maxDim : 1;
@@ -857,8 +872,10 @@ export function initEditor(
     const m = mousePos(e);
     const items: ContextMenuItem[] = [];
 
-    // Check if right-clicking on a FreeText
-    const ftHit = hitFreeText(state.freeTexts, m.px, m.py);
+    // Check if right-clicking on a FreeText (front layer first, then back)
+    const ftHit =
+      hitFreeText(state.freeTexts, m.px, m.py, 'front') ||
+      hitFreeText(state.freeTexts, m.px, m.py, 'back');
     if (ftHit) {
       const ftId = ftHit.id;
       activeFreeTextId = ftId;
@@ -1324,8 +1341,10 @@ export function initEditor(
   async function onDblClick(e: MouseEvent): Promise<void> {
     const m = mousePos(e);
 
-    // FreeText double-click → edit
-    const ftHit = hitFreeText(state.freeTexts, m.px, m.py);
+    // FreeText double-click → edit (front layer first, then back)
+    const ftHit =
+      hitFreeText(state.freeTexts, m.px, m.py, 'front') ||
+      hitFreeText(state.freeTexts, m.px, m.py, 'back');
     if (ftHit) {
       const ftId = ftHit.id;
       const result = await callbacks.onFreeTextEdit({
