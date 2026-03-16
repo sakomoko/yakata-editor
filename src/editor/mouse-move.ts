@@ -1,4 +1,10 @@
 import { GRID } from '../grid.ts';
+import {
+  findFreeTextById,
+  findInteriorObjectById,
+  findRoomById,
+  findWallObjectById,
+} from '../lookup.ts';
 import { hitHandle, hitRoom, findRoomsInArea, normalizeArea } from '../room.ts';
 import {
   hitWallObjectInRooms,
@@ -57,7 +63,7 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
     } else {
       // FreeText handle hover
       if (flags.activeFreeTextId) {
-        const activeFt = state.freeTexts.find((ft) => ft.id === flags.activeFreeTextId);
+        const activeFt = findFreeTextById(state.freeTexts, flags.activeFreeTextId);
         if (activeFt) {
           const ftDir = hitFreeTextHandle(activeFt, m.px, m.py, viewport.zoom);
           if (ftDir) {
@@ -123,7 +129,7 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
     const dx = m.gx - state.drag.start.gx;
     const dy = m.gy - state.drag.start.gy;
     for (const [id, orig] of state.drag.originals) {
-      const room = state.rooms.find((r) => r.id === id);
+      const room = findRoomById(state.rooms, id);
       if (room) {
         room.x = orig.x + dx;
         room.y = orig.y + dy;
@@ -133,7 +139,7 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
     const o = state.drag.orig;
     const d = state.drag.dir;
     const targetId = state.drag.targetId;
-    const target = state.rooms.find((r) => r.id === targetId);
+    const target = findRoomById(state.rooms, targetId);
     if (target) {
       if (d.includes('w')) {
         target.x = Math.min(m.gx, o.x + o.w - 1);
@@ -154,9 +160,9 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
     }
   } else if (state.drag.type === 'moveWallObject') {
     const drag = state.drag;
-    const targetRoom = state.rooms.find((r) => r.id === drag.roomId);
+    const targetRoom = findRoomById(state.rooms, drag.roomId);
     if (targetRoom) {
-      const obj = targetRoom.wallObjects?.find((o) => o.id === drag.objectId);
+      const obj = findWallObjectById(targetRoom, drag.objectId);
       if (obj) {
         const pos = computeWallObjectPosition(targetRoom, m.px, m.py, obj.width);
         obj.side = pos.side;
@@ -168,9 +174,9 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
     }
   } else if (state.drag.type === 'resizeWallObject') {
     const drag = state.drag;
-    const targetRoom = state.rooms.find((r) => r.id === drag.roomId);
+    const targetRoom = findRoomById(state.rooms, drag.roomId);
     if (targetRoom) {
-      const obj = targetRoom.wallObjects?.find((o) => o.id === drag.objectId);
+      const obj = findWallObjectById(targetRoom, drag.objectId);
       if (obj) {
         const result = computeWallObjectResize(
           targetRoom,
@@ -190,9 +196,9 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
     }
   } else if (state.drag.type === 'moveInteriorObject') {
     const drag = state.drag;
-    const targetRoom = state.rooms.find((r) => r.id === drag.roomId);
+    const targetRoom = findRoomById(state.rooms, drag.roomId);
     if (targetRoom) {
-      const obj = targetRoom.interiorObjects?.find((o) => o.id === drag.objectId);
+      const obj = findInteriorObjectById(targetRoom, drag.objectId);
       if (obj) {
         const gxF = drag.snapToGrid ? m.gx : m.px / GRID;
         const gyF = drag.snapToGrid ? m.gy : m.py / GRID;
@@ -210,9 +216,9 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
     }
   } else if (state.drag.type === 'resizeInteriorObject') {
     const drag = state.drag;
-    const targetRoom = state.rooms.find((r) => r.id === drag.roomId);
+    const targetRoom = findRoomById(state.rooms, drag.roomId);
     if (targetRoom) {
-      const obj = targetRoom.interiorObjects?.find((o) => o.id === drag.objectId);
+      const obj = findInteriorObjectById(targetRoom, drag.objectId);
       if (obj) {
         const gxF = drag.snapToGrid ? m.gx : m.px / GRID;
         const gyF = drag.snapToGrid ? m.gy : m.py / GRID;
@@ -249,14 +255,14 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
     }
   } else if (state.drag.type === 'moveFreeText') {
     const drag = state.drag;
-    const ft = state.freeTexts.find((f) => f.id === drag.freeTextId);
+    const ft = findFreeTextById(state.freeTexts, drag.freeTextId);
     if (ft) {
       ft.gx = m.gx - drag.offsetGx;
       ft.gy = m.gy - drag.offsetGy;
     }
   } else if (state.drag.type === 'resizeFreeText') {
     const drag = state.drag;
-    const ft = state.freeTexts.find((f) => f.id === drag.freeTextId);
+    const ft = findFreeTextById(state.freeTexts, drag.freeTextId);
     if (ft) {
       const result = computeFreeTextResize(drag.dir, drag.orig, m.gx, m.gy);
       ft.gx = result.gx;

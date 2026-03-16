@@ -1,3 +1,4 @@
+import { findFreeTextById, findInteriorObjectById, findRoomById } from '../lookup.ts';
 import { hitRoom } from '../room.ts';
 import { hitInteriorObjectInRooms } from '../interior-object.ts';
 import { hitFreeText } from '../free-text.ts';
@@ -19,7 +20,7 @@ export async function onDblClick(ec: EditorContext, e: MouseEvent): Promise<void
     });
     if (!result || !result.label) return;
     commitChange(ec, () => {
-      const ft = ec.state.freeTexts.find((f) => f.id === ftId);
+      const ft = findFreeTextById(ec.state.freeTexts, ftId);
       if (!ft) return;
       ft.label = result.label;
       ft.fontSize = result.fontSize;
@@ -33,9 +34,9 @@ export async function onDblClick(ec: EditorContext, e: MouseEvent): Promise<void
     const objId = intHit.obj.id;
     const result = await ec.callbacks.onMarkerEdit({ label: intHit.obj.label ?? '' });
     if (!result) return;
-    const room = ec.state.rooms.find((r) => r.id === roomId);
+    const room = findRoomById(ec.state.rooms, roomId);
     if (!room) return;
-    const obj = room.interiorObjects?.find((o) => o.id === objId);
+    const obj = findInteriorObjectById(room, objId);
     if (!obj || obj.type !== 'marker') return;
     commitChange(ec, () => {
       obj.label = result.label || undefined;

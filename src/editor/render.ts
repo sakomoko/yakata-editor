@@ -1,4 +1,5 @@
 import { drawGrid } from '../grid.ts';
+import { findFreeTextById, findInteriorObjectById } from '../lookup.ts';
 import {
   drawRoom,
   drawCreationPreview,
@@ -81,10 +82,9 @@ export function render(ec: EditorContext): void {
   // Camera handles for active camera
   if (activeIntObjId) {
     for (const r of state.rooms) {
-      const cam = r.interiorObjects?.find(
-        (o) => o.id === activeIntObjId && o.type === 'camera',
-      );
-      if (cam && cam.type === 'camera') {
+      const obj = findInteriorObjectById(r, activeIntObjId);
+      const cam = obj?.type === 'camera' ? obj : undefined;
+      if (cam) {
         drawCameraHandles(ctx, r, cam, viewport.zoom);
         break;
       }
@@ -95,7 +95,7 @@ export function render(ec: EditorContext): void {
 
   // active FreeText handles
   if (flags.activeFreeTextId) {
-    const activeFt = state.freeTexts.find((ft) => ft.id === flags.activeFreeTextId);
+    const activeFt = findFreeTextById(state.freeTexts, flags.activeFreeTextId);
     if (activeFt) {
       drawFreeTextHandles(ctx, activeFt, viewport.zoom);
     }

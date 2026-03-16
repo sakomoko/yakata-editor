@@ -1,4 +1,5 @@
 import type { Room, WallSide, WallObject } from './types.ts';
+import { findRoomById } from './lookup.ts';
 import { createWallOpening } from './wall-object.ts';
 
 /** 壁面の対面を返す */
@@ -181,7 +182,7 @@ export function removePairedOpening(rooms: Room[], wallObject: WallObject): void
   if (!wallObject.pairedWith || wallObject.pairedWith.length === 0) return;
 
   for (const pair of wallObject.pairedWith) {
-    const targetRoom = rooms.find((r) => r.id === pair.roomId);
+    const targetRoom = findRoomById(rooms, pair.roomId);
     if (targetRoom?.wallObjects) {
       targetRoom.wallObjects = targetRoom.wallObjects.filter((o) => o.id !== pair.objectId);
       if (targetRoom.wallObjects.length === 0) targetRoom.wallObjects = undefined;

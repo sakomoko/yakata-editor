@@ -1,3 +1,4 @@
+import { findRoomById } from './lookup.ts';
 import type { Room } from './types.ts';
 
 export function toggleSelection(selection: Set<string>, roomId: string): void {
@@ -20,7 +21,7 @@ export function clearSelection(selection: Set<string>): void {
 export function getSingleSelected(rooms: Room[], selection: Set<string>): Room | null {
   if (selection.size !== 1) return null;
   const id = [...selection][0];
-  return rooms.find((r) => r.id === id) ?? null;
+  return findRoomById(rooms, id) ?? null;
 }
 
 export function getSelectedRooms(rooms: Room[], selection: Set<string>): Room[] {

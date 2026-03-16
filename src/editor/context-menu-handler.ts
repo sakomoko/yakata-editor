@@ -8,6 +8,13 @@ import type {
 } from '../types.ts';
 import { CAMERA_COLOR_PRESETS } from '../camera.ts';
 import { GRID } from '../grid.ts';
+import {
+  findFreeTextById,
+  findInteriorObjectById,
+  findRoomById,
+  findRoomIndexById,
+  findWallObjectById,
+} from '../lookup.ts';
 import { hitRoom, isInsideRoom } from '../room.ts';
 import { selectSingle, getSingleSelected } from '../selection.ts';
 import {
@@ -60,12 +67,12 @@ function buildFreeTextMenu(ec: EditorContext, ftHit: FreeText): ContextMenuItem[
   items.push({
     label: 'テキストを変更',
     action: async () => {
-      const ft = state.freeTexts.find((f) => f.id === ftId);
+      const ft = findFreeTextById(state.freeTexts, ftId);
       if (!ft) return;
       const result = await callbacks.onFreeTextEdit({ label: ft.label, fontSize: ft.fontSize });
       if (!result) return;
       commitChange(ec, () => {
-        const current = state.freeTexts.find((f) => f.id === ftId);
+        const current = findFreeTextById(state.freeTexts, ftId);
         if (!current) return;
         current.label = result.label;
         current.fontSize = result.fontSize;
@@ -76,7 +83,7 @@ function buildFreeTextMenu(ec: EditorContext, ftHit: FreeText): ContextMenuItem[
   items.push({
     label: ftHit.zLayer === 'front' ? '最背面へ切替' : '最前面へ切替',
     action: () => {
-      const ft = state.freeTexts.find((f) => f.id === ftId);
+      const ft = findFreeTextById(state.freeTexts, ftId);
       if (!ft) return;
       commitChange(ec, () => {
         ft.zLayer = ft.zLayer === 'front' ? 'back' : 'front';
@@ -108,9 +115,9 @@ function buildDirectionItems(
     label: d.label,
     disabled: currentDir === d.dir,
     action: () => {
-      const room = state.rooms.find((r) => r.id === roomId);
+      const room = findRoomById(state.rooms, roomId);
       if (!room) return;
-      const obj = room.interiorObjects?.find((o) => o.id === objId);
+      const obj = findInteriorObjectById(room, objId);
       if (!obj || obj.type !== objType) return;
       commitChange(ec, () => {
         obj.direction = d.dir;
@@ -135,7 +142,7 @@ function buildInteriorObjectMenu(
     items.push({
       label,
       action: () => {
-        const room = state.rooms.find((r) => r.id === roomId);
+        const room = findRoomById(state.rooms, roomId);
         if (!room) return;
         commitChange(ec, () => {
           room.interiorObjects = room.interiorObjects?.filter((o) => o.id !== objId);
@@ -155,9 +162,9 @@ function buildInteriorObjectMenu(
     items.push({
       label: 'ラベルを変更',
       action: async () => {
-        const room = state.rooms.find((r) => r.id === roomId);
+        const room = findRoomById(state.rooms, roomId);
         if (!room) return;
-        const obj = room.interiorObjects?.find((o) => o.id === objId);
+        const obj = findInteriorObjectById(room, objId);
         if (!obj || obj.type !== 'marker') return;
         const result = await ec.callbacks.onMarkerEdit({ label: obj.label ?? '' });
         if (!result) return;
@@ -186,9 +193,9 @@ function buildInteriorObjectMenu(
       items.push({
         label: `色: ${preset.label}`,
         action: () => {
-          const room = state.rooms.find((r) => r.id === roomId);
+          const room = findRoomById(state.rooms, roomId);
           if (!room) return;
-          const obj = room.interiorObjects?.find((o) => o.id === objId);
+          const obj = findInteriorObjectById(room, objId);
           if (!obj || obj.type !== 'camera') return;
           const colors = CAMERA_COLOR_PRESETS[preset.key];
           commitChange(ec, () => {
@@ -225,10 +232,10 @@ function buildWallObjectMenu(
   }
 
   const removeWallObject = () => {
-    const room = state.rooms.find((r) => r.id === roomId);
+    const room = findRoomById(state.rooms, roomId);
     if (!room) return;
     commitChange(ec, () => {
-      const obj = room.wallObjects?.find((o) => o.id === objId);
+      const obj = findWallObjectById(room, objId);
       if (obj) removePairedOpening(state.rooms, obj);
       room.wallObjects = room.wallObjects?.filter((o) => o.id !== objId);
       if (room.wallObjects?.length === 0) room.wallObjects = undefined;
@@ -239,9 +246,9 @@ function buildWallObjectMenu(
     items.push({
       label: '開き方向を切替',
       action: () => {
-        const room = state.rooms.find((r) => r.id === roomId);
+        const room = findRoomById(state.rooms, roomId);
         if (!room) return;
-        const door = room.wallObjects?.find((o) => o.id === objId);
+        const door = findWallObjectById(room, objId);
         if (!door || door.type !== 'door') return;
         commitChange(ec, () => {
           door.swing = door.swing === 'inward' ? 'outward' : 'inward';
@@ -251,9 +258,9 @@ function buildWallObjectMenu(
     items.push({
       label: 'ヒンジ位置を切替',
       action: () => {
-        const room = state.rooms.find((r) => r.id === roomId);
+        const room = findRoomById(state.rooms, roomId);
         if (!room) return;
-        const door = room.wallObjects?.find((o) => o.id === objId);
+        const door = findWallObjectById(room, objId);
         if (!door || door.type !== 'door') return;
         commitChange(ec, () => {
           door.hinge = door.hinge === 'start' ? 'end' : 'start';
@@ -278,7 +285,7 @@ function buildRoomMenu(ec: EditorContext, contextRoom: Room, m: MouseCoord): Con
   items.push({
     label: '部屋名を変更',
     action: async () => {
-      const room = state.rooms.find((r) => r.id === roomId);
+      const room = findRoomById(state.rooms, roomId);
       if (!room) return;
       await applyRoomEdit(ec, room);
     },
@@ -289,7 +296,7 @@ function buildRoomMenu(ec: EditorContext, contextRoom: Room, m: MouseCoord): Con
     (o) => o.side === side && offset < o.offset + o.width && offset + 1 > o.offset,
   );
   const placeWallObject = (factory: () => WallObject) => {
-    const room = state.rooms.find((r) => r.id === roomId);
+    const room = findRoomById(state.rooms, roomId);
     if (!room) return;
     commitChange(ec, () => {
       if (!room.wallObjects) room.wallObjects = [];
@@ -316,7 +323,7 @@ function buildRoomMenu(ec: EditorContext, contextRoom: Room, m: MouseCoord): Con
 
   // Interior object placement
   const placeInteriorObject = (factory: (room: Room) => RoomInteriorObject) => {
-    const room = state.rooms.find((r) => r.id === roomId);
+    const room = findRoomById(state.rooms, roomId);
     if (!room) return;
     const obj = factory(room);
     commitChange(ec, () => {
@@ -450,7 +457,7 @@ function buildRoomMenu(ec: EditorContext, contextRoom: Room, m: MouseCoord): Con
     });
   }
 
-  const roomIdx = state.rooms.findIndex((r) => r.id === roomId);
+  const roomIdx = findRoomIndexById(state.rooms, roomId);
   const isFirst = roomIdx === 0;
   const isLast = roomIdx === state.rooms.length - 1;
   items.push({ separator: true });
