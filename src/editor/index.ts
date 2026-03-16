@@ -132,6 +132,7 @@ export function initEditor(
       state.history = data.history;
       state.drag = null;
       clearSelection(state.selection);
+      flags.isPanning = false;
       flags.activeInteriorObjectId = undefined;
       flags.activeFreeTextId = undefined;
       viewport.zoom = data.viewport.zoom;

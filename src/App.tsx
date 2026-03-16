@@ -58,6 +58,18 @@ function createDebouncedTouchUpdatedAt(delayMs: number): (id: string) => void {
 
 const debouncedTouchUpdatedAt = createDebouncedTouchUpdatedAt(2000);
 
+/** debounce付きの関数生成ユーティリティ */
+function createDebouncedFn(fn: () => void, delayMs: number): () => void {
+  let timerId: ReturnType<typeof setTimeout> | undefined;
+  return () => {
+    if (timerId !== undefined) clearTimeout(timerId);
+    timerId = setTimeout(() => {
+      fn();
+      timerId = undefined;
+    }, delayMs);
+  };
+}
+
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -245,10 +257,10 @@ export default function App() {
         onMarkerEdit: handleMarkerEdit,
         onFreeTextEdit: handleFreeTextEdit,
         onContextMenu: handleContextMenu,
-        // onAutoSave / onViewportChange はどちらも現在の全状態を保存する
         // editorRef は init 完了後にセットされるが、コールバックはユーザー操作時のみ呼ばれるので問題ない
         onAutoSave: () => saveCurrentProject(),
-        onViewportChange: () => saveCurrentProject(),
+        // onViewportChange はホイール等で高頻度に呼ばれるため、debounce で全データシリアライズの頻度を抑制
+        onViewportChange: createDebouncedFn(() => saveCurrentProject(), 300),
       },
       activeData ?? undefined,
     );
@@ -301,13 +313,11 @@ export default function App() {
 
   const handleTabRename = useCallback((id: string, newName: string) => {
     const index = loadProjectIndex();
-    const meta = index.find((m) => m.id === id);
-    if (meta) {
-      meta.name = newName;
-      meta.updatedAt = Date.now();
-      saveProjectIndex(index);
-      setProjectIndex([...index]);
-    }
+    const newIndex = index.map((m) =>
+      m.id === id ? { ...m, name: newName, updatedAt: Date.now() } : m,
+    );
+    saveProjectIndex(newIndex);
+    setProjectIndex(newIndex);
   }, []);
 
   // --- Project list modal handlers ---

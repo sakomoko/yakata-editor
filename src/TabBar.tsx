@@ -42,7 +42,7 @@ export default function TabBar({
 
   return (
     <div style={barStyle}>
-      <div style={tabsContainerStyle}>
+      <div className="tab-bar-tabs" style={tabsContainerStyle}>
         {tabs.map((tab) => (
           <div
             key={tab.id}

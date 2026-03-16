@@ -33,7 +33,16 @@ export function loadProjectIndex(): ProjectMeta[] {
   try {
     const raw = localStorage.getItem(INDEX_KEY);
     if (!raw) return [];
-    return JSON.parse(raw) as ProjectMeta[];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item): item is ProjectMeta =>
+        item !== null &&
+        item !== undefined &&
+        typeof item === 'object' &&
+        typeof (item as Record<string, unknown>).id === 'string' &&
+        typeof (item as Record<string, unknown>).name === 'string',
+    );
   } catch {
     return [];
   }
@@ -58,6 +67,9 @@ export function loadProjectData(id: string): ProjectData | null {
     const obj = parsed as Record<string, unknown>;
 
     const storageData = parseStorageData({ rooms: obj.rooms, freeTexts: obj.freeTexts });
+    if (storageData.warning) {
+      console.warn(`Project ${id}: ${storageData.warning}`);
+    }
     const viewport = parseViewport(obj.viewport);
     const history: string[] = Array.isArray(obj.history)
       ? (obj.history as unknown[]).filter((h): h is string => typeof h === 'string')

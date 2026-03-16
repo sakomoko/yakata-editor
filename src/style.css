@@ -25,3 +25,6 @@ canvas {
 #fileInput {
   display: none;
 }
+.tab-bar-tabs::-webkit-scrollbar {
+  display: none;
+}
