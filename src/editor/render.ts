@@ -9,6 +9,7 @@ import { getSingleSelected } from '../selection.ts';
 import { drawOutwardDoorsOverlay } from '../wall-object.ts';
 import { drawCameraFovOverlay, drawCameraHandles } from '../camera.ts';
 import { drawFreeText, drawFreeTextHandles } from '../free-text.ts';
+import { drawLinkGroupIndicators } from '../link.ts';
 import type { EditorContext } from './context.ts';
 
 export function render(ec: EditorContext): void {
@@ -69,6 +70,9 @@ export function render(ec: EditorContext): void {
       activeIntObjId,
     );
   }
+
+  // link group indicators
+  drawLinkGroupIndicators(ctx, state.rooms, state.selection, viewport.zoom);
 
   // 2nd pass: redraw outward doors on top of all rooms to prevent occlusion
   for (const r of state.rooms) {

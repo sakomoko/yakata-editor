@@ -1,3 +1,4 @@
+import { GRID } from './grid.ts';
 import type { Room } from './types.ts';
 
 /** 2つの部屋が壁辺で接触し、1グリッド以上の重なりがあるか判定 */
@@ -16,9 +17,8 @@ export function areAdjacent(a: Room, b: Room): boolean {
   return false;
 }
 
-/** 選択IDをlinkGroupで拡張して返す */
-export function expandWithLinked(rooms: Room[], selectedIds: Set<string>): Set<string> {
-  const result = new Set(selectedIds);
+/** 選択IDに関連する linkGroup のセットを収集する */
+function collectLinkedGroups(rooms: Room[], selectedIds: Set<string>): Set<string> {
   const groups = new Set<string>();
   const roomById = new Map(rooms.map((r) => [r.id, r]));
   for (const id of selectedIds) {
@@ -27,6 +27,13 @@ export function expandWithLinked(rooms: Room[], selectedIds: Set<string>): Set<s
       groups.add(room.linkGroup);
     }
   }
+  return groups;
+}
+
+/** 選択IDをlinkGroupで拡張して返す */
+export function expandWithLinked(rooms: Room[], selectedIds: Set<string>): Set<string> {
+  const result = new Set(selectedIds);
+  const groups = collectLinkedGroups(rooms, selectedIds);
   if (groups.size === 0) return result;
   for (const room of rooms) {
     if (room.linkGroup && groups.has(room.linkGroup)) {
@@ -88,6 +95,62 @@ export function cleanupSingletonGroups(rooms: Room[]): void {
     if (room.linkGroup && (groupCounts.get(room.linkGroup) ?? 0) <= 1) {
       room.linkGroup = undefined;
     }
+  }
+}
+
+/** linkGroup UUID から HSL カラーを生成 (FNV-1a hash) */
+export function linkGroupColor(groupId: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < groupId.length; i++) {
+    hash ^= groupId.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  const hue = ((hash % 360) + 360) % 360;
+  return `hsl(${hue}, 70%, 50%)`;
+}
+
+/** 選択中の部屋の linkGroup に属する全部屋IDと色のマップを返す */
+export function getLinkedIndicators(
+  rooms: Room[],
+  selection: Set<string>,
+): Map<string, string> {
+  const result = new Map<string, string>();
+  const groups = collectLinkedGroups(rooms, selection);
+  if (groups.size === 0) return result;
+  for (const room of rooms) {
+    if (room.linkGroup && groups.has(room.linkGroup)) {
+      result.set(room.id, linkGroupColor(room.linkGroup));
+    }
+  }
+  return result;
+}
+
+const INDICATOR_RADIUS = 4;
+const INDICATOR_OFFSET = 6;
+
+/** 連結グループインジケーターを各部屋の右上隅に描画 */
+export function drawLinkGroupIndicators(
+  ctx: CanvasRenderingContext2D,
+  rooms: Room[],
+  selection: Set<string>,
+  zoom: number,
+): void {
+  const indicators = getLinkedIndicators(rooms, selection);
+  if (indicators.size === 0) return;
+  const radius = INDICATOR_RADIUS / zoom;
+  const offset = INDICATOR_OFFSET / zoom;
+  for (const r of rooms) {
+    const color = indicators.get(r.id);
+    if (!color) continue;
+    const px = (r.x + r.w) * GRID - offset;
+    const py = r.y * GRID + offset;
+    ctx.beginPath();
+    ctx.arc(px, py, radius, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1 / zoom;
+    ctx.stroke();
   }
 }
 
