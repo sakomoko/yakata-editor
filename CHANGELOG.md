@@ -5,10 +5,6 @@
 
 ## [Unreleased]
 
-### Changed
-
-- `context-menu-handler.ts` のメニュー構築ロジックを5つのbuild関数に分割し、配置パターンの共通化・型改善を実施
-
 ### Added
 
 - 部屋に防犯カメラ（SecurityCamera）を配置できる機能
@@ -59,6 +55,10 @@
   - Delete/Backspaceキーでアクティブな階段を削除
   - 部屋リサイズ時に階段を自動クランプ
   - localStorage/JSONファイルでの保存・復元に対応
+
+### Changed
+
+- `context-menu-handler.ts` のメニュー構築ロジックを5つのbuild関数に分割し、配置パターンの共通化・型改善を実施
 
 ### Fixed
 
