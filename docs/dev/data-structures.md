@@ -79,22 +79,38 @@ interface Marker extends InteriorObjectBase {
   label?: string;
 }
 
-type RoomInteriorObject = StraightStairs | FoldingStairs | Marker;
+interface SecurityCamera extends InteriorObjectBase {
+  type: 'camera';
+  angle: number;         // カメラの向き（ラジアン、0=右/東、PI/2=下/南）
+  fovAngle: number;      // 視野の半角（ラジアン）。デフォルト PI/6 (30°)
+  fovRange: number;      // 視野の到達距離（グリッド単位）。デフォルト 5
+  fovColor: string;      // 視野コーンの塗りつぶし色
+  fovStrokeColor: string; // 視野コーンの枠線色
+}
+
+type RoomInteriorObject = StraightStairs | FoldingStairs | Marker | SecurityCamera;
 ```
 
 | プロパティ | 説明 |
 |-----------|------|
-| `x`, `y` | 部屋左上からの相対位置（グリッド単位、マーカーは小数可） |
-| `w`, `h` | オブジェクトのサイズ（グリッド単位、マーカーは小数可） |
-| `type` | オブジェクトの種別（`'stairs'` / `'marker'`） |
+| `x`, `y` | 部屋左上からの相対位置（グリッド単位、マーカー・カメラは小数可） |
+| `w`, `h` | オブジェクトのサイズ（グリッド単位、マーカー・カメラは小数可） |
+| `type` | オブジェクトの種別（`'stairs'` / `'marker'` / `'camera'`） |
 | `stairsType` | 階段の形状（`'straight'`: 直線 / `'folding'`: 折り返し）※階段のみ |
 | `direction` | 方向（階段: 昇降方向、死体マーカー: 頭の向き） |
 | `markerKind` | マーカーの種類（`'body'`: 死体 / `'pin'`: ピンマーカー / `'text'`: テキストのみ）※マーカーのみ |
 | `label` | マーカーのラベルテキスト（任意）※マーカーのみ |
+| `angle` | カメラの向き（ラジアン）※カメラのみ |
+| `fovAngle` | 視野の半角（ラジアン、5°〜90°）※カメラのみ |
+| `fovRange` | 視野の到達距離（グリッド単位、1〜20）※カメラのみ |
+| `fovColor` | 視野コーンの塗りつぶし色（CSS rgba文字列）※カメラのみ |
+| `fovStrokeColor` | 視野コーンの枠線色（CSS rgba文字列）※カメラのみ |
 
-直線階段のデフォルトサイズは2×3グリッド、折り返し階段は4×3グリッド。死体マーカーのデフォルトサイズは2×1グリッド。部屋境界をはみ出さない制約があり、部屋リサイズ時に自動クランプされる。
+直線階段のデフォルトサイズは2×3グリッド、折り返し階段は4×3グリッド。死体マーカーのデフォルトサイズは2×1グリッド。カメラのデフォルトサイズは1×1グリッド。部屋境界をはみ出さない制約があり、部屋リサイズ時に自動クランプされる。
 
-階段はグリッドスナップで移動・リサイズされるが、マーカーはグリッドに縛られず自由に配置・リサイズ可能（最小サイズ0.25グリッド）。
+階段はグリッドスナップで移動・リサイズされるが、マーカー・カメラはグリッドに縛られず自由に配置・リサイズ可能（最小サイズ0.25グリッド）。
+
+カメラの視野コーンは4色のプリセット（青・赤・緑・黄）から選択可能。デフォルトは青（`rgba(0,150,255,0.15)` / `rgba(0,150,255,0.4)`）。
 
 ## FreeText
 
@@ -173,6 +189,9 @@ type DragState =
   | { type: 'resizeInteriorObject'; roomId: string; objectId: string; dir: ResizeDirection; snapToGrid: boolean; orig: { x: number; y: number; w: number; h: number } }
   | { type: 'moveFreeText'; freeTextId: string; offsetGx: number; offsetGy: number }
   | { type: 'resizeFreeText'; freeTextId: string; dir: ResizeDirection; orig: { gx: number; gy: number; w: number; h: number } }
+  | { type: 'rotateCameraAngle'; roomId: string; objectId: string }
+  | { type: 'adjustCameraFovAngle'; roomId: string; objectId: string }
+  | { type: 'adjustCameraFovRange'; roomId: string; objectId: string }
   | null;
 ```
 
@@ -185,10 +204,13 @@ type DragState =
 | `pan` | 中ボタンドラッグ | キャンバスのパン移動 |
 | `moveWallObject` | 壁オブジェクトをドラッグ | 壁上のオブジェクトを移動（別の壁への移動も可能） |
 | `resizeWallObject` | 壁オブジェクトの端をドラッグ | 壁オブジェクトの幅を伸縮（グリッドスナップ、オーバーラップ防止） |
-| `moveInteriorObject` | 部屋内オブジェクトをドラッグ | 部屋内でオブジェクトを移動（部屋境界内に制約、`snapToGrid`で階段はグリッドスナップ、マーカーはフリー） |
-| `resizeInteriorObject` | 部屋内オブジェクトのハンドルをドラッグ | オブジェクトのサイズを変更（`snapToGrid`で階段は最小1×1グリッドスナップ、マーカーは最小0.25グリッドフリー） |
+| `moveInteriorObject` | 部屋内オブジェクトをドラッグ | 部屋内でオブジェクトを移動（部屋境界内に制約、`snapToGrid`で階段はグリッドスナップ、マーカー・カメラはフリー） |
+| `resizeInteriorObject` | 部屋内オブジェクトのハンドルをドラッグ | オブジェクトのサイズを変更（`snapToGrid`で階段は最小1×1グリッドスナップ、マーカー・カメラは最小0.25グリッドフリー） |
 | `moveFreeText` | 自由配置テキストをドラッグ | FreeTextを移動（グリッドスナップ） |
 | `resizeFreeText` | FreeTextの四隅ハンドルをドラッグ | FreeTextのサイズを変更（最小1×1グリッド） |
+| `rotateCameraAngle` | カメラの回転ハンドルをドラッグ | カメラの向き（angle）を変更 |
+| `adjustCameraFovAngle` | カメラの広がりハンドルをドラッグ | 視野の半角（fovAngle）を調整 |
+| `adjustCameraFovRange` | カメラの距離ハンドルをドラッグ | 視野の到達距離（fovRange）を調整 |
 | `null` | ドラッグなし | 通常状態 |
 
 ## EditorState
