@@ -101,6 +101,15 @@ export interface FreeText {
   zLayer: 'front' | 'back';
 }
 
+export interface FreeStroke {
+  id: string;
+  /** ピクセル座標の点列（ワールド座標系） */
+  points: { px: number; py: number }[];
+  color: string;
+  lineWidth: number;
+  opacity: number;
+}
+
 export interface FreeTextEditData {
   label: string;
   fontSize: number;
@@ -112,6 +121,7 @@ export interface Project {
   gridSize: number;
   rooms: Room[];
   freeTexts?: FreeText[];
+  freeStrokes?: FreeStroke[];
 }
 
 export interface MouseCoord {
@@ -212,6 +222,8 @@ export type DragState =
       dir: ResizeDirection;
       orig: { gx: number; gy: number; w: number; h: number };
     }
+  | { type: 'paint'; strokeId: string }
+  | { type: 'moveStroke'; id: string; offsetPx: number; offsetPy: number }
   | {
       type: 'rotateCameraAngle';
       roomId: string;
@@ -239,10 +251,15 @@ export type DragState =
 export interface EditorState {
   rooms: Room[];
   freeTexts: FreeText[];
+  freeStrokes: FreeStroke[];
   selection: Set<string>;
   history: string[];
   drag: DragState;
   mouse: MouseCoord;
+  paintMode: boolean;
+  paintColor: string;
+  paintLineWidth: number;
+  paintOpacity: number;
 }
 
 export interface ProjectMeta {
@@ -255,6 +272,7 @@ export interface ProjectMeta {
 export interface ProjectData {
   rooms: Room[];
   freeTexts: FreeText[];
+  freeStrokes: FreeStroke[];
   viewport: { zoom: number; panX: number; panY: number };
   history: string[];
 }

@@ -1,4 +1,12 @@
-import type { EditorState, Room, FreeText, FreeTextEditData, MouseCoord, ProjectData } from '../types.ts';
+import type {
+  EditorState,
+  Room,
+  FreeText,
+  FreeStroke,
+  FreeTextEditData,
+  MouseCoord,
+  ProjectData,
+} from '../types.ts';
 import type { ContextMenuItem } from '../context-menu.ts';
 import type { ViewportState } from '../viewport.ts';
 
@@ -26,19 +34,35 @@ export interface EditorCallbacks {
   onContextMenu: (request: ContextMenuRequest) => void;
   onAutoSave: () => void;
   onViewportChange: () => void;
+  onPaintModeChange?: (paintMode: boolean) => void;
 }
 
 export interface EditorAPI {
   undo: () => void;
   newProject: () => void;
-  loadProject: (data: { rooms: Room[]; freeTexts: FreeText[] }) => void;
+  loadProject: (data: { rooms: Room[]; freeTexts: FreeText[]; freeStrokes?: FreeStroke[] }) => void;
   saveProject: () => Promise<void>;
   exportAsPng: () => void;
   resize: () => void;
   destroy: () => void;
-  getState: () => { rooms: Room[]; freeTexts: FreeText[]; history: string[] };
+  getState: () => {
+    rooms: Room[];
+    freeTexts: FreeText[];
+    freeStrokes: FreeStroke[];
+    history: string[];
+  };
   getViewport: () => ViewportState;
   loadProjectState: (data: ProjectData) => void;
+  setPaintMode: (on: boolean) => void;
+  setPaintColor: (color: string) => void;
+  setPaintLineWidth: (width: number) => void;
+  setPaintOpacity: (opacity: number) => void;
+  getPaintState: () => {
+    paintMode: boolean;
+    paintColor: string;
+    paintLineWidth: number;
+    paintOpacity: number;
+  };
 }
 
 export interface EditorContext {

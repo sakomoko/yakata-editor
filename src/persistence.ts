@@ -1,6 +1,7 @@
 import type {
   Room,
   FreeText,
+  FreeStroke,
   WallObject,
   WallWindow,
   WallDoor,
@@ -169,8 +170,7 @@ export function ensureInteriorObjectIds(objects: unknown[]): RoomInteriorObject[
 
       if (obj.type === 'camera') {
         const defaults = CAMERA_COLOR_PRESETS.blue;
-        const angle =
-          typeof obj.angle === 'number' && Number.isFinite(obj.angle) ? obj.angle : 0;
+        const angle = typeof obj.angle === 'number' && Number.isFinite(obj.angle) ? obj.angle : 0;
         const fovAngle =
           typeof obj.fovAngle === 'number' && Number.isFinite(obj.fovAngle)
             ? Math.max(Math.PI / 36, Math.min(Math.PI / 2, obj.fovAngle))
@@ -240,6 +240,46 @@ export function ensureFreeTextIds(objects: unknown[]): FreeText[] {
     });
 }
 
+const VALID_HEX_COLOR = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+
+/** @internal Exported for testing */
+export function ensureFreeStrokeIds(objects: unknown[]): FreeStroke[] {
+  return objects
+    .filter((o) => {
+      const obj = o as Record<string, unknown>;
+      return (
+        Array.isArray(obj.points) &&
+        obj.points.length > 0 &&
+        typeof obj.color === 'string' &&
+        typeof obj.lineWidth === 'number' &&
+        typeof obj.opacity === 'number'
+      );
+    })
+    .map((o): FreeStroke => {
+      const obj = o as Record<string, unknown>;
+      const points = (obj.points as unknown[])
+        .filter(
+          (p) =>
+            p &&
+            typeof p === 'object' &&
+            typeof (p as Record<string, unknown>).px === 'number' &&
+            typeof (p as Record<string, unknown>).py === 'number',
+        )
+        .map((p) => ({
+          px: (p as Record<string, unknown>).px as number,
+          py: (p as Record<string, unknown>).py as number,
+        }));
+      return {
+        id: typeof obj.id === 'string' ? obj.id : crypto.randomUUID(),
+        points,
+        color: VALID_HEX_COLOR.test(obj.color as string) ? (obj.color as string) : '#ff0000',
+        lineWidth: Math.max(0.5, Math.min(20, obj.lineWidth as number)),
+        opacity: Math.max(0, Math.min(1, obj.opacity as number)),
+      };
+    })
+    .filter((s) => s.points.length > 0);
+}
+
 function ensureIds(rooms: unknown[]): Room[] {
   return rooms.map((r) => {
     const room = r as Record<string, unknown>;
@@ -270,6 +310,7 @@ function ensureIds(rooms: unknown[]): Room[] {
 export interface StorageData {
   rooms: Room[];
   freeTexts: FreeText[];
+  freeStrokes: FreeStroke[];
   /** データが存在したが解析できなかった場合の警告メッセージ */
   warning?: string;
 }
@@ -281,24 +322,29 @@ const WARNING_UNRECOGNIZED_FORMAT =
 export function parseStorageData(parsed: unknown): StorageData {
   // 旧形式: 配列（rooms only）
   if (Array.isArray(parsed)) {
-    return { rooms: ensureIds(parsed), freeTexts: [] };
+    return { rooms: ensureIds(parsed), freeTexts: [], freeStrokes: [] };
   }
-  // 新形式: { rooms, freeTexts }
+  // 新形式: { rooms, freeTexts, freeStrokes }
   if (parsed && typeof parsed === 'object') {
     const obj = parsed as Record<string, unknown>;
     if (!Array.isArray(obj.rooms)) {
-      return { rooms: [], freeTexts: [], warning: WARNING_UNRECOGNIZED_FORMAT };
+      return { rooms: [], freeTexts: [], freeStrokes: [], warning: WARNING_UNRECOGNIZED_FORMAT };
     }
     return {
       rooms: ensureIds(obj.rooms),
       freeTexts: Array.isArray(obj.freeTexts) ? ensureFreeTextIds(obj.freeTexts) : [],
+      freeStrokes: Array.isArray(obj.freeStrokes) ? ensureFreeStrokeIds(obj.freeStrokes) : [],
     };
   }
-  return { rooms: [], freeTexts: [], warning: WARNING_UNRECOGNIZED_FORMAT };
+  return { rooms: [], freeTexts: [], freeStrokes: [], warning: WARNING_UNRECOGNIZED_FORMAT };
 }
 
-export async function saveAsJson(rooms: Room[], freeTexts: FreeText[] = []): Promise<void> {
-  const data = { rooms, freeTexts };
+export async function saveAsJson(
+  rooms: Room[],
+  freeTexts: FreeText[] = [],
+  freeStrokes: FreeStroke[] = [],
+): Promise<void> {
+  const data = { rooms, freeTexts, freeStrokes };
   const json = JSON.stringify(data, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
 

@@ -6,6 +6,7 @@ import type { EditorContext } from './context.ts';
 import { commitChange, applyRoomEdit } from './project.ts';
 
 export async function onDblClick(ec: EditorContext, e: MouseEvent): Promise<void> {
+  if (ec.state.paintMode) return;
   const m = ec.mousePos(e);
 
   // FreeText double-click → edit (front layer first, then back)
