@@ -65,6 +65,12 @@ describe('pushUndo / popUndo', () => {
     expect(first!.rooms[0].label).toBe('before');
   });
 
+  it('cancelLastUndo on empty history should be a no-op', () => {
+    const history: string[] = [];
+    expect(() => cancelLastUndo(history)).not.toThrow();
+    expect(history).toHaveLength(0);
+  });
+
   it('cancelLastUndo should remove the last entry', () => {
     const history: string[] = [];
     const rooms = [createRoom(0, 0, 1, 1, 'first')];

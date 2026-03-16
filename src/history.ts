@@ -13,6 +13,8 @@ export function pushUndo(history: string[], rooms: Room[], freeTexts: FreeText[]
   if (history.length > MAX_HISTORY) history.shift();
 }
 
+/** undoスタックの最後のエントリを破棄する（状態は復元しない）。
+ * 操作が実際には変化をもたらさなかった場合にスタックを汚さないよう呼び出す。 */
 export function cancelLastUndo(history: string[]): void {
   history.pop();
 }
