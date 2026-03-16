@@ -11,7 +11,7 @@ export function commitChange(ec: EditorContext, fn: () => void): void {
   pushUndo(ec.state.history, ec.state.rooms, ec.state.freeTexts);
   fn();
   ec.render();
-  ec.callbacks.onAutoSave(ec.state.rooms, ec.state.freeTexts);
+  ec.callbacks.onAutoSave();
 }
 
 export function undo(ec: EditorContext): void {
@@ -23,7 +23,7 @@ export function undo(ec: EditorContext): void {
   ec.flags.activeInteriorObjectId = undefined;
   ec.flags.activeFreeTextId = undefined;
   ec.render();
-  ec.callbacks.onAutoSave(ec.state.rooms, ec.state.freeTexts);
+  ec.callbacks.onAutoSave();
 }
 
 export function newProject(ec: EditorContext): void {

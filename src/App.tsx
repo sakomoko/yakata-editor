@@ -12,12 +12,14 @@ import {
   type ContextMenuRequest,
 } from './editor/index.ts';
 import { loadFromFile } from './persistence.ts';
-import type { ProjectMeta, TabState, FreeTextEditData } from './types.ts';
+import type { ProjectMeta, ProjectData, TabState, FreeTextEditData } from './types.ts';
 import {
   migrateIfNeeded,
   loadProjectIndex,
   loadProjectData,
   saveProjectData,
+  touchProjectUpdatedAt,
+  deleteProject,
   loadTabState,
   saveTabState,
   createNewProject,
@@ -38,6 +40,23 @@ const darkTheme = createTheme({
   },
   typography: { fontFamily: '-apple-system, system-ui, sans-serif' },
 });
+
+/** debounce付きの updatedAt 更新。高頻度の保存でindex読み書きが毎回走るのを防ぐ */
+function createDebouncedTouchUpdatedAt(delayMs: number): (id: string) => void {
+  let timerId: ReturnType<typeof setTimeout> | undefined;
+  let pendingId: string | undefined;
+  return (id: string) => {
+    pendingId = id;
+    if (timerId !== undefined) clearTimeout(timerId);
+    timerId = setTimeout(() => {
+      if (pendingId) touchProjectUpdatedAt(pendingId);
+      timerId = undefined;
+      pendingId = undefined;
+    }, delayMs);
+  };
+}
+
+const debouncedTouchUpdatedAt = createDebouncedTouchUpdatedAt(2000);
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -127,19 +146,15 @@ export default function App() {
     setCtxMenu({ x: request.screenX, y: request.screenY, items: request.items });
   }, []);
 
-  // Save current project to storage
+  // Save current project to storage (unified save logic)
   const saveCurrentProject = useCallback(() => {
     const editor = editorRef.current;
     const activeId = tabStateRef.current.activeTabId;
     if (!editor || !activeId) return;
-    const editorState = editor.getState();
+    const { rooms, freeTexts, history } = editor.getState();
     const viewport = editor.getViewport();
-    saveProjectData(activeId, {
-      rooms: editorState.rooms,
-      freeTexts: editorState.freeTexts,
-      viewport,
-      history: editorState.history,
-    });
+    saveProjectData(activeId, { rooms, freeTexts, viewport, history } satisfies ProjectData);
+    debouncedTouchUpdatedAt(activeId);
   }, []);
 
   // Update tabState in both state and ref
@@ -149,23 +164,56 @@ export default function App() {
     saveTabState(newState);
   }, []);
 
+  // Load project into editor with fallback for missing data
+  const loadProjectIntoEditor = useCallback((id: string) => {
+    const data = loadProjectData(id);
+    const editor = editorRef.current;
+    if (editor) {
+      editor.loadProjectState(
+        data ?? { rooms: [], freeTexts: [], viewport: { zoom: 1, panX: 0, panY: 0 }, history: [] },
+      );
+    }
+  }, []);
+
+  // Close a tab from openTabs and switch if needed (shared by handleTabClose & handleDeleteProject)
+  const removeTabAndSwitch = useCallback(
+    (id: string, openTabs: string[]) => {
+      const newTabs = openTabs.filter((t) => t !== id);
+      let newActiveId = tabStateRef.current.activeTabId;
+
+      if (id === tabStateRef.current.activeTabId) {
+        saveCurrentProject();
+        if (newTabs.length > 0) {
+          const oldIdx = openTabs.indexOf(id);
+          const newIdx = Math.min(oldIdx, newTabs.length - 1);
+          newActiveId = newTabs[newIdx];
+          loadProjectIntoEditor(newActiveId);
+        }
+      }
+
+      return { newTabs, newActiveId };
+    },
+    [saveCurrentProject, loadProjectIntoEditor],
+  );
+
   useEffect(() => {
     const canvas = canvasRef.current!;
     const container = containerRef.current!;
 
     // Migration & initial load
     migrateIfNeeded();
-    const index = loadProjectIndex();
+    let index = loadProjectIndex();
     setProjectIndex(index);
 
     let ts = loadTabState();
     if (!ts || ts.openTabs.length === 0) {
-      // Fallback: open the first project
       if (index.length > 0) {
         ts = { openTabs: [index[0].id], activeTabId: index[0].id };
       } else {
         const { meta } = createNewProject();
-        setProjectIndex([meta]);
+        // Re-read index to include the newly created project
+        index = loadProjectIndex();
+        setProjectIndex(index);
         ts = { openTabs: [meta.id], activeTabId: meta.id };
       }
       saveTabState(ts);
@@ -197,28 +245,10 @@ export default function App() {
         onMarkerEdit: handleMarkerEdit,
         onFreeTextEdit: handleFreeTextEdit,
         onContextMenu: handleContextMenu,
-        onAutoSave: (rooms, freeTexts) => {
-          const activeId = tabStateRef.current.activeTabId;
-          if (!activeId) return;
-          const editor = editorRef.current;
-          const viewport = editor ? editor.getViewport() : { zoom: 1, panX: 0, panY: 0 };
-          const history = editor ? editor.getState().history : [];
-          saveProjectData(activeId, { rooms, freeTexts, viewport, history });
-        },
-        onViewportChange: (vp) => {
-          const activeId = tabStateRef.current.activeTabId;
-          if (!activeId) return;
-          const editor = editorRef.current;
-          const editorState = editor
-            ? editor.getState()
-            : { rooms: [], freeTexts: [], history: [] };
-          saveProjectData(activeId, {
-            rooms: editorState.rooms,
-            freeTexts: editorState.freeTexts,
-            viewport: vp,
-            history: editorState.history,
-          });
-        },
+        // onAutoSave / onViewportChange はどちらも現在の全状態を保存する
+        // editorRef は init 完了後にセットされるが、コールバックはユーザー操作時のみ呼ばれるので問題ない
+        onAutoSave: () => saveCurrentProject(),
+        onViewportChange: () => saveCurrentProject(),
       },
       activeData ?? undefined,
     );
@@ -239,14 +269,11 @@ export default function App() {
     (id: string) => {
       if (id === tabStateRef.current.activeTabId) return;
       saveCurrentProject();
-      const data = loadProjectData(id);
-      if (data && editorRef.current) {
-        editorRef.current.loadProjectState(data);
-      }
+      loadProjectIntoEditor(id);
       const newTs = { ...tabStateRef.current, activeTabId: id };
       updateTabState(newTs);
     },
-    [saveCurrentProject, updateTabState],
+    [saveCurrentProject, loadProjectIntoEditor, updateTabState],
   );
 
   const handleTabAdd = useCallback(() => {
@@ -266,31 +293,10 @@ export default function App() {
     (id: string) => {
       const ts = tabStateRef.current;
       if (ts.openTabs.length <= 1) return;
-
-      // Save if closing the active tab
-      if (id === ts.activeTabId) {
-        saveCurrentProject();
-      }
-
-      const newTabs = ts.openTabs.filter((t) => t !== id);
-      let newActiveId = ts.activeTabId;
-
-      if (id === ts.activeTabId) {
-        // Switch to adjacent tab
-        const oldIdx = ts.openTabs.indexOf(id);
-        const newIdx = Math.min(oldIdx, newTabs.length - 1);
-        newActiveId = newTabs[newIdx];
-
-        const data = loadProjectData(newActiveId);
-        if (data && editorRef.current) {
-          editorRef.current.loadProjectState(data);
-        }
-      }
-
-      const newTs = { openTabs: newTabs, activeTabId: newActiveId };
-      updateTabState(newTs);
+      const { newTabs, newActiveId } = removeTabAndSwitch(id, ts.openTabs);
+      updateTabState({ openTabs: newTabs, activeTabId: newActiveId });
     },
-    [saveCurrentProject, updateTabState],
+    [removeTabAndSwitch, updateTabState],
   );
 
   const handleTabRename = useCallback((id: string, newName: string) => {
@@ -310,22 +316,17 @@ export default function App() {
     (id: string) => {
       const ts = tabStateRef.current;
       if (ts.openTabs.includes(id)) {
-        // Already open - switch to it
         handleTabClick(id);
       } else {
-        // Open in a new tab
         saveCurrentProject();
         const newTabs = [...ts.openTabs, id];
         const newTs = { openTabs: newTabs, activeTabId: id };
         updateTabState(newTs);
-        const data = loadProjectData(id);
-        if (data && editorRef.current) {
-          editorRef.current.loadProjectState(data);
-        }
+        loadProjectIntoEditor(id);
       }
       setProjectListOpen(false);
     },
-    [handleTabClick, saveCurrentProject, updateTabState],
+    [handleTabClick, saveCurrentProject, updateTabState, loadProjectIntoEditor],
   );
 
   const handleDeleteProject = useCallback(
@@ -335,38 +336,25 @@ export default function App() {
 
       if (!confirm('このプロジェクトを削除しますか？')) return;
 
-      // Import and call deleteProject
-      import('./project-store.ts').then(({ deleteProject }) => {
-        deleteProject(id);
-        const newIndex = index.filter((m) => m.id !== id);
-        setProjectIndex(newIndex);
+      deleteProject(id);
+      const newIndex = index.filter((m) => m.id !== id);
+      setProjectIndex(newIndex);
 
-        // If it was in open tabs, close it
-        const ts = tabStateRef.current;
-        if (ts.openTabs.includes(id)) {
-          const newTabs = ts.openTabs.filter((t) => t !== id);
-          let newActiveId = ts.activeTabId;
-          if (id === ts.activeTabId) {
-            if (newTabs.length === 0) {
-              // Last tab was deleted - create a new project
-              const { meta, data } = createNewProject();
-              setProjectIndex([...newIndex, meta]);
-              newTabs.push(meta.id);
-              newActiveId = meta.id;
-              editorRef.current?.loadProjectState(data);
-            } else {
-              newActiveId = newTabs[Math.min(ts.openTabs.indexOf(id), newTabs.length - 1)];
-              const data = loadProjectData(newActiveId);
-              if (data && editorRef.current) {
-                editorRef.current.loadProjectState(data);
-              }
-            }
-          }
+      const ts = tabStateRef.current;
+      if (ts.openTabs.includes(id)) {
+        const { newTabs, newActiveId } = removeTabAndSwitch(id, ts.openTabs);
+        if (newTabs.length === 0) {
+          // All tabs closed — create a new project
+          const { meta, data } = createNewProject();
+          setProjectIndex([...newIndex, meta]);
+          updateTabState({ openTabs: [meta.id], activeTabId: meta.id });
+          editorRef.current?.loadProjectState(data);
+        } else {
           updateTabState({ openTabs: newTabs, activeTabId: newActiveId });
         }
-      });
+      }
     },
-    [updateTabState],
+    [removeTabAndSwitch, updateTabState],
   );
 
   const handleLoad = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -468,9 +456,9 @@ export default function App() {
           variant="contained"
           color="inherit"
           sx={toolbarButtonSx}
-          onClick={() => editorRef.current?.newProject()}
+          onClick={handleTabAdd}
         >
-          新規
+          新規プロジェクト
         </Button>
         <Divider orientation="vertical" flexItem sx={{ borderColor: '#555', mx: 0.5 }} />
         <Button

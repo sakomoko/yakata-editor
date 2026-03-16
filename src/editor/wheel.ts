@@ -24,5 +24,5 @@ export function onWheel(ec: EditorContext, e: WheelEvent): void {
   }
 
   ec.render();
-  ec.callbacks.onViewportChange(viewport);
+  ec.callbacks.onViewportChange();
 }

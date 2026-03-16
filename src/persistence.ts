@@ -15,11 +15,6 @@ import type {
   MarkerKind,
 } from './types.ts';
 import { CAMERA_COLOR_PRESETS } from './camera.ts';
-import type { ViewportState } from './viewport.ts';
-import { clampZoom } from './viewport.ts';
-
-const STORAGE_KEY = 'madori_data';
-const VIEWPORT_KEY = 'madori_viewport';
 
 const VALID_SIDES = new Set(['n', 'e', 's', 'w']);
 const VALID_WALL_OBJECT_TYPES = new Set(['window', 'door', 'opening']);
@@ -302,30 +297,6 @@ export function parseStorageData(parsed: unknown): StorageData {
   return { rooms: [], freeTexts: [], warning: WARNING_UNRECOGNIZED_FORMAT };
 }
 
-export function persistToStorage(rooms: Room[], freeTexts: FreeText[] = []): void {
-  try {
-    const data: StorageData = { rooms, freeTexts };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch {
-    // storage full or unavailable
-  }
-}
-
-export function loadFromStorage(): StorageData {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    if (!data) return { rooms: [], freeTexts: [] };
-    const parsed: unknown = JSON.parse(data);
-    return parseStorageData(parsed);
-  } catch {
-    return {
-      rooms: [],
-      freeTexts: [],
-      warning: '保存データの読み込みに失敗しました。データが破損している可能性があります。',
-    };
-  }
-}
-
 export async function saveAsJson(rooms: Room[], freeTexts: FreeText[] = []): Promise<void> {
   const data = { rooms, freeTexts };
   const json = JSON.stringify(data, null, 2);
@@ -375,33 +346,6 @@ export function loadFromFile(file: File): Promise<StorageData> {
     reader.onerror = () => reject(reader.error);
     reader.readAsText(file);
   });
-}
-
-export function persistViewport(vp: ViewportState): void {
-  try {
-    localStorage.setItem(VIEWPORT_KEY, JSON.stringify(vp));
-  } catch {
-    // storage full or unavailable
-  }
-}
-
-export function loadViewport(): ViewportState | null {
-  try {
-    const data = localStorage.getItem(VIEWPORT_KEY);
-    if (!data) return null;
-    const parsed = JSON.parse(data) as Record<string, unknown>;
-    if (
-      typeof parsed.zoom === 'number' &&
-      typeof parsed.panX === 'number' &&
-      typeof parsed.panY === 'number'
-    ) {
-      if (!Number.isFinite(parsed.panX) || !Number.isFinite(parsed.panY)) return null;
-      return { zoom: clampZoom(parsed.zoom), panX: parsed.panX, panY: parsed.panY };
-    }
-  } catch {
-    // corrupt data
-  }
-  return null;
 }
 
 export function exportPng(canvas: HTMLCanvasElement): void {

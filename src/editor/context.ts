@@ -24,8 +24,8 @@ export interface EditorCallbacks {
   onMarkerEdit: (data: MarkerEditData) => Promise<{ label: string } | null>;
   onFreeTextEdit: (data: FreeTextEditData) => Promise<{ label: string; fontSize: number } | null>;
   onContextMenu: (request: ContextMenuRequest) => void;
-  onAutoSave: (rooms: Room[], freeTexts: FreeText[]) => void;
-  onViewportChange: (vp: ViewportState) => void;
+  onAutoSave: () => void;
+  onViewportChange: () => void;
 }
 
 export interface EditorAPI {

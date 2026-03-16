@@ -24,7 +24,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     const newVp = zoomAtCenterFn(viewport, canvas.width, canvas.height, viewport.zoom * 1.25);
     Object.assign(viewport, newVp);
     ec.render();
-    ec.callbacks.onViewportChange(viewport);
+    ec.callbacks.onViewportChange();
     return;
   }
   if ((e.metaKey || e.ctrlKey) && e.key === '-') {
@@ -32,7 +32,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     const newVp = zoomAtCenterFn(viewport, canvas.width, canvas.height, viewport.zoom / 1.25);
     Object.assign(viewport, newVp);
     ec.render();
-    ec.callbacks.onViewportChange(viewport);
+    ec.callbacks.onViewportChange();
     return;
   }
   if ((e.metaKey || e.ctrlKey) && e.key === '0') {
@@ -41,7 +41,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     viewport.panX = 0;
     viewport.panY = 0;
     ec.render();
-    ec.callbacks.onViewportChange(viewport);
+    ec.callbacks.onViewportChange();
     return;
   }
 
@@ -64,7 +64,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     const changed = fn(state.rooms, roomId);
     if (changed) {
       ec.render();
-      ec.callbacks.onAutoSave(state.rooms, state.freeTexts);
+      ec.callbacks.onAutoSave();
     } else {
       cancelLastUndo(state.history);
     }

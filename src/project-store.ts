@@ -1,4 +1,4 @@
-import type { ProjectMeta, ProjectData } from './types.ts';
+import type { ProjectMeta, ProjectData, TabState } from './types.ts';
 import { parseStorageData } from './persistence.ts';
 import type { ViewportState } from './viewport.ts';
 import { clampZoom } from './viewport.ts';
@@ -9,7 +9,23 @@ const TAB_STATE_KEY = 'yakata_tab_state';
 const OLD_STORAGE_KEY = 'madori_data';
 const OLD_VIEWPORT_KEY = 'madori_viewport';
 
-import type { TabState } from './types.ts';
+// --- Viewport validation (shared) ---
+
+function parseViewport(raw: unknown): ViewportState {
+  const fallback: ViewportState = { zoom: 1, panX: 0, panY: 0 };
+  if (!raw || typeof raw !== 'object') return fallback;
+  const vp = raw as Record<string, unknown>;
+  if (
+    typeof vp.zoom === 'number' &&
+    typeof vp.panX === 'number' &&
+    typeof vp.panY === 'number' &&
+    Number.isFinite(vp.panX) &&
+    Number.isFinite(vp.panY)
+  ) {
+    return { zoom: clampZoom(vp.zoom), panX: vp.panX, panY: vp.panY };
+  }
+  return fallback;
+}
 
 // --- Index ---
 
@@ -41,25 +57,8 @@ export function loadProjectData(id: string): ProjectData | null {
     if (!parsed || typeof parsed !== 'object') return null;
     const obj = parsed as Record<string, unknown>;
 
-    // rooms/freeTexts はバリデーション付きでパース
     const storageData = parseStorageData({ rooms: obj.rooms, freeTexts: obj.freeTexts });
-
-    // viewport の復元
-    let viewport: ViewportState = { zoom: 1, panX: 0, panY: 0 };
-    if (obj.viewport && typeof obj.viewport === 'object') {
-      const vp = obj.viewport as Record<string, unknown>;
-      if (
-        typeof vp.zoom === 'number' &&
-        typeof vp.panX === 'number' &&
-        typeof vp.panY === 'number' &&
-        Number.isFinite(vp.panX) &&
-        Number.isFinite(vp.panY)
-      ) {
-        viewport = { zoom: clampZoom(vp.zoom), panX: vp.panX, panY: vp.panY };
-      }
-    }
-
-    // history の復元
+    const viewport = parseViewport(obj.viewport);
     const history: string[] = Array.isArray(obj.history)
       ? (obj.history as unknown[]).filter((h): h is string => typeof h === 'string')
       : [];
@@ -75,13 +74,17 @@ export function loadProjectData(id: string): ProjectData | null {
   }
 }
 
+/** プロジェクトデータのみ保存（updatedAt は更新しない） */
 export function saveProjectData(id: string, data: ProjectData): void {
   try {
     localStorage.setItem(PROJECT_KEY_PREFIX + id, JSON.stringify(data));
   } catch {
     // storage full or unavailable
   }
-  // updatedAt を更新
+}
+
+/** updatedAt を現在時刻に更新して index を保存 */
+export function touchProjectUpdatedAt(id: string): void {
   const index = loadProjectIndex();
   const meta = index.find((m) => m.id === id);
   if (meta) {
@@ -102,9 +105,12 @@ export function loadTabState(): TabState | null {
   try {
     const raw = localStorage.getItem(TAB_STATE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as TabState;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
     if (Array.isArray(parsed.openTabs) && typeof parsed.activeTabId === 'string') {
-      return parsed;
+      const openTabs = (parsed.openTabs as unknown[]).filter(
+        (t): t is string => typeof t === 'string',
+      );
+      return { openTabs, activeTabId: parsed.activeTabId };
     }
   } catch {
     // corrupt
@@ -156,7 +162,6 @@ export function createNewProject(name?: string): { meta: ProjectMeta; data: Proj
 // --- Migration ---
 
 export function migrateIfNeeded(): void {
-  // 既に新形式のインデックスがあれば何もしない
   if (localStorage.getItem(INDEX_KEY)) return;
 
   const oldData = localStorage.getItem(OLD_STORAGE_KEY);
@@ -164,26 +169,15 @@ export function migrateIfNeeded(): void {
   const id = crypto.randomUUID();
 
   if (oldData) {
-    // 旧データから移行
     try {
       const parsed: unknown = JSON.parse(oldData);
       const storageData = parseStorageData(parsed);
 
-      // viewport
       let viewport: ViewportState = { zoom: 1, panX: 0, panY: 0 };
       const oldVpRaw = localStorage.getItem(OLD_VIEWPORT_KEY);
       if (oldVpRaw) {
         try {
-          const vp = JSON.parse(oldVpRaw) as Record<string, unknown>;
-          if (
-            typeof vp.zoom === 'number' &&
-            typeof vp.panX === 'number' &&
-            typeof vp.panY === 'number' &&
-            Number.isFinite(vp.panX) &&
-            Number.isFinite(vp.panY)
-          ) {
-            viewport = { zoom: clampZoom(vp.zoom), panX: vp.panX, panY: vp.panY };
-          }
+          viewport = parseViewport(JSON.parse(oldVpRaw));
         } catch {
           // ignore
         }
@@ -206,15 +200,12 @@ export function migrateIfNeeded(): void {
       saveProjectData(id, data);
       saveTabState({ openTabs: [id], activeTabId: id });
 
-      // 旧キーを削除
       localStorage.removeItem(OLD_STORAGE_KEY);
       localStorage.removeItem(OLD_VIEWPORT_KEY);
     } catch {
-      // 旧データのパースに失敗した場合は空プロジェクトを作成
       createEmptyInitialProject();
     }
   } else {
-    // 旧データがない場合も空プロジェクトを作成
     createEmptyInitialProject();
   }
 }
