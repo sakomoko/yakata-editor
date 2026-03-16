@@ -1,3 +1,4 @@
+import { findRoomById, findWallObjectById } from '../lookup.ts';
 import { selectSingle, clearSelection } from '../selection.ts';
 import { persistToStorage, persistViewport } from '../persistence.ts';
 import { pushUndo } from '../history.ts';
@@ -27,8 +28,8 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
     selectSingle(state.selection, dragRoomId);
     state.drag = null;
     // 壁オブジェクトの同期
-    const dragRoom = state.rooms.find((r) => r.id === dragRoomId);
-    const dragObj = dragRoom?.wallObjects?.find((o) => o.id === dragObjId);
+    const dragRoom = findRoomById(state.rooms, dragRoomId);
+    const dragObj = dragRoom ? findWallObjectById(dragRoom, dragObjId) : undefined;
     if (dragRoom && dragObj) {
       syncPairedOpening(state.rooms, dragRoom, dragObj);
     }

@@ -1,4 +1,5 @@
 import type { FreeText } from '../types.ts';
+import { findFreeTextById } from '../lookup.ts';
 import { GRID } from '../grid.ts';
 import { hitHandle, hitRoom } from '../room.ts';
 import { toggleSelection, selectSingle, clearSelection } from '../selection.ts';
@@ -58,7 +59,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
 
   // Check FreeText handle hit (resize) — only for active FreeText
   if (flags.activeFreeTextId) {
-    const activeFt = state.freeTexts.find((ft) => ft.id === flags.activeFreeTextId);
+    const activeFt = findFreeTextById(state.freeTexts, flags.activeFreeTextId);
     if (activeFt) {
       const ftHandleDir = hitFreeTextHandle(activeFt, m.px, m.py, viewport.zoom);
       if (ftHandleDir) {

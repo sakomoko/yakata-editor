@@ -1,5 +1,6 @@
 import type { Room, SecurityCamera, CameraColorPreset } from './types.ts';
 import { GRID, HANDLE_SIZE, HANDLE_HIT } from './grid.ts';
+import { findInteriorObjectById, findRoomById } from './lookup.ts';
 
 export const CAMERA_COLOR_PRESETS: Record<
   CameraColorPreset,
@@ -291,9 +292,9 @@ export function findCameraInRoom(
   roomId: string,
   objectId: string,
 ): { room: Room; cam: SecurityCamera } | null {
-  const room = rooms.find((r) => r.id === roomId);
+  const room = findRoomById(rooms, roomId);
   if (!room) return null;
-  const obj = room.interiorObjects?.find((o) => o.id === objectId);
+  const obj = findInteriorObjectById(room, objectId);
   if (!obj || obj.type !== 'camera') return null;
   return { room, cam: obj };
 }

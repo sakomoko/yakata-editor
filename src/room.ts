@@ -1,5 +1,6 @@
 import type { Room, Handle, MouseCoord } from './types.ts';
 import { GRID, HANDLE_SIZE, HANDLE_HIT } from './grid.ts';
+import { findRoomById } from './lookup.ts';
 import { drawWallSegments, drawWallObjects, drawWallObjectResizeHandles } from './wall-object.ts';
 import { drawInteriorObjects, drawInteriorObjectHandles } from './interior-object.ts';
 
@@ -161,7 +162,7 @@ export function hitHandle(
 ): { handle: Handle; room: Room } | null {
   if (selection.size !== 1) return null;
   const selId = [...selection][0];
-  const room = rooms.find((r) => r.id === selId);
+  const room = findRoomById(rooms, selId);
   if (!room) return null;
   const tolerance = HANDLE_HIT / zoom;
   for (const h of getHandles(room)) {

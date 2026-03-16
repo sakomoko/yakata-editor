@@ -59,6 +59,7 @@
 ### Changed
 
 - `context-menu-handler.ts` のメニュー構築ロジックを5つのbuild関数に分割し、配置パターンの共通化・型改善を実施
+- `rooms.find((r) => r.id === ...)` 等のIDルックアップパターン46箇所を `lookup.ts` の共通ヘルパー5関数に集約
 - `history.ts` に `cancelLastUndo` APIを追加し、`keyboard.ts` での内部構造直接操作を排除
 
 ### Fixed
