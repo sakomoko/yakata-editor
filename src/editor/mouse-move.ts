@@ -5,7 +5,16 @@ import {
   findRoomById,
   findWallObjectById,
 } from '../lookup.ts';
-import { hitHandle, hitRoom, findRoomsInArea, normalizeArea } from '../room.ts';
+import {
+  hitHandle,
+  hitRoom,
+  findRoomsInArea,
+  normalizeArea,
+  computeGroupBoundingBox,
+  hitGroupHandle,
+  computeGroupScale,
+  applyGroupScale,
+} from '../room.ts';
 import {
   hitWallObjectInRooms,
   hitWallObjectEdgeInRooms,
@@ -31,6 +40,18 @@ import { hitFreeText, hitFreeTextHandle, computeFreeTextResize } from '../free-t
 import { syncPairedOpening } from '../adjacency.ts';
 import type { EditorContext } from './context.ts';
 import { updateStatus } from './render.ts';
+
+import type { MouseCoord } from '../types.ts';
+
+/** 壁オブジェクト・インテリア・FreeText・部屋のヒット判定に基づくデフォルトカーソルを返す */
+function resolveDefaultCursor(ec: EditorContext, m: MouseCoord): string {
+  const { state, viewport } = ec;
+  if (hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom, true)) return 'grab';
+  if (hitInteriorObjectInRooms(state.rooms, m.px, m.py)) return 'grab';
+  if (hitFreeText(state.freeTexts, m.px, m.py)) return 'grab';
+  if (hitRoom(state.rooms, m.px, m.py)) return 'move';
+  return 'crosshair';
+}
 
 export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
   const { canvas, state, viewport, flags } = ec;
@@ -98,16 +119,16 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
         const h = hitHandle(state.rooms, state.selection, m.px, m.py, viewport.zoom);
         if (h) {
           canvas.style.cursor = h.handle.dir + '-resize';
-        } else if (hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom, true)) {
-          canvas.style.cursor = 'grab';
-        } else if (hitInteriorObjectInRooms(state.rooms, m.px, m.py)) {
-          canvas.style.cursor = 'grab';
-        } else if (hitFreeText(state.freeTexts, m.px, m.py)) {
-          canvas.style.cursor = 'grab';
-        } else if (hitRoom(state.rooms, m.px, m.py)) {
-          canvas.style.cursor = 'move';
+        } else if (selectedRooms.length >= 2) {
+          const bb = computeGroupBoundingBox(selectedRooms);
+          const gh = hitGroupHandle(bb, m.px, m.py, viewport.zoom);
+          if (gh) {
+            canvas.style.cursor = gh.dir + '-resize';
+          } else {
+            canvas.style.cursor = resolveDefaultCursor(ec, m);
+          }
         } else {
-          canvas.style.cursor = 'crosshair';
+          canvas.style.cursor = resolveDefaultCursor(ec, m);
         }
       }
     }
@@ -157,6 +178,59 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
       }
       clampWallObjects(target);
       clampAllInteriorObjects(target);
+    }
+  } else if (state.drag.type === 'groupResize') {
+    const { anchor, origBB, originals } = state.drag;
+
+    const rawW = Math.abs(m.gx - anchor.gx);
+    const rawH = Math.abs(m.gy - anchor.gy);
+    const scale = computeGroupScale(origBB, rawW, rawH, originals.values());
+    if (scale === null) {
+      ec.render();
+      return;
+    }
+
+    for (const [id, orig] of originals) {
+      const room = findRoomById(state.rooms, id);
+      if (!room) continue;
+
+      const scaled = applyGroupScale(anchor, orig, scale);
+      room.x = scaled.x;
+      room.y = scaled.y;
+      room.w = scaled.w;
+      room.h = scaled.h;
+
+      // fontSize: 未設定(undefined)の場合は部屋サイズから自動計算されるためスケール不要
+      if (orig.fontSize !== undefined) {
+        room.fontSize = Math.max(1, Math.round(orig.fontSize * scale));
+      }
+
+      if (orig.wallObjects && room.wallObjects) {
+        for (const origWo of orig.wallObjects) {
+          const wo = room.wallObjects.find((w) => w.id === origWo.id);
+          if (wo) {
+            wo.offset = origWo.offset * scale;
+            wo.width = origWo.width * scale;
+          }
+        }
+        clampWallObjects(room);
+      }
+
+      if (orig.interiorObjects && room.interiorObjects) {
+        for (const origIo of orig.interiorObjects) {
+          const io = room.interiorObjects.find((i) => i.id === origIo.id);
+          if (io) {
+            io.x = origIo.x * scale;
+            io.y = origIo.y * scale;
+            io.w = origIo.w * scale;
+            io.h = origIo.h * scale;
+            if (io.type === 'camera' && origIo.fovRange !== undefined) {
+              io.fovRange = origIo.fovRange * scale;
+            }
+          }
+        }
+        clampAllInteriorObjects(room);
+      }
     }
   } else if (state.drag.type === 'moveWallObject') {
     const drag = state.drag;

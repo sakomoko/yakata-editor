@@ -5,6 +5,10 @@ import {
   hitRoom,
   hitHandle,
   computeRoomsBoundingBox,
+  computeGroupBoundingBox,
+  getAnchorForDir,
+  computeGroupScale,
+  applyGroupScale,
   findRoomsInArea,
   normalizeArea,
 } from './room.ts';
@@ -174,6 +178,130 @@ describe('normalizeArea', () => {
   it('should handle negative grid coordinates', () => {
     const result = normalizeArea({ px: 0, py: 0, gx: -2, gy: -3 }, { px: 0, py: 0, gx: 2, gy: 1 });
     expect(result).toEqual({ x: -2, y: -3, w: 4, h: 4 });
+  });
+});
+
+describe('computeGroupBoundingBox', () => {
+  it('should compute bounding box in grid coordinates without padding', () => {
+    const a = createRoom(2, 3, 4, 5);
+    const b = createRoom(8, 1, 3, 6);
+    const bb = computeGroupBoundingBox([a, b]);
+    expect(bb).toEqual({ x: 2, y: 1, w: 9, h: 7 });
+  });
+
+  it('should handle a single room', () => {
+    const a = createRoom(5, 5, 3, 4);
+    const bb = computeGroupBoundingBox([a]);
+    expect(bb).toEqual({ x: 5, y: 5, w: 3, h: 4 });
+  });
+
+  it('should return zero-size for empty array', () => {
+    const bb = computeGroupBoundingBox([]);
+    expect(bb).toEqual({ x: 0, y: 0, w: 0, h: 0 });
+  });
+
+  it('should handle negative coordinates', () => {
+    const a = createRoom(-3, -2, 2, 2);
+    const b = createRoom(1, 1, 3, 3);
+    const bb = computeGroupBoundingBox([a, b]);
+    expect(bb).toEqual({ x: -3, y: -2, w: 7, h: 6 });
+  });
+});
+
+describe('getAnchorForDir', () => {
+  const bb = { x: 2, y: 3, w: 6, h: 4 };
+
+  it('nw → opposite is se corner', () => {
+    expect(getAnchorForDir(bb, 'nw')).toEqual({ gx: 8, gy: 7 });
+  });
+
+  it('ne → opposite is sw corner', () => {
+    expect(getAnchorForDir(bb, 'ne')).toEqual({ gx: 2, gy: 7 });
+  });
+
+  it('se → opposite is nw corner', () => {
+    expect(getAnchorForDir(bb, 'se')).toEqual({ gx: 2, gy: 3 });
+  });
+
+  it('sw → opposite is ne corner', () => {
+    expect(getAnchorForDir(bb, 'sw')).toEqual({ gx: 8, gy: 3 });
+  });
+});
+
+describe('computeGroupScale', () => {
+  it('should compute aspect-ratio-preserving scale', () => {
+    const origBB = { w: 10, h: 8 };
+    const originals = [{ x: 0, y: 0, w: 4, h: 3 }];
+    // rawW=20, rawH=16 → scale = min(20/10, 16/8) = min(2, 2) = 2
+    expect(computeGroupScale(origBB, 20, 16, originals)).toBe(2);
+  });
+
+  it('should pick smaller scale to maintain aspect ratio', () => {
+    const origBB = { w: 10, h: 8 };
+    const originals = [{ x: 0, y: 0, w: 4, h: 3 }];
+    // rawW=15, rawH=24 → scale = min(15/10, 24/8) = min(1.5, 3) = 1.5
+    expect(computeGroupScale(origBB, 15, 24, originals)).toBe(1.5);
+  });
+
+  it('should return null when rawW or rawH < 1', () => {
+    const origBB = { w: 10, h: 8 };
+    expect(computeGroupScale(origBB, 0.5, 10, [{ x: 0, y: 0, w: 2, h: 2 }])).toBeNull();
+    expect(computeGroupScale(origBB, 10, 0, [{ x: 0, y: 0, w: 2, h: 2 }])).toBeNull();
+  });
+
+  it('should enforce minScale from room dimensions', () => {
+    const origBB = { w: 10, h: 8 };
+    // w=2 → minScale >= 0.5, scale from raw = min(1/10, 1/8) = 0.1
+    const originals = [
+      { x: 0, y: 0, w: 4, h: 3 },
+      { x: 5, y: 5, w: 2, h: 5 },
+    ];
+    const scale = computeGroupScale(origBB, 1, 1, originals);
+    expect(scale).toBe(0.5); // clamped to minScale
+  });
+
+  it('should return null when origBB has zero dimension', () => {
+    expect(computeGroupScale({ w: 0, h: 5 }, 10, 10, [{ x: 0, y: 0, w: 2, h: 2 }])).toBeNull();
+    expect(computeGroupScale({ w: 5, h: 0 }, 10, 10, [{ x: 0, y: 0, w: 2, h: 2 }])).toBeNull();
+  });
+});
+
+describe('applyGroupScale', () => {
+  it('should scale room positions and sizes relative to anchor', () => {
+    const anchor = { gx: 0, gy: 0 };
+    const orig = { x: 2, y: 2, w: 4, h: 3 };
+    const result = applyGroupScale(anchor, orig, 2);
+    expect(result).toEqual({ x: 4, y: 4, w: 8, h: 6 });
+  });
+
+  it('should enforce minimum size of 1', () => {
+    const anchor = { gx: 0, gy: 0 };
+    const orig = { x: 2, y: 2, w: 4, h: 3 };
+    const result = applyGroupScale(anchor, orig, 0.1);
+    expect(result.w).toBeGreaterThanOrEqual(1);
+    expect(result.h).toBeGreaterThanOrEqual(1);
+  });
+
+  it('should preserve adjacency between rooms (no gaps)', () => {
+    const anchor = { gx: 0, gy: 0 };
+    // Two adjacent rooms: A ends at x=6, B starts at x=6
+    const origA = { x: 2, y: 0, w: 4, h: 3 };
+    const origB = { x: 6, y: 0, w: 3, h: 3 };
+    const scale = 1.5;
+    const a = applyGroupScale(anchor, origA, scale);
+    const b = applyGroupScale(anchor, origB, scale);
+    // A's right edge should equal B's left edge
+    expect(a.x + a.w).toBe(b.x);
+  });
+
+  it('should work with non-zero anchor', () => {
+    const anchor = { gx: 10, gy: 10 };
+    const orig = { x: 12, y: 12, w: 4, h: 3 };
+    const result = applyGroupScale(anchor, orig, 2);
+    expect(result.x).toBe(14); // 10 + (12-10)*2
+    expect(result.y).toBe(14);
+    expect(result.w).toBe(8);
+    expect(result.h).toBe(6);
   });
 });
 

@@ -122,11 +122,35 @@ export interface MouseCoord {
 }
 
 export type ResizeDirection = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
+export type CornerDirection = 'nw' | 'ne' | 'se' | 'sw';
 
 export interface Handle {
   px: number;
   py: number;
   dir: ResizeDirection;
+}
+
+export interface GroupHandle {
+  px: number;
+  py: number;
+  dir: CornerDirection;
+}
+
+export interface GroupScaleOriginal {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  fontSize?: number;
+  wallObjects?: Array<{ id: string; offset: number; width: number }>;
+  interiorObjects?: Array<{
+    id: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    fovRange?: number;
+  }>;
 }
 
 export type DragState =
@@ -202,6 +226,13 @@ export type DragState =
       type: 'adjustCameraFovRange';
       roomId: string;
       objectId: string;
+    }
+  | {
+      type: 'groupResize';
+      dir: CornerDirection;
+      origBB: { x: number; y: number; w: number; h: number };
+      anchor: { gx: number; gy: number };
+      originals: Map<string, GroupScaleOriginal>;
     }
   | null;
 

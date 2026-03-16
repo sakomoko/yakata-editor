@@ -41,11 +41,11 @@ Canvas 再描画 + localStorage 保存
   - **editor/wheel.ts** — `onWheel()` ホイールズーム・パン処理
   - **editor/dblclick.ts** — `onDblClick()` ダブルクリックイベント処理
   - **editor/utils.ts** — `labelDisplayWidth()`, `createMousePos()` ユーティリティ
-- **types.ts** — 全型定義（`Room`, `FreeText`, `WallObject`, `RoomInteriorObject`, `Project`, `EditorState`, `DragState`, `MouseCoord`, `Handle`）
+- **types.ts** — 全型定義（`Room`, `FreeText`, `WallObject`, `RoomInteriorObject`, `Project`, `EditorState`, `DragState`, `MouseCoord`, `Handle`, `GroupHandle`, `GroupScaleOriginal`, `CornerDirection`）
 
 ### 機能モジュール
 
-- **room.ts** — 部屋の生成（`createRoom`）、Canvas描画（`drawRoom`）、ヒット判定（`hitRoom`, `hitHandle`）、リサイズハンドル計算（`getHandles`）、矩形包含判定（`findRoomsInArea`）、ドラッグ矩形の正規化（`normalizeArea`）、範囲選択プレビュー描画（`drawAreaSelectPreview`）
+- **room.ts** — 部屋の生成（`createRoom`）、Canvas描画（`drawRoom`）、ヒット判定（`hitRoom`, `hitHandle`）、リサイズハンドル計算（`getHandles`）、矩形包含判定（`findRoomsInArea`）、ドラッグ矩形の正規化（`normalizeArea`）、範囲選択プレビュー描画（`drawAreaSelectPreview`）、グループBB計算（`computeGroupBoundingBox`）・ハンドル（`getGroupHandles`, `hitGroupHandle`）・アンカー計算（`getAnchorForDir`）・スケーリング（`computeGroupScale`, `applyGroupScale`）・BB描画（`drawGroupBoundingBox`）
 - **free-text.ts** — 自由配置テキスト（FreeText）の生成（`createFreeText`）、描画（`drawFreeText`, `drawFreeTextHandles`）、ヒット判定（`hitFreeText`, `hitFreeTextHandle`）、範囲検索（`findFreeTextsInArea`）、リサイズ計算（`computeFreeTextResize`）。部屋に紐付かず、グリッド座標で自由配置。front/backの2レイヤーで描画順を制御
 - **interior-object.ts** — 部屋内オブジェクト（階段・マーカー）の生成（`createStraightStairs`, `createFoldingStairs`, `createMarker`）、描画（`drawInteriorObjects`）、ヒット判定（`hitInteriorObject`, `hitInteriorObjectInRooms`）、ハンドルヒット判定（`hitInteriorObjectHandle`, `hitInteriorObjectHandleInRooms`）、クランプ処理（`clampInteriorObject`, `clampAllInteriorObjects`）、移動/リサイズ計算（`computeInteriorObjectMove`, `computeInteriorObjectResize`）。マーカーは死体（チョークアウトライン）・ピン（アイコン+ラベル）・テキスト（ラベルのみ）の3種類で、ラベルのフォントサイズはリサイズに追従。カメラの描画は `camera.ts` に委譲
 - **camera.ts** — 防犯カメラ（SecurityCamera）の生成（`createSecurityCamera`）、カメラアイコン描画（`drawCameraIcon`）、視野コーンオーバーレイ描画（`drawCameraFovOverlay`）、FOVハンドル描画（`drawCameraHandles`）・ヒット判定（`hitCameraHandle`, `hitCameraHandleInRooms`）、回転・FOV角度・FOV距離の計算（`computeCameraAngle`, `computeCameraFovAngle`, `computeCameraFovRange`）。FOVコーンは2パスレンダリングで部屋の外まで描画可能
@@ -104,7 +104,7 @@ main.ts
 - `freeTexts: FreeText[]` — 自由配置テキストデータ
 - `selection: Set<string>` — 選択中の部屋/FreeTextのID
 - `history: string[]` — Undoスナップショット（JSON文字列）
-- `drag: DragState` — ドラッグ操作の状態（discriminated union: `create | areaSelect | move | resize | moveWallObject | resizeWallObject | moveInteriorObject | resizeInteriorObject | moveFreeText | resizeFreeText | rotateCameraAngle | adjustCameraFovAngle | adjustCameraFovRange | pan | null`）
+- `drag: DragState` — ドラッグ操作の状態（discriminated union: `create | areaSelect | move | resize | groupResize | moveWallObject | resizeWallObject | moveInteriorObject | resizeInteriorObject | moveFreeText | resizeFreeText | rotateCameraAngle | adjustCameraFovAngle | adjustCameraFovRange | pan | null`）
 - `mouse: MouseCoord` — 現在のマウス座標
 
 状態変更は `commitChange()` を通じて行い、Undo履歴の保存・Canvas再描画・localStorage保存をまとめて実行する。

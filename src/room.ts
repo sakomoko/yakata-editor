@@ -1,4 +1,4 @@
-import type { Room, Handle, MouseCoord } from './types.ts';
+import type { Room, Handle, MouseCoord, CornerDirection, GroupHandle } from './types.ts';
 import { GRID, HANDLE_SIZE, HANDLE_HIT } from './grid.ts';
 import { findRoomById } from './lookup.ts';
 import { drawWallSegments, drawWallObjects, drawWallObjectResizeHandles } from './wall-object.ts';
@@ -188,6 +188,144 @@ export function hitRoom(rooms: Room[], px: number, py: number): Room | null {
     if (isInsideRoom(rooms[i], px, py)) return rooms[i];
   }
   return null;
+}
+
+/** 選択部屋のバウンディングボックスをグリッド座標で返す（paddingなし） */
+export function computeGroupBoundingBox(rooms: Room[]): {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+} {
+  if (rooms.length === 0) return { x: 0, y: 0, w: 0, h: 0 };
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const r of rooms) {
+    minX = Math.min(minX, r.x);
+    minY = Math.min(minY, r.y);
+    maxX = Math.max(maxX, r.x + r.w);
+    maxY = Math.max(maxY, r.y + r.h);
+  }
+  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+}
+
+/** グループBBの4隅ハンドルをピクセル座標で返す */
+export function getGroupHandles(bb: {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}): GroupHandle[] {
+  const x = bb.x * GRID,
+    y = bb.y * GRID,
+    w = bb.w * GRID,
+    h = bb.h * GRID;
+  return [
+    { px: x, py: y, dir: 'nw' },
+    { px: x + w, py: y, dir: 'ne' },
+    { px: x + w, py: y + h, dir: 'se' },
+    { px: x, py: y + h, dir: 'sw' },
+  ];
+}
+
+/** グループBBの4隅ハンドルのヒット判定 */
+export function hitGroupHandle(
+  bb: { x: number; y: number; w: number; h: number },
+  px: number,
+  py: number,
+  zoom: number,
+): GroupHandle | null {
+  const tolerance = HANDLE_HIT / zoom;
+  for (const h of getGroupHandles(bb)) {
+    if (Math.abs(px - h.px) < tolerance && Math.abs(py - h.py) < tolerance) {
+      return h;
+    }
+  }
+  return null;
+}
+
+/** ドラッグ方向の対角コーナーをグリッド座標で返す */
+export function getAnchorForDir(
+  bb: { x: number; y: number; w: number; h: number },
+  dir: CornerDirection,
+): { gx: number; gy: number } {
+  switch (dir) {
+    case 'nw':
+      return { gx: bb.x + bb.w, gy: bb.y + bb.h };
+    case 'ne':
+      return { gx: bb.x, gy: bb.y + bb.h };
+    case 'se':
+      return { gx: bb.x, gy: bb.y };
+    case 'sw':
+      return { gx: bb.x + bb.w, gy: bb.y };
+  }
+}
+
+/** グループスケーリングのスケール値を計算する。originals は一回のみ反復される */
+export function computeGroupScale<T extends { w: number; h: number }>(
+  origBB: { w: number; h: number },
+  rawW: number,
+  rawH: number,
+  originals: Iterable<T>,
+): number | null {
+  if (rawW < 1 || rawH < 1) return null;
+  if (origBB.w === 0 || origBB.h === 0) return null;
+  const scale = Math.min(rawW / origBB.w, rawH / origBB.h);
+  let minScale = 0;
+  for (const orig of originals) {
+    minScale = Math.max(minScale, 1 / orig.w, 1 / orig.h);
+  }
+  return Math.max(scale, minScale);
+}
+
+/** アンカー基準でスケールされた部屋の位置・サイズを計算する（隣接関係を維持する丸め） */
+export function applyGroupScale(
+  anchor: { gx: number; gy: number },
+  orig: { x: number; y: number; w: number; h: number },
+  scale: number,
+): { x: number; y: number; w: number; h: number } {
+  const x = Math.round(anchor.gx + (orig.x - anchor.gx) * scale);
+  const y = Math.round(anchor.gy + (orig.y - anchor.gy) * scale);
+  // サイズは右端/下端から位置を引くことで、隣接部屋間の隙間/重なりを防ぐ
+  const right = Math.round(anchor.gx + (orig.x + orig.w - anchor.gx) * scale);
+  const bottom = Math.round(anchor.gy + (orig.y + orig.h - anchor.gy) * scale);
+  return {
+    x,
+    y,
+    w: Math.max(1, right - x),
+    h: Math.max(1, bottom - y),
+  };
+}
+
+/** 選択中の複数部屋のバウンディングボックスとハンドルを描画 */
+export function drawGroupBoundingBox(
+  ctx: CanvasRenderingContext2D,
+  rooms: Room[],
+  zoom: number,
+): void {
+  const bb = computeGroupBoundingBox(rooms);
+  if (bb.w <= 0 || bb.h <= 0) return;
+
+  const px = bb.x * GRID,
+    py = bb.y * GRID,
+    pw = bb.w * GRID,
+    ph = bb.h * GRID;
+
+  // 破線矩形
+  ctx.strokeStyle = '#2196F3';
+  ctx.lineWidth = 1.5 / zoom;
+  ctx.setLineDash([6 / zoom, 4 / zoom]);
+  ctx.strokeRect(px, py, pw, ph);
+  ctx.setLineDash([]);
+
+  // 4隅ハンドル
+  const size = HANDLE_SIZE / zoom;
+  for (const handle of getGroupHandles(bb)) {
+    ctx.fillStyle = '#2196F3';
+    ctx.fillRect(handle.px - size / 2, handle.py - size / 2, size, size);
+  }
 }
 
 /** 全部屋を囲むバウンディングボックスをピクセル座標で返す（パディング付き） */

@@ -4,8 +4,9 @@ import {
   drawRoom,
   drawCreationPreview,
   drawAreaSelectPreview,
+  drawGroupBoundingBox,
 } from '../room.ts';
-import { getSingleSelected } from '../selection.ts';
+import { getSingleSelected, getSelectedRooms } from '../selection.ts';
 import { drawOutwardDoorsOverlay } from '../wall-object.ts';
 import { drawCameraFovOverlay, drawCameraHandles } from '../camera.ts';
 import { drawFreeText, drawFreeTextHandles } from '../free-text.ts';
@@ -69,6 +70,14 @@ export function render(ec: EditorContext): void {
       activeWallObjectId,
       activeIntObjId,
     );
+  }
+
+  // Group bounding box for multi-selection
+  {
+    const selRooms = getSelectedRooms(state.rooms, state.selection);
+    if (selRooms.length >= 2) {
+      drawGroupBoundingBox(ctx, selRooms, viewport.zoom);
+    }
   }
 
   // link group indicators
