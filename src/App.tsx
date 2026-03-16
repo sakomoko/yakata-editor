@@ -94,6 +94,9 @@ export default function App() {
     null,
   );
   const [paintMode, setPaintMode] = useState(false);
+  const [paintColor, setPaintColor] = useState('#ff0000');
+  const [paintLineWidth, setPaintLineWidth] = useState(3);
+  const [paintOpacity, setPaintOpacity] = useState(1);
 
   // Multi-project state
   // tabState: React state (レンダリング用), tabStateRef: ref (コールバック内での最新値参照用)
@@ -566,14 +569,21 @@ export default function App() {
           <>
             <input
               type="color"
-              value={editorRef.current?.getPaintState().paintColor ?? '#ff0000'}
-              onChange={(e) => editorRef.current?.setPaintColor(e.target.value)}
+              value={paintColor}
+              onChange={(e) => {
+                setPaintColor(e.target.value);
+                editorRef.current?.setPaintColor(e.target.value);
+              }}
               style={{ width: 28, height: 24, border: 'none', padding: 0, cursor: 'pointer' }}
               title="ペン色"
             />
             <select
-              value={editorRef.current?.getPaintState().paintLineWidth ?? 3}
-              onChange={(e) => editorRef.current?.setPaintLineWidth(Number(e.target.value))}
+              value={paintLineWidth}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setPaintLineWidth(v);
+                editorRef.current?.setPaintLineWidth(v);
+              }}
               style={{
                 height: 24,
                 fontSize: 11,
@@ -591,8 +601,12 @@ export default function App() {
               <option value={10}>10px</option>
             </select>
             <select
-              value={editorRef.current?.getPaintState().paintOpacity ?? 1}
-              onChange={(e) => editorRef.current?.setPaintOpacity(Number(e.target.value))}
+              value={paintOpacity}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setPaintOpacity(v);
+                editorRef.current?.setPaintOpacity(v);
+              }}
               style={{
                 height: 24,
                 fontSize: 11,

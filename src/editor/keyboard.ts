@@ -21,7 +21,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
       flags.activeInteriorObjectId = undefined;
       flags.activeFreeTextId = undefined;
     }
-    canvas.style.cursor = 'crosshair';
+    canvas.style.cursor = state.paintMode ? 'crosshair' : 'default';
     ec.render();
     ec.callbacks.onPaintModeChange?.(state.paintMode);
     return;
