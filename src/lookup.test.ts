@@ -74,6 +74,7 @@ describe('findRoomIndexById', () => {
 describe('findFreeTextById', () => {
   it('returns the free text when found', () => {
     expect(findFreeTextById(freeTexts, 'ft1')).toBe(freeTexts[0]);
+    expect(findFreeTextById(freeTexts, 'ft2')).toBe(freeTexts[1]);
   });
 
   it('returns undefined when not found', () => {
