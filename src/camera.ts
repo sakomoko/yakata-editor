@@ -135,7 +135,7 @@ export function getCameraHandlePositions(
   const { cx, cy } = cameraCenter(room, cam);
   const rangePx = cam.fovRange * GRID;
 
-  const rotDist = GRID * 2;
+  const rotDist = GRID * 1.5;
   const leftAngle = cam.angle - cam.fovAngle;
   const rightAngle = cam.angle + cam.fovAngle;
 
@@ -266,7 +266,7 @@ export function computeCameraFovAngle(
   const { cx, cy } = cameraCenter(room, cam);
   const mouseAngle = Math.atan2(py - cy, px - cx);
   let diff = Math.abs(mouseAngle - cam.angle);
-  // [-PI, PI] に正規化
+  // [0, PI] に正規化
   if (diff > Math.PI) diff = 2 * Math.PI - diff;
   // 最小5°、最大90°
   return Math.max(Math.PI / 36, Math.min(Math.PI / 2, diff));

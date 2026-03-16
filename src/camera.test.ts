@@ -185,8 +185,8 @@ describe('getCameraHandlePositions', () => {
     const cy = (room.y + cam.y + cam.h / 2) * GRID;
     const rangePx = 5 * GRID;
 
-    // 回転ハンドル: GRID * 2 の固定位置
-    expect(handles.rotate.x).toBeCloseTo(cx + GRID * 2);
+    // 回転ハンドル: GRID * 1.5 の固定位置
+    expect(handles.rotate.x).toBeCloseTo(cx + GRID * 1.5);
     expect(handles.rotate.y).toBeCloseTo(cy);
 
     // 距離ハンドル: range の位置

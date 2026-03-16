@@ -16,12 +16,6 @@ import type {
 } from './types.ts';
 import { CAMERA_COLOR_PRESETS } from './camera.ts';
 import type { ViewportState } from './viewport.ts';
-
-/** プリセットカラー値のホワイトリスト。現時点ではプリセット以外のカスタム色は禁止。
- * 将来カラーピッカー等で任意色を許可する場合は、このバリデーションを緩和すること。 */
-const VALID_CAMERA_COLORS = new Set(
-  Object.values(CAMERA_COLOR_PRESETS).flatMap((c) => [c.fovColor, c.fovStrokeColor]),
-);
 import { clampZoom } from './viewport.ts';
 
 const STORAGE_KEY = 'madori_data';
@@ -35,6 +29,11 @@ const VALID_INTERIOR_OBJECT_TYPES = new Set(['stairs', 'marker', 'camera']);
 const VALID_STAIRS_TYPES = new Set(['straight', 'folding']);
 const VALID_STAIRS_DIRECTIONS = new Set(['n', 'e', 's', 'w']);
 const VALID_MARKER_KINDS = new Set(['body', 'pin', 'text']);
+/** プリセットカラー値のホワイトリスト。現時点ではプリセット以外のカスタム色は禁止。
+ * 将来カラーピッカー等で任意色を許可する場合は、このバリデーションを緩和すること。 */
+const VALID_CAMERA_COLORS = new Set(
+  Object.values(CAMERA_COLOR_PRESETS).flatMap((c) => [c.fovColor, c.fovStrokeColor]),
+);
 
 function restorePairedWithEntry(value: unknown): { roomId: string; objectId: string } | undefined {
   if (
