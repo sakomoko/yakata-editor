@@ -136,6 +136,10 @@ export default function App() {
     if (!file) return;
     try {
       const data = await loadFromFile(file);
+      if (data.warning) {
+        alert(data.warning);
+        return;
+      }
       editorRef.current?.loadProject(data);
     } catch {
       alert('ファイルを読み込めませんでした');

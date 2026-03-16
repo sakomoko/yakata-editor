@@ -231,12 +231,18 @@ function ensureIds(rooms: unknown[]): Room[] {
   });
 }
 
-interface StorageData {
+export interface StorageData {
   rooms: Room[];
   freeTexts: FreeText[];
+  /** データが存在したが解析できなかった場合の警告メッセージ */
+  warning?: string;
 }
 
-function parseStorageData(parsed: unknown): StorageData {
+const WARNING_UNRECOGNIZED_FORMAT =
+  'データ形式を認識できませんでした。データが破損している可能性があります。';
+
+/** @internal Exported for testing */
+export function parseStorageData(parsed: unknown): StorageData {
   // 旧形式: 配列（rooms only）
   if (Array.isArray(parsed)) {
     return { rooms: ensureIds(parsed), freeTexts: [] };
@@ -244,11 +250,15 @@ function parseStorageData(parsed: unknown): StorageData {
   // 新形式: { rooms, freeTexts }
   if (parsed && typeof parsed === 'object') {
     const obj = parsed as Record<string, unknown>;
-    const rooms = Array.isArray(obj.rooms) ? ensureIds(obj.rooms) : [];
-    const freeTexts = Array.isArray(obj.freeTexts) ? ensureFreeTextIds(obj.freeTexts) : [];
-    return { rooms, freeTexts };
+    if (!Array.isArray(obj.rooms)) {
+      return { rooms: [], freeTexts: [], warning: WARNING_UNRECOGNIZED_FORMAT };
+    }
+    return {
+      rooms: ensureIds(obj.rooms),
+      freeTexts: Array.isArray(obj.freeTexts) ? ensureFreeTextIds(obj.freeTexts) : [],
+    };
   }
-  return { rooms: [], freeTexts: [] };
+  return { rooms: [], freeTexts: [], warning: WARNING_UNRECOGNIZED_FORMAT };
 }
 
 export function persistToStorage(rooms: Room[], freeTexts: FreeText[] = []): void {
@@ -267,9 +277,12 @@ export function loadFromStorage(): StorageData {
     const parsed: unknown = JSON.parse(data);
     return parseStorageData(parsed);
   } catch {
-    // corrupt data
+    return {
+      rooms: [],
+      freeTexts: [],
+      warning: '保存データの読み込みに失敗しました。データが破損している可能性があります。',
+    };
   }
-  return { rooms: [], freeTexts: [] };
 }
 
 export function saveAsJson(rooms: Room[], freeTexts: FreeText[] = []): void {

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { ensureWallObjectIds, ensureInteriorObjectIds, ensureFreeTextIds } from './persistence.ts';
+import {
+  ensureWallObjectIds,
+  ensureInteriorObjectIds,
+  ensureFreeTextIds,
+  parseStorageData,
+} from './persistence.ts';
 import type { WallDoor, StraightStairs, FoldingStairs, Marker } from './types.ts';
 
 describe('ensureWallObjectIds', () => {
@@ -290,5 +295,47 @@ describe('ensureFreeTextIds', () => {
     const raw = [{ gx: 0, gy: 0, w: 3, h: 2, label: 123 }];
     const result = ensureFreeTextIds(raw);
     expect(result).toHaveLength(0);
+  });
+});
+
+describe('parseStorageData', () => {
+  it('新形式のデータを正しく解析する', () => {
+    const data = {
+      rooms: [{ id: 'r1', x: 0, y: 0, w: 5, h: 5, label: 'Room' }],
+      freeTexts: [
+        { id: 'ft1', gx: 0, gy: 0, w: 3, h: 2, label: 'Text', fontSize: 14, zLayer: 'front' },
+      ],
+    };
+    const result = parseStorageData(data);
+    expect(result.rooms).toHaveLength(1);
+    expect(result.freeTexts).toHaveLength(1);
+    expect(result.warning).toBeUndefined();
+  });
+
+  it('旧形式（配列）のデータを正しく解析する', () => {
+    const data = [{ id: 'r1', x: 0, y: 0, w: 5, h: 5, label: 'Room' }];
+    const result = parseStorageData(data);
+    expect(result.rooms).toHaveLength(1);
+    expect(result.freeTexts).toHaveLength(0);
+    expect(result.warning).toBeUndefined();
+  });
+
+  it('認識できないオブジェクト形式の場合warningを返す', () => {
+    const data = { version: 1, name: 'test' };
+    const result = parseStorageData(data);
+    expect(result.rooms).toHaveLength(0);
+    expect(result.warning).toBeTruthy();
+  });
+
+  it('プリミティブ値の場合warningを返す', () => {
+    const result = parseStorageData('invalid');
+    expect(result.rooms).toHaveLength(0);
+    expect(result.warning).toBeTruthy();
+  });
+
+  it('nullの場合warningを返す', () => {
+    const result = parseStorageData(null);
+    expect(result.rooms).toHaveLength(0);
+    expect(result.warning).toBeTruthy();
   });
 });
