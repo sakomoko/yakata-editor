@@ -1,4 +1,4 @@
-import type { EditorState, Room, FreeText, FreeTextEditData, MouseCoord } from '../types.ts';
+import type { EditorState, Room, FreeText, FreeTextEditData, MouseCoord, ProjectData } from '../types.ts';
 import type { ContextMenuItem } from '../context-menu.ts';
 import type { ViewportState } from '../viewport.ts';
 
@@ -24,6 +24,8 @@ export interface EditorCallbacks {
   onMarkerEdit: (data: MarkerEditData) => Promise<{ label: string } | null>;
   onFreeTextEdit: (data: FreeTextEditData) => Promise<{ label: string; fontSize: number } | null>;
   onContextMenu: (request: ContextMenuRequest) => void;
+  onAutoSave: () => void;
+  onViewportChange: () => void;
 }
 
 export interface EditorAPI {
@@ -34,6 +36,9 @@ export interface EditorAPI {
   exportAsPng: () => void;
   resize: () => void;
   destroy: () => void;
+  getState: () => { rooms: Room[]; freeTexts: FreeText[]; history: string[] };
+  getViewport: () => ViewportState;
+  loadProjectState: (data: ProjectData) => void;
 }
 
 export interface EditorContext {

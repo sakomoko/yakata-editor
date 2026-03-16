@@ -1,5 +1,4 @@
 import { zoomAtPoint, ZOOM_STEP } from '../viewport.ts';
-import { persistViewport } from '../persistence.ts';
 import type { EditorContext } from './context.ts';
 
 export function onWheel(ec: EditorContext, e: WheelEvent): void {
@@ -25,5 +24,5 @@ export function onWheel(ec: EditorContext, e: WheelEvent): void {
   }
 
   ec.render();
-  persistViewport(viewport);
+  ec.callbacks.onViewportChange();
 }

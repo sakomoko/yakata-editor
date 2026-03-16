@@ -15,10 +15,12 @@ EditorContext 経由で EditorState 更新
     ↓
 commitChange()（editor/project.ts）
     ↓
-pushUndo() → render() → persistToStorage()
+pushUndo() → render() → callbacks.onAutoSave()
     ↓
-Canvas 再描画 + localStorage 保存
+Canvas 再描画 + App.tsx → project-store.ts → localStorage 保存
 ```
+
+エディタはストレージに直接依存せず、`onAutoSave` / `onViewportChange` コールバックを通じて App.tsx に通知する。App.tsx が `project-store.ts` を使ってアクティブプロジェクトのキーに保存する。
 
 ## モジュール構成
 
@@ -41,7 +43,7 @@ Canvas 再描画 + localStorage 保存
   - **editor/wheel.ts** — `onWheel()` ホイールズーム・パン処理
   - **editor/dblclick.ts** — `onDblClick()` ダブルクリックイベント処理
   - **editor/utils.ts** — `labelDisplayWidth()`, `createMousePos()` ユーティリティ
-- **types.ts** — 全型定義（`Room`, `FreeText`, `WallObject`, `RoomInteriorObject`, `Project`, `EditorState`, `DragState`, `MouseCoord`, `Handle`, `GroupHandle`, `GroupScaleOriginal`, `CornerDirection`）
+- **types.ts** — 全型定義（`Room`, `FreeText`, `WallObject`, `RoomInteriorObject`, `Project`, `EditorState`, `DragState`, `MouseCoord`, `Handle`, `GroupHandle`, `GroupScaleOriginal`, `CornerDirection`, `ProjectMeta`, `ProjectData`, `TabState`）
 
 ### 機能モジュール
 
@@ -58,7 +60,8 @@ Canvas 再描画 + localStorage 保存
 - **selection.ts** — `Set<string>` ベースの選択状態管理
 - **history.ts** — Undoスタック（JSON snapshot方式、最大50件）
 - **grid.ts** — グリッド定数（`GRID=20px`）とビューポート対応のグリッド描画
-- **persistence.ts** — localStorage自動保存、JSON/PNGエクスポート、ファイルインポート
+- **project-store.ts** — マルチプロジェクト対応のlocalStorageストレージ層。プロジェクトindex・プロジェクトデータ・タブ状態のCRUD、旧形式からの自動マイグレーション、デフォルト名生成
+- **persistence.ts** — データバリデーション（`parseStorageData`）、JSON/PNGエクスポート、ファイルインポート
 
 ## モジュール依存関係
 
@@ -68,7 +71,7 @@ main.ts
   │   ├─ editor/index.ts (initEditor)
   │   │   ├─ editor/context.ts (EditorContext, EditorCallbacks, EditorAPI)
   │   │   ├─ editor/render.ts → room.ts, wall-object.ts, camera.ts, free-text.ts, grid.ts, lookup.ts
-  │   │   ├─ editor/project.ts → history.ts, selection.ts, persistence.ts, room.ts, adjacency.ts
+  │   │   ├─ editor/project.ts → history.ts, selection.ts, room.ts, adjacency.ts
   │   │   ├─ editor/mouse-down.ts → room.ts, wall-object.ts, interior-object.ts, camera.ts, free-text.ts, link.ts, lookup.ts
   │   │   ├─ editor/mouse-move.ts → room.ts, wall-object.ts, interior-object.ts, camera.ts, free-text.ts, adjacency.ts, lookup.ts
   │   │   ├─ editor/mouse-up.ts → room.ts, wall-object.ts, free-text.ts, adjacency.ts, lookup.ts
@@ -77,6 +80,8 @@ main.ts
   │   │   ├─ editor/wheel.ts → viewport.ts
   │   │   ├─ editor/dblclick.ts → room.ts, interior-object.ts, free-text.ts
   │   │   └─ editor/utils.ts → grid.ts, viewport.ts
+  │   ├─ project-store.ts → persistence.ts (parseStorageData), viewport.ts
+  │   ├─ TabBar.tsx, ProjectListModal.tsx
   │   ├─ RoomDialog.tsx, MarkerDialog.tsx, FreeTextDialog.tsx
   │   ├─ ContextMenu.tsx → context-menu.ts
   │   └─ persistence.ts
@@ -107,4 +112,22 @@ main.ts
 - `drag: DragState` — ドラッグ操作の状態（discriminated union: `create | areaSelect | move | resize | groupResize | moveWallObject | resizeWallObject | moveInteriorObject | resizeInteriorObject | moveFreeText | resizeFreeText | rotateCameraAngle | adjustCameraFovAngle | adjustCameraFovRange | pan | null`）
 - `mouse: MouseCoord` — 現在のマウス座標
 
-状態変更は `commitChange()` を通じて行い、Undo履歴の保存・Canvas再描画・localStorage保存をまとめて実行する。
+状態変更は `commitChange()` を通じて行い、Undo履歴の保存・Canvas再描画・`onAutoSave` コールバック呼び出しをまとめて実行する。
+
+## マルチプロジェクト管理
+
+アプリケーションは複数プロジェクトをlocalStorageで管理する。
+
+**localStorageキー:**
+| キー | 内容 |
+|------|------|
+| `yakata_project_index` | `ProjectMeta[]` — 全プロジェクトのメタデータ（ID・名前・作成日・更新日） |
+| `yakata_project_{id}` | `ProjectData` — プロジェクトごとのデータ（rooms, freeTexts, viewport, history） |
+| `yakata_tab_state` | `TabState` — 開いているタブの状態（openTabs, activeTabId） |
+
+**データフロー:**
+- エディタの `onAutoSave` / `onViewportChange` コールバック → App.tsx の `saveCurrentProject()` → `project-store.ts` の `saveProjectData()`
+- タブ切り替え時: 現在のプロジェクトを保存 → 新プロジェクトをロード → `EditorAPI.loadProjectState()` でエディタの全状態を置換
+- `updatedAt` の更新はdebounce付き（2秒）で、高頻度の保存イベントでindex読み書きが毎回走るのを防止
+
+**マイグレーション:** 初回アクセス時に旧 `madori_data` / `madori_viewport` キーから新形式に自動移行し、旧キーは削除される。
