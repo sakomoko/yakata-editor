@@ -119,9 +119,8 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
         const h = hitHandle(state.rooms, state.selection, m.px, m.py, viewport.zoom);
         if (h) {
           canvas.style.cursor = h.handle.dir + '-resize';
-        } else if (state.selection.size >= 2) {
-          const selRooms = state.rooms.filter((r) => state.selection.has(r.id));
-          const bb = computeGroupBoundingBox(selRooms);
+        } else if (selectedRooms.length >= 2) {
+          const bb = computeGroupBoundingBox(selectedRooms);
           const gh = hitGroupHandle(bb, m.px, m.py, viewport.zoom);
           if (gh) {
             canvas.style.cursor = gh.dir + '-resize';

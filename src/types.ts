@@ -130,6 +130,12 @@ export interface Handle {
   dir: ResizeDirection;
 }
 
+export interface GroupHandle {
+  px: number;
+  py: number;
+  dir: CornerDirection;
+}
+
 export interface GroupScaleOriginal {
   x: number;
   y: number;

@@ -1,4 +1,4 @@
-import type { Room, Handle, MouseCoord, CornerDirection } from './types.ts';
+import type { Room, Handle, MouseCoord, CornerDirection, GroupHandle } from './types.ts';
 import { GRID, HANDLE_SIZE, HANDLE_HIT } from './grid.ts';
 import { findRoomById } from './lookup.ts';
 import { drawWallSegments, drawWallObjects, drawWallObjectResizeHandles } from './wall-object.ts';
@@ -217,7 +217,7 @@ export function getGroupHandles(bb: {
   y: number;
   w: number;
   h: number;
-}): Handle[] {
+}): GroupHandle[] {
   const x = bb.x * GRID,
     y = bb.y * GRID,
     w = bb.w * GRID,
@@ -236,7 +236,7 @@ export function hitGroupHandle(
   px: number,
   py: number,
   zoom: number,
-): Handle | null {
+): GroupHandle | null {
   const tolerance = HANDLE_HIT / zoom;
   for (const h of getGroupHandles(bb)) {
     if (Math.abs(px - h.px) < tolerance && Math.abs(py - h.py) < tolerance) {

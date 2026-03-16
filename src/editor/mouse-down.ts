@@ -1,4 +1,4 @@
-import type { CornerDirection, FreeText, GroupScaleOriginal } from '../types.ts';
+import type { FreeText, GroupScaleOriginal } from '../types.ts';
 import { findFreeTextById } from '../lookup.ts';
 import { GRID } from '../grid.ts';
 import { hitHandle, hitRoom, computeGroupBoundingBox, hitGroupHandle, getAnchorForDir } from '../room.ts';
@@ -142,51 +142,53 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
   }
 
   // Group resize: multiple rooms selected → check group bounding box handles
-  if (state.selection.size >= 2) {
+  // selection にはFreeTextのIDも含まれるため、部屋が2つ以上あるか確認
+  {
     const selRooms = getSelectedRooms(state.rooms, state.selection);
-    const selBB = computeGroupBoundingBox(selRooms);
-    const groupHandle = hitGroupHandle(selBB, m.px, m.py, viewport.zoom);
-    if (groupHandle) {
-      pushUndo(state.history, state.rooms, state.freeTexts);
-      const expanded = expandWithLinked(state.rooms, state.selection);
-      const expandedRooms = state.rooms.filter((r) => expanded.has(r.id));
-      // BB をリンク拡張後の全部屋から再計算
-      const bb = computeGroupBoundingBox(expandedRooms);
-      const originals = new Map<string, GroupScaleOriginal>();
-      for (const room of expandedRooms) {
-        originals.set(room.id, {
-          x: room.x,
-          y: room.y,
-          w: room.w,
-          h: room.h,
-          fontSize: room.fontSize,
-          wallObjects: room.wallObjects?.map((wo) => ({
-            id: wo.id,
-            offset: wo.offset,
-            width: wo.width,
-          })),
-          interiorObjects: room.interiorObjects?.map((io) => ({
-            id: io.id,
-            x: io.x,
-            y: io.y,
-            w: io.w,
-            h: io.h,
-            fovRange: io.type === 'camera' ? io.fovRange : undefined,
-          })),
-        });
+    if (selRooms.length >= 2) {
+      const selBB = computeGroupBoundingBox(selRooms);
+      const groupHandle = hitGroupHandle(selBB, m.px, m.py, viewport.zoom);
+      if (groupHandle) {
+        pushUndo(state.history, state.rooms, state.freeTexts);
+        const expanded = expandWithLinked(state.rooms, state.selection);
+        const expandedRooms = state.rooms.filter((r) => expanded.has(r.id));
+        // BB をリンク拡張後の全部屋から再計算
+        const bb = computeGroupBoundingBox(expandedRooms);
+        const originals = new Map<string, GroupScaleOriginal>();
+        for (const room of expandedRooms) {
+          originals.set(room.id, {
+            x: room.x,
+            y: room.y,
+            w: room.w,
+            h: room.h,
+            fontSize: room.fontSize,
+            wallObjects: room.wallObjects?.map((wo) => ({
+              id: wo.id,
+              offset: wo.offset,
+              width: wo.width,
+            })),
+            interiorObjects: room.interiorObjects?.map((io) => ({
+              id: io.id,
+              x: io.x,
+              y: io.y,
+              w: io.w,
+              h: io.h,
+              fovRange: io.type === 'camera' ? io.fovRange : undefined,
+            })),
+          });
+        }
+        const anchor = getAnchorForDir(bb, groupHandle.dir);
+        state.drag = {
+          type: 'groupResize',
+          dir: groupHandle.dir,
+          origBB: bb,
+          anchor,
+          originals,
+        };
+        canvas.style.cursor = groupHandle.dir + '-resize';
+        ec.render();
+        return;
       }
-      const cornerDir = groupHandle.dir as CornerDirection;
-      const anchor = getAnchorForDir(bb, cornerDir);
-      state.drag = {
-        type: 'groupResize',
-        dir: cornerDir,
-        origBB: bb,
-        anchor,
-        originals,
-      };
-      canvas.style.cursor = groupHandle.dir + '-resize';
-      ec.render();
-      return;
     }
   }
 
