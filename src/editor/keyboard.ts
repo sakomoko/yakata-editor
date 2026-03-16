@@ -13,7 +13,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
   const { canvas, state, viewport, flags } = ec;
 
   // P キーでペイントモードトグル
-  if (e.key === 'p' && !e.metaKey && !e.ctrlKey && document.activeElement === document.body) {
+  if (e.key.toLowerCase() === 'p' && !e.metaKey && !e.ctrlKey && document.activeElement === document.body) {
     e.preventDefault();
     state.paintMode = !state.paintMode;
     if (state.paintMode) {
@@ -132,7 +132,7 @@ export function onKeyUp(ec: EditorContext, e: KeyboardEvent): void {
   if (e.code === 'Space') {
     ec.flags.isPanning = false;
     if (!ec.state.drag || ec.state.drag.type !== 'pan') {
-      ec.canvas.style.cursor = 'crosshair';
+      ec.canvas.style.cursor = ec.state.paintMode ? 'crosshair' : 'default';
     }
   }
 }

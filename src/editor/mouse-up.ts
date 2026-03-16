@@ -15,7 +15,7 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
 
   if (state.drag.type === 'pan') {
     state.drag = null;
-    canvas.style.cursor = flags.isPanning ? 'grab' : 'crosshair';
+    canvas.style.cursor = flags.isPanning ? 'grab' : state.paintMode ? 'crosshair' : 'default';
     ec.callbacks.onViewportChange();
     return;
   }
@@ -34,7 +34,7 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
     // Cursor will be recalculated on next mousemove; set a reasonable default
     const m = ec.mousePos(e);
     const stillOnWallObj = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom, true);
-    canvas.style.cursor = stillOnWallObj ? 'grab' : 'crosshair';
+    canvas.style.cursor = stillOnWallObj ? 'grab' : state.paintMode ? 'crosshair' : 'default';
     ec.render();
     ec.callbacks.onAutoSave();
     return;
@@ -66,7 +66,7 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
 
   if (state.drag.type === 'moveStroke') {
     state.drag = null;
-    canvas.style.cursor = 'crosshair';
+    canvas.style.cursor = state.paintMode ? 'crosshair' : 'default';
     ec.render();
     ec.callbacks.onAutoSave();
     return;
@@ -82,7 +82,7 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
     state.drag.type === 'resizeFreeText'
   ) {
     state.drag = null;
-    canvas.style.cursor = 'crosshair';
+    canvas.style.cursor = state.paintMode ? 'crosshair' : 'default';
     ec.render();
     ec.callbacks.onAutoSave();
     return;
@@ -124,7 +124,7 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
     // 部屋の移動・リサイズ後にペア開口を再同期
     syncAllPairedOpenings(state.rooms);
     if (state.drag.type === 'groupResize') {
-      canvas.style.cursor = 'crosshair';
+      canvas.style.cursor = state.paintMode ? 'crosshair' : 'default';
     }
   }
 
