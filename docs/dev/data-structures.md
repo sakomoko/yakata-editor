@@ -192,6 +192,7 @@ type DragState =
   | { type: 'rotateCameraAngle'; roomId: string; objectId: string }
   | { type: 'adjustCameraFovAngle'; roomId: string; objectId: string }
   | { type: 'adjustCameraFovRange'; roomId: string; objectId: string }
+  | { type: 'groupResize'; dir: CornerDirection; origBB: { x: number; y: number; w: number; h: number }; anchor: { gx: number; gy: number }; originals: Map<string, GroupScaleOriginal> }
   | null;
 ```
 
@@ -211,6 +212,7 @@ type DragState =
 | `rotateCameraAngle` | カメラの回転ハンドルをドラッグ | カメラの向き（angle）を変更 |
 | `adjustCameraFovAngle` | カメラの広がりハンドルをドラッグ | 視野の半角（fovAngle）を調整 |
 | `adjustCameraFovRange` | カメラの距離ハンドルをドラッグ | 視野の到達距離（fovRange）を調整 |
+| `groupResize` | グループBBの4隅ハンドルをドラッグ（部屋2つ以上選択時） | アスペクト比維持で選択部屋を一括スケーリング |
 | `null` | ドラッグなし | 通常状態 |
 
 ## EditorState
@@ -247,12 +249,37 @@ interface MouseCoord {
 
 ```typescript
 type ResizeDirection = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
+type CornerDirection = 'nw' | 'ne' | 'se' | 'sw';
 
 interface Handle {
   px: number;          // ハンドルのピクセル座標 X
   py: number;          // ハンドルのピクセル座標 Y
   dir: ResizeDirection; // リサイズ方向
 }
+
+interface GroupHandle {
+  px: number;          // ハンドルのピクセル座標 X
+  py: number;          // ハンドルのピクセル座標 Y
+  dir: CornerDirection; // 4隅方向のみ
+}
 ```
 
-8方向のハンドルが部屋の選択時に表示される。ハンドルサイズは `HANDLE_SIZE=8px`、ヒット判定範囲は `HANDLE_HIT=7px`。
+8方向のハンドルが部屋の単一選択時に表示される。複数部屋選択時はグループBBの4隅にのみハンドルが表示される。ハンドルサイズは `HANDLE_SIZE=8px`、ヒット判定範囲は `HANDLE_HIT=7px`。
+
+## GroupScaleOriginal
+
+グループスケーリング時に保存される部屋のスナップショット。
+
+```typescript
+interface GroupScaleOriginal {
+  x: number;           // 元のグリッド座標 X
+  y: number;           // 元のグリッド座標 Y
+  w: number;           // 元の幅（グリッド単位）
+  h: number;           // 元の高さ（グリッド単位）
+  fontSize?: number;   // 明示設定されたフォントサイズ
+  wallObjects?: Array<{ id: string; offset: number; width: number }>;
+  interiorObjects?: Array<{ id: string; x: number; y: number; w: number; h: number; fovRange?: number }>;
+}
+```
+
+スケーリング計算は常に元データから行い、累積誤差を防ぐ。サイズ計算は右端/下端から位置を引く方式で、隣接部屋間の隙間/重なりを防止する。
