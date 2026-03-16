@@ -39,6 +39,7 @@ Canvas上でのマウス操作 → editor/ のイベントハンドラ → state
   - **editor/wheel.ts** — `onWheel()` ホイールズーム・パン処理
   - **editor/dblclick.ts** — `onDblClick()` ダブルクリックイベント処理
   - **editor/utils.ts** — `labelDisplayWidth()`, `createMousePos()` ユーティリティ
+- **lookup.ts** — ID検索ヘルパー (`findRoomById`, `findRoomIndexById`, `findFreeTextById`, `findWallObjectById`, `findInteriorObjectById`)
 - **room.ts** — 部屋の生成(`createRoom`)、描画(`drawRoom`)、ヒット判定(`hitRoom`, `hitHandle`)、リサイズハンドル計算(`getHandles`)
 - **wall-object.ts** — 壁オブジェクト(窓など)の生成・ヒット判定・ピクセル座標変換・壁セグメント分割
 - **interior-object.ts** — 部屋内オブジェクト(階段・マーカー)の生成・描画・ヒット判定・クランプ・移動/リサイズ計算
