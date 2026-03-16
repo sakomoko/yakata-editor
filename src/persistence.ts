@@ -14,7 +14,7 @@ import type {
   StairsDirection,
   MarkerKind,
 } from './types.ts';
-import { CAMERA_COLOR_PRESETS } from './types.ts';
+import { CAMERA_COLOR_PRESETS } from './camera.ts';
 import type { ViewportState } from './viewport.ts';
 import { clampZoom } from './viewport.ts';
 
@@ -179,10 +179,17 @@ export function ensureInteriorObjectIds(objects: unknown[]): RoomInteriorObject[
           typeof obj.fovRange === 'number' && Number.isFinite(obj.fovRange)
             ? Math.max(1, Math.min(20, obj.fovRange))
             : 5;
+        const validColors = new Set(
+          Object.values(CAMERA_COLOR_PRESETS).flatMap((c) => [c.fovColor, c.fovStrokeColor]),
+        );
         const fovColor =
-          typeof obj.fovColor === 'string' ? obj.fovColor : defaults.fovColor;
+          typeof obj.fovColor === 'string' && validColors.has(obj.fovColor)
+            ? obj.fovColor
+            : defaults.fovColor;
         const fovStrokeColor =
-          typeof obj.fovStrokeColor === 'string' ? obj.fovStrokeColor : defaults.fovStrokeColor;
+          typeof obj.fovStrokeColor === 'string' && validColors.has(obj.fovStrokeColor)
+            ? obj.fovStrokeColor
+            : defaults.fovStrokeColor;
         return {
           id,
           type: 'camera',

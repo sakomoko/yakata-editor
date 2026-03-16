@@ -1,12 +1,20 @@
-import type { Room, SecurityCamera } from './types.ts';
-import { CAMERA_COLOR_PRESETS } from './types.ts';
+import type { Room, SecurityCamera, CameraColorPreset } from './types.ts';
 import { GRID, HANDLE_SIZE, HANDLE_HIT } from './grid.ts';
+
+export const CAMERA_COLOR_PRESETS: Record<
+  CameraColorPreset,
+  { fovColor: string; fovStrokeColor: string }
+> = {
+  blue: { fovColor: 'rgba(0,150,255,0.15)', fovStrokeColor: 'rgba(0,150,255,0.4)' },
+  red: { fovColor: 'rgba(255,50,50,0.15)', fovStrokeColor: 'rgba(255,50,50,0.4)' },
+  green: { fovColor: 'rgba(50,200,50,0.15)', fovStrokeColor: 'rgba(50,200,50,0.4)' },
+  yellow: { fovColor: 'rgba(255,200,0,0.15)', fovStrokeColor: 'rgba(255,200,0,0.4)' },
+};
 
 const CAMERA_DEFAULT_W = 1;
 const CAMERA_DEFAULT_H = 1;
 const DEFAULT_FOV_ANGLE = Math.PI / 6; // 30° half-angle
 const DEFAULT_FOV_RANGE = 5; // grids
-const DEFAULT_COLORS = CAMERA_COLOR_PRESETS.blue;
 
 export function createSecurityCamera(
   x: number,
@@ -25,8 +33,8 @@ export function createSecurityCamera(
     angle,
     fovAngle: DEFAULT_FOV_ANGLE,
     fovRange: DEFAULT_FOV_RANGE,
-    fovColor: DEFAULT_COLORS.fovColor,
-    fovStrokeColor: DEFAULT_COLORS.fovStrokeColor,
+    fovColor: CAMERA_COLOR_PRESETS.blue.fovColor,
+    fovStrokeColor: CAMERA_COLOR_PRESETS.blue.fovStrokeColor,
   };
 }
 
@@ -127,7 +135,7 @@ export function getCameraHandlePositions(
   const { cx, cy } = cameraCenter(room, cam);
   const rangePx = cam.fovRange * GRID;
 
-  const rotDist = rangePx * 0.7;
+  const rotDist = GRID * 2;
   const leftAngle = cam.angle - cam.fovAngle;
   const rightAngle = cam.angle + cam.fovAngle;
 

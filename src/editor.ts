@@ -7,7 +7,7 @@ import type {
   WallObject,
   CameraColorPreset,
 } from './types.ts';
-import { CAMERA_COLOR_PRESETS } from './types.ts';
+import { CAMERA_COLOR_PRESETS } from './camera.ts';
 import { GRID, drawGrid } from './grid.ts';
 import {
   drawRoom,

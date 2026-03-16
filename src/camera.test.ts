@@ -7,6 +7,7 @@ import {
   computeCameraFovRange,
   hitCameraHandle,
   getCameraHandlePositions,
+  findCameraInRoom,
 } from './camera.ts';
 import { GRID } from './grid.ts';
 
@@ -183,8 +184,8 @@ describe('getCameraHandlePositions', () => {
     const cy = (room.y + cam.y + cam.h / 2) * GRID;
     const rangePx = 5 * GRID;
 
-    // 回転ハンドル: 0.7 * range の位置
-    expect(handles.rotate.x).toBeCloseTo(cx + rangePx * 0.7);
+    // 回転ハンドル: GRID * 2 の固定位置
+    expect(handles.rotate.x).toBeCloseTo(cx + GRID * 2);
     expect(handles.rotate.y).toBeCloseTo(cy);
 
     // 距離ハンドル: range の位置
@@ -231,5 +232,52 @@ describe('hitCameraHandle', () => {
     const cam = makeCam();
     const hit = hitCameraHandle(room, cam, 0, 0, 1);
     expect(hit).toBeNull();
+  });
+});
+
+describe('findCameraInRoom', () => {
+  it('finds a camera by roomId and objectId', () => {
+    const cam = makeCam();
+    const room: Room = { ...makeRoom(), interiorObjects: [cam] };
+    const result = findCameraInRoom([room], room.id, cam.id);
+    expect(result).not.toBeNull();
+    expect(result!.room.id).toBe(room.id);
+    expect(result!.cam.id).toBe(cam.id);
+  });
+
+  it('returns null for non-existent roomId', () => {
+    const cam = makeCam();
+    const room: Room = { ...makeRoom(), interiorObjects: [cam] };
+    const result = findCameraInRoom([room], 'non-existent', cam.id);
+    expect(result).toBeNull();
+  });
+
+  it('returns null for non-existent objectId', () => {
+    const cam = makeCam();
+    const room: Room = { ...makeRoom(), interiorObjects: [cam] };
+    const result = findCameraInRoom([room], room.id, 'non-existent');
+    expect(result).toBeNull();
+  });
+
+  it('returns null when objectId matches a non-camera object', () => {
+    const stairs = {
+      id: 'stairs-1',
+      type: 'stairs' as const,
+      stairsType: 'straight' as const,
+      direction: 'n' as const,
+      x: 0,
+      y: 0,
+      w: 2,
+      h: 2,
+    };
+    const room: Room = { ...makeRoom(), interiorObjects: [stairs] };
+    const result = findCameraInRoom([room], room.id, stairs.id);
+    expect(result).toBeNull();
+  });
+
+  it('returns null when room has no interiorObjects', () => {
+    const room = makeRoom();
+    const result = findCameraInRoom([room], room.id, 'any-id');
+    expect(result).toBeNull();
   });
 });

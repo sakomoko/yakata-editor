@@ -74,16 +74,6 @@ export interface SecurityCamera extends InteriorObjectBase {
 
 export type CameraColorPreset = 'blue' | 'red' | 'green' | 'yellow';
 
-export const CAMERA_COLOR_PRESETS: Record<
-  CameraColorPreset,
-  { fovColor: string; fovStrokeColor: string }
-> = {
-  blue: { fovColor: 'rgba(0,150,255,0.15)', fovStrokeColor: 'rgba(0,150,255,0.4)' },
-  red: { fovColor: 'rgba(255,50,50,0.15)', fovStrokeColor: 'rgba(255,50,50,0.4)' },
-  green: { fovColor: 'rgba(50,200,50,0.15)', fovStrokeColor: 'rgba(50,200,50,0.4)' },
-  yellow: { fovColor: 'rgba(255,200,0,0.15)', fovStrokeColor: 'rgba(255,200,0,0.4)' },
-};
-
 export type RoomInteriorObject = StraightStairs | FoldingStairs | Marker | SecurityCamera;
 
 export interface Room {
