@@ -607,11 +607,7 @@ export function drawInteriorObjectHandles(
   }
 }
 
-export function hitInteriorObject(
-  room: Room,
-  px: number,
-  py: number,
-): RoomInteriorObject | null {
+export function hitInteriorObject(room: Room, px: number, py: number): RoomInteriorObject | null {
   if (!room.interiorObjects?.length) return null;
   for (let i = room.interiorObjects.length - 1; i >= 0; i--) {
     const obj = room.interiorObjects[i];

@@ -157,34 +157,22 @@ describe('findRoomsInArea', () => {
 
 describe('normalizeArea', () => {
   it('should normalize when start is top-left of cur', () => {
-    const result = normalizeArea(
-      { px: 0, py: 0, gx: 1, gy: 2 },
-      { px: 0, py: 0, gx: 5, gy: 6 },
-    );
+    const result = normalizeArea({ px: 0, py: 0, gx: 1, gy: 2 }, { px: 0, py: 0, gx: 5, gy: 6 });
     expect(result).toEqual({ x: 1, y: 2, w: 4, h: 4 });
   });
 
   it('should normalize when dragging right-to-left (cur < start)', () => {
-    const result = normalizeArea(
-      { px: 0, py: 0, gx: 5, gy: 6 },
-      { px: 0, py: 0, gx: 1, gy: 2 },
-    );
+    const result = normalizeArea({ px: 0, py: 0, gx: 5, gy: 6 }, { px: 0, py: 0, gx: 1, gy: 2 });
     expect(result).toEqual({ x: 1, y: 2, w: 4, h: 4 });
   });
 
   it('should return zero size when start equals cur', () => {
-    const result = normalizeArea(
-      { px: 0, py: 0, gx: 3, gy: 4 },
-      { px: 0, py: 0, gx: 3, gy: 4 },
-    );
+    const result = normalizeArea({ px: 0, py: 0, gx: 3, gy: 4 }, { px: 0, py: 0, gx: 3, gy: 4 });
     expect(result).toEqual({ x: 3, y: 4, w: 0, h: 0 });
   });
 
   it('should handle negative grid coordinates', () => {
-    const result = normalizeArea(
-      { px: 0, py: 0, gx: -2, gy: -3 },
-      { px: 0, py: 0, gx: 2, gy: 1 },
-    );
+    const result = normalizeArea({ px: 0, py: 0, gx: -2, gy: -3 }, { px: 0, py: 0, gx: 2, gy: 1 });
     expect(result).toEqual({ x: -2, y: -3, w: 4, h: 4 });
   });
 });

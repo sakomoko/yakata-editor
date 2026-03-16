@@ -30,6 +30,7 @@ Canvas上でのマウス操作 → editor.ts のイベントハンドラ → sta
 - **room.ts** — 部屋の生成(`createRoom`)、描画(`drawRoom`)、ヒット判定(`hitRoom`, `hitHandle`)、リサイズハンドル計算(`getHandles`)
 - **wall-object.ts** — 壁オブジェクト(窓など)の生成・ヒット判定・ピクセル座標変換・壁セグメント分割
 - **interior-object.ts** — 部屋内オブジェクト(階段・マーカー)の生成・描画・ヒット判定・クランプ・移動/リサイズ計算
+- **free-text.ts** — 自由配置テキスト(FreeText)の生成・描画・ヒット判定・リサイズ計算。部屋に属さない独立オブジェクト
 - **adjacency.ts** — 隣接部屋の壁オブジェクト自動同期。ペア開口の作成・削除・全再構築
 - **context-menu.ts** / **ContextMenu.tsx** — 壁の右クリックコンテキストメニュー(窓の追加・削除)
 - **selection.ts** — 選択状態管理 (Set\<string\>ベース)

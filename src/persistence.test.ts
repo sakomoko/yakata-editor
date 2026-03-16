@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ensureWallObjectIds, ensureInteriorObjectIds } from './persistence.ts';
+import { ensureWallObjectIds, ensureInteriorObjectIds, ensureFreeTextIds } from './persistence.ts';
 import type { WallDoor, StraightStairs, FoldingStairs, Marker } from './types.ts';
 
 describe('ensureWallObjectIds', () => {
@@ -53,7 +53,9 @@ describe('ensureWallObjectIds', () => {
   });
 
   it('hinge が不正な値のドアデータは start にフォールバックする', () => {
-    const raw = [{ type: 'door', side: 'n', offset: 2, width: 1, swing: 'inward', hinge: 'middle' }];
+    const raw = [
+      { type: 'door', side: 'n', offset: 2, width: 1, swing: 'inward', hinge: 'middle' },
+    ];
     const result = ensureWallObjectIds(raw);
     expect(result).toHaveLength(1);
     expect((result[0] as WallDoor).hinge).toBe('start');
@@ -95,7 +97,9 @@ describe('ensureWallObjectIds', () => {
 
 describe('ensureInteriorObjectIds', () => {
   it('階段データを正しく復元する', () => {
-    const raw = [{ type: 'stairs', stairsType: 'straight', direction: 'n', x: 1, y: 2, w: 2, h: 3 }];
+    const raw = [
+      { type: 'stairs', stairsType: 'straight', direction: 'n', x: 1, y: 2, w: 2, h: 3 },
+    ];
     const result = ensureInteriorObjectIds(raw);
     expect(result).toHaveLength(1);
     expect(result[0].type).toBe('stairs');
@@ -110,7 +114,18 @@ describe('ensureInteriorObjectIds', () => {
   });
 
   it('既存のidを保持する', () => {
-    const raw = [{ id: 'test-id', type: 'stairs', stairsType: 'straight', direction: 's', x: 0, y: 0, w: 2, h: 3 }];
+    const raw = [
+      {
+        id: 'test-id',
+        type: 'stairs',
+        stairsType: 'straight',
+        direction: 's',
+        x: 0,
+        y: 0,
+        w: 2,
+        h: 3,
+      },
+    ];
     const result = ensureInteriorObjectIds(raw);
     expect(result[0].id).toBe('test-id');
   });
@@ -142,7 +157,9 @@ describe('ensureInteriorObjectIds', () => {
   });
 
   it('directionが不正な値の場合nにフォールバックする', () => {
-    const raw = [{ type: 'stairs', stairsType: 'straight', direction: 'invalid', x: 0, y: 0, w: 2, h: 3 }];
+    const raw = [
+      { type: 'stairs', stairsType: 'straight', direction: 'invalid', x: 0, y: 0, w: 2, h: 3 },
+    ];
     const result = ensureInteriorObjectIds(raw);
     expect((result[0] as StraightStairs).direction).toBe('n');
   });
@@ -175,7 +192,18 @@ describe('ensureInteriorObjectIds', () => {
   });
 
   it('pinマーカーをラベル付きで復元する', () => {
-    const raw = [{ type: 'marker', markerKind: 'pin', direction: 'n', x: 0, y: 0, w: 3, h: 1, label: '証拠品' }];
+    const raw = [
+      {
+        type: 'marker',
+        markerKind: 'pin',
+        direction: 'n',
+        x: 0,
+        y: 0,
+        w: 3,
+        h: 1,
+        label: '証拠品',
+      },
+    ];
     const result = ensureInteriorObjectIds(raw);
     const marker = result[0] as Marker;
     expect(marker.markerKind).toBe('pin');
@@ -183,7 +211,9 @@ describe('ensureInteriorObjectIds', () => {
   });
 
   it('textマーカーを復元する', () => {
-    const raw = [{ type: 'marker', markerKind: 'text', direction: 'e', x: 0, y: 0, w: 2, h: 1, label: 'メモ' }];
+    const raw = [
+      { type: 'marker', markerKind: 'text', direction: 'e', x: 0, y: 0, w: 2, h: 1, label: 'メモ' },
+    ];
     const result = ensureInteriorObjectIds(raw);
     const marker = result[0] as Marker;
     expect(marker.markerKind).toBe('text');
@@ -197,14 +227,68 @@ describe('ensureInteriorObjectIds', () => {
   });
 
   it('マーカーのdirectionが不正な値の場合eにフォールバックする', () => {
-    const raw = [{ type: 'marker', markerKind: 'body', direction: 'invalid', x: 0, y: 0, w: 2, h: 1 }];
+    const raw = [
+      { type: 'marker', markerKind: 'body', direction: 'invalid', x: 0, y: 0, w: 2, h: 1 },
+    ];
     const result = ensureInteriorObjectIds(raw);
     expect((result[0] as Marker).direction).toBe('e');
   });
 
   it('空文字のラベルは復元しない', () => {
-    const raw = [{ type: 'marker', markerKind: 'pin', direction: 'e', x: 0, y: 0, w: 2, h: 1, label: '' }];
+    const raw = [
+      { type: 'marker', markerKind: 'pin', direction: 'e', x: 0, y: 0, w: 2, h: 1, label: '' },
+    ];
     const result = ensureInteriorObjectIds(raw);
     expect((result[0] as Marker).label).toBeUndefined();
+  });
+});
+
+describe('ensureFreeTextIds', () => {
+  it('FreeTextデータを正しく復元する', () => {
+    const raw = [{ gx: 5, gy: 10, w: 3, h: 2, label: 'Hello', fontSize: 20, zLayer: 'back' }];
+    const result = ensureFreeTextIds(raw);
+    expect(result).toHaveLength(1);
+    expect(result[0].gx).toBe(5);
+    expect(result[0].gy).toBe(10);
+    expect(result[0].label).toBe('Hello');
+    expect(result[0].fontSize).toBe(20);
+    expect(result[0].zLayer).toBe('back');
+    expect(result[0].id).toBeTruthy();
+  });
+
+  it('既存のidを保持する', () => {
+    const raw = [{ id: 'ft-id', gx: 0, gy: 0, w: 3, h: 2, label: 'Test' }];
+    const result = ensureFreeTextIds(raw);
+    expect(result[0].id).toBe('ft-id');
+  });
+
+  it('fontSizeが欠損した場合14にフォールバックする', () => {
+    const raw = [{ gx: 0, gy: 0, w: 3, h: 2, label: 'Test' }];
+    const result = ensureFreeTextIds(raw);
+    expect(result[0].fontSize).toBe(14);
+  });
+
+  it('zLayerが欠損した場合frontにフォールバックする', () => {
+    const raw = [{ gx: 0, gy: 0, w: 3, h: 2, label: 'Test' }];
+    const result = ensureFreeTextIds(raw);
+    expect(result[0].zLayer).toBe('front');
+  });
+
+  it('zLayerが不正な値の場合frontにフォールバックする', () => {
+    const raw = [{ gx: 0, gy: 0, w: 3, h: 2, label: 'Test', zLayer: 'invalid' }];
+    const result = ensureFreeTextIds(raw);
+    expect(result[0].zLayer).toBe('front');
+  });
+
+  it('必須プロパティが欠損したデータはフィルタで除外される', () => {
+    const raw = [{ gx: 0, gy: 0 }];
+    const result = ensureFreeTextIds(raw);
+    expect(result).toHaveLength(0);
+  });
+
+  it('labelがstring以外のデータはフィルタで除外される', () => {
+    const raw = [{ gx: 0, gy: 0, w: 3, h: 2, label: 123 }];
+    const result = ensureFreeTextIds(raw);
+    expect(result).toHaveLength(0);
   });
 });

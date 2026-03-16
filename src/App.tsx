@@ -14,6 +14,8 @@ import {
 import { loadFromFile } from './persistence.ts';
 import RoomDialog from './RoomDialog.tsx';
 import MarkerDialog from './MarkerDialog.tsx';
+import type { FreeTextEditData } from './types.ts';
+import FreeTextDialog from './FreeTextDialog.tsx';
 import ContextMenu from './ContextMenu.tsx';
 import type { ContextMenuItem } from './context-menu.ts';
 
@@ -34,12 +36,17 @@ export default function App() {
     ((v: { label: string; fontSize?: number } | null) => void) | null
   >(null);
   const markerEditResolveRef = useRef<((v: { label: string } | null) => void) | null>(null);
+  const freeTextEditResolveRef = useRef<
+    ((v: { label: string; fontSize: number } | null) => void) | null
+  >(null);
 
   const [status, setStatus] = useState('準備完了');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogData, setDialogData] = useState<RoomEditData | null>(null);
   const [markerDialogOpen, setMarkerDialogOpen] = useState(false);
   const [markerDialogData, setMarkerDialogData] = useState<MarkerEditData | null>(null);
+  const [freeTextDialogOpen, setFreeTextDialogOpen] = useState(false);
+  const [freeTextDialogData, setFreeTextDialogData] = useState<FreeTextEditData | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(
     null,
   );
@@ -78,6 +85,26 @@ export default function App() {
     markerEditResolveRef.current = null;
   }, []);
 
+  const handleFreeTextEdit = useCallback(
+    (data: FreeTextEditData): Promise<{ label: string; fontSize: number } | null> => {
+      setFreeTextDialogData(data);
+      setFreeTextDialogOpen(true);
+      return new Promise((resolve) => {
+        freeTextEditResolveRef.current = resolve;
+      });
+    },
+    [],
+  );
+
+  const handleFreeTextDialogClose = useCallback(
+    (result: { label: string; fontSize: number } | null) => {
+      setFreeTextDialogOpen(false);
+      freeTextEditResolveRef.current?.(result);
+      freeTextEditResolveRef.current = null;
+    },
+    [],
+  );
+
   const handleContextMenu = useCallback((request: ContextMenuRequest) => {
     setCtxMenu({ x: request.screenX, y: request.screenY, items: request.items });
   }, []);
@@ -90,6 +117,7 @@ export default function App() {
       onStatusChange: setStatus,
       onRoomEdit: handleRoomEdit,
       onMarkerEdit: handleMarkerEdit,
+      onFreeTextEdit: handleFreeTextEdit,
       onContextMenu: handleContextMenu,
     });
     editorRef.current = api;
@@ -101,14 +129,14 @@ export default function App() {
       window.removeEventListener('resize', onResize);
       api.destroy();
     };
-  }, [handleRoomEdit, handleMarkerEdit, handleContextMenu]);
+  }, [handleRoomEdit, handleMarkerEdit, handleFreeTextEdit, handleContextMenu]);
 
   const handleLoad = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const rooms = await loadFromFile(file);
-      editorRef.current?.loadProject(rooms);
+      const data = await loadFromFile(file);
+      editorRef.current?.loadProject(data);
     } catch {
       alert('ファイルを読み込めませんでした');
     }
@@ -229,6 +257,15 @@ export default function App() {
           open={markerDialogOpen}
           data={markerDialogData}
           onClose={handleMarkerDialogClose}
+        />
+      )}
+
+      {/* FreeText dialog */}
+      {freeTextDialogData && (
+        <FreeTextDialog
+          open={freeTextDialogOpen}
+          data={freeTextDialogData}
+          onClose={handleFreeTextDialogClose}
         />
       )}
 

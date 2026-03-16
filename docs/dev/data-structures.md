@@ -96,6 +96,33 @@ type RoomInteriorObject = StraightStairs | FoldingStairs | Marker;
 
 階段はグリッドスナップで移動・リサイズされるが、マーカーはグリッドに縛られず自由に配置・リサイズ可能（最小サイズ0.25グリッド）。
 
+## FreeText
+
+部屋に紐付かない自由配置テキスト。グリッド座標で自由に配置でき、front/backの2レイヤーで描画順を制御する。
+
+```typescript
+interface FreeText {
+  id: string;              // UUID
+  gx: number;              // グリッド座標 X
+  gy: number;              // グリッド座標 Y
+  w: number;               // 幅（グリッド単位）
+  h: number;               // 高さ（グリッド単位）
+  label: string;           // 表示テキスト
+  fontSize: number;        // フォントサイズ（ピクセル）
+  zLayer: 'front' | 'back'; // 描画レイヤー
+}
+```
+
+| プロパティ | 説明 |
+|-----------|------|
+| `gx`, `gy` | 配置位置（グリッド座標） |
+| `w`, `h` | サイズ（グリッド単位） |
+| `label` | 表示テキスト |
+| `fontSize` | フォントサイズ（4〜80px、デフォルト14px） |
+| `zLayer` | 描画レイヤー（`'front'`: 部屋の上に描画 / `'back'`: 部屋の下に描画） |
+
+デフォルトサイズは3×2グリッド。部屋の境界制約なし。移動はグリッドスナップ、リサイズは最小1×1グリッド。
+
 ## Room
 
 部屋を表す基本データ構造。座標・サイズはすべてグリッド単位。
@@ -122,10 +149,11 @@ JSON保存ファイルの形式。
 
 ```typescript
 interface Project {
-  version: number;     // ファイル形式バージョン
-  name: string;        // プロジェクト名
-  gridSize: number;    // グリッドサイズ（px）
-  rooms: Room[];       // 部屋の配列
+  version: number;         // ファイル形式バージョン
+  name: string;            // プロジェクト名
+  gridSize: number;        // グリッドサイズ（px）
+  rooms: Room[];           // 部屋の配列
+  freeTexts?: FreeText[];  // 自由配置テキストの配列（後方互換のためoptional）
 }
 ```
 
@@ -143,6 +171,8 @@ type DragState =
   | { type: 'resizeWallObject'; roomId: string; objectId: string; edge: 'start' | 'end'; origOffset: number; origWidth: number }
   | { type: 'moveInteriorObject'; roomId: string; objectId: string; offsetX: number; offsetY: number; snapToGrid: boolean }
   | { type: 'resizeInteriorObject'; roomId: string; objectId: string; dir: ResizeDirection; snapToGrid: boolean; orig: { x: number; y: number; w: number; h: number } }
+  | { type: 'moveFreeText'; freeTextId: string; offsetGx: number; offsetGy: number }
+  | { type: 'resizeFreeText'; freeTextId: string; dir: ResizeDirection; orig: { gx: number; gy: number; w: number; h: number } }
   | null;
 ```
 
@@ -157,6 +187,8 @@ type DragState =
 | `resizeWallObject` | 壁オブジェクトの端をドラッグ | 壁オブジェクトの幅を伸縮（グリッドスナップ、オーバーラップ防止） |
 | `moveInteriorObject` | 部屋内オブジェクトをドラッグ | 部屋内でオブジェクトを移動（部屋境界内に制約、`snapToGrid`で階段はグリッドスナップ、マーカーはフリー） |
 | `resizeInteriorObject` | 部屋内オブジェクトのハンドルをドラッグ | オブジェクトのサイズを変更（`snapToGrid`で階段は最小1×1グリッドスナップ、マーカーは最小0.25グリッドフリー） |
+| `moveFreeText` | 自由配置テキストをドラッグ | FreeTextを移動（グリッドスナップ） |
+| `resizeFreeText` | FreeTextの四隅ハンドルをドラッグ | FreeTextのサイズを変更（最小1×1グリッド） |
 | `null` | ドラッグなし | 通常状態 |
 
 ## EditorState
@@ -166,7 +198,8 @@ type DragState =
 ```typescript
 interface EditorState {
   rooms: Room[];           // 全部屋データ
-  selection: Set<string>;  // 選択中の部屋ID
+  freeTexts: FreeText[];   // 自由配置テキストデータ
+  selection: Set<string>;  // 選択中の部屋/FreeTextのID
   history: string[];       // Undoスナップショット（JSON文字列、最大50件）
   drag: DragState;         // 現在のドラッグ操作
   mouse: MouseCoord;       // 現在のマウス座標
