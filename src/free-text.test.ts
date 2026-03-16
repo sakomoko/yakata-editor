@@ -110,6 +110,16 @@ describe('computeFreeTextResize', () => {
     expect(result).toEqual({ gx: 3, gy: 3, w: 6, h: 5 });
   });
 
+  it('should resize from NE corner', () => {
+    const result = computeFreeTextResize('ne', orig, 12, 3);
+    expect(result).toEqual({ gx: 5, gy: 3, w: 7, h: 5 });
+  });
+
+  it('should resize from SW corner', () => {
+    const result = computeFreeTextResize('sw', orig, 3, 10);
+    expect(result).toEqual({ gx: 3, gy: 5, w: 6, h: 5 });
+  });
+
   it('should enforce minimum size of 1', () => {
     const result = computeFreeTextResize('se', orig, 5, 5);
     expect(result.w).toBeGreaterThanOrEqual(1);

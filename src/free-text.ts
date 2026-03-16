@@ -45,6 +45,12 @@ export function drawFreeText(
   }
 
   ctx.save();
+
+  // Clip text to bounding box to prevent overflow
+  ctx.beginPath();
+  ctx.rect(px, py, pw, ph);
+  ctx.clip();
+
   ctx.fillStyle = '#000';
   ctx.font = `${ft.fontSize}px sans-serif`;
   ctx.textAlign = 'left';
