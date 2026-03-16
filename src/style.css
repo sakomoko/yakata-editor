@@ -10,8 +10,8 @@ body {
 
 #container {
   position: absolute;
-  top: 36px;
-  bottom: 24px;
+  top: 60px;
+  bottom: 60px;
   left: 0;
   right: 0;
   overflow: hidden;

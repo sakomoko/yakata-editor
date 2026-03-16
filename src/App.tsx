@@ -12,12 +12,24 @@ import {
   type ContextMenuRequest,
 } from './editor/index.ts';
 import { loadFromFile } from './persistence.ts';
+import type { ProjectMeta, TabState, FreeTextEditData } from './types.ts';
+import {
+  migrateIfNeeded,
+  loadProjectIndex,
+  loadProjectData,
+  saveProjectData,
+  loadTabState,
+  saveTabState,
+  createNewProject,
+  saveProjectIndex,
+} from './project-store.ts';
 import RoomDialog from './RoomDialog.tsx';
 import MarkerDialog from './MarkerDialog.tsx';
-import type { FreeTextEditData } from './types.ts';
 import FreeTextDialog from './FreeTextDialog.tsx';
 import ContextMenu from './ContextMenu.tsx';
 import type { ContextMenuItem } from './context-menu.ts';
+import TabBar from './TabBar.tsx';
+import ProjectListModal from './ProjectListModal.tsx';
 
 const darkTheme = createTheme({
   palette: {
@@ -50,6 +62,12 @@ export default function App() {
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(
     null,
   );
+
+  // Multi-project state
+  const [projectIndex, setProjectIndex] = useState<ProjectMeta[]>([]);
+  const [tabState, setTabState] = useState<TabState>({ openTabs: [], activeTabId: '' });
+  const tabStateRef = useRef<TabState>({ openTabs: [], activeTabId: '' });
+  const [projectListOpen, setProjectListOpen] = useState(false);
 
   const handleRoomEdit = useCallback(
     (data: RoomEditData): Promise<{ label: string; fontSize?: number } | null> => {
@@ -109,17 +127,101 @@ export default function App() {
     setCtxMenu({ x: request.screenX, y: request.screenY, items: request.items });
   }, []);
 
+  // Save current project to storage
+  const saveCurrentProject = useCallback(() => {
+    const editor = editorRef.current;
+    const activeId = tabStateRef.current.activeTabId;
+    if (!editor || !activeId) return;
+    const editorState = editor.getState();
+    const viewport = editor.getViewport();
+    saveProjectData(activeId, {
+      rooms: editorState.rooms,
+      freeTexts: editorState.freeTexts,
+      viewport,
+      history: editorState.history,
+    });
+  }, []);
+
+  // Update tabState in both state and ref
+  const updateTabState = useCallback((newState: TabState) => {
+    tabStateRef.current = newState;
+    setTabState(newState);
+    saveTabState(newState);
+  }, []);
+
   useEffect(() => {
     const canvas = canvasRef.current!;
     const container = containerRef.current!;
 
-    const api = initEditor(canvas, container, {
-      onStatusChange: setStatus,
-      onRoomEdit: handleRoomEdit,
-      onMarkerEdit: handleMarkerEdit,
-      onFreeTextEdit: handleFreeTextEdit,
-      onContextMenu: handleContextMenu,
-    });
+    // Migration & initial load
+    migrateIfNeeded();
+    const index = loadProjectIndex();
+    setProjectIndex(index);
+
+    let ts = loadTabState();
+    if (!ts || ts.openTabs.length === 0) {
+      // Fallback: open the first project
+      if (index.length > 0) {
+        ts = { openTabs: [index[0].id], activeTabId: index[0].id };
+      } else {
+        const { meta } = createNewProject();
+        setProjectIndex([meta]);
+        ts = { openTabs: [meta.id], activeTabId: meta.id };
+      }
+      saveTabState(ts);
+    }
+
+    // Validate tab state against existing projects
+    const validIds = new Set(index.map((m) => m.id));
+    ts.openTabs = ts.openTabs.filter((id) => validIds.has(id));
+    if (ts.openTabs.length === 0 && index.length > 0) {
+      ts.openTabs = [index[0].id];
+    }
+    if (!ts.openTabs.includes(ts.activeTabId)) {
+      ts.activeTabId = ts.openTabs[0] ?? '';
+    }
+
+    tabStateRef.current = ts;
+    setTabState(ts);
+    saveTabState(ts);
+
+    // Load active project data
+    const activeData = ts.activeTabId ? loadProjectData(ts.activeTabId) : null;
+
+    const api = initEditor(
+      canvas,
+      container,
+      {
+        onStatusChange: setStatus,
+        onRoomEdit: handleRoomEdit,
+        onMarkerEdit: handleMarkerEdit,
+        onFreeTextEdit: handleFreeTextEdit,
+        onContextMenu: handleContextMenu,
+        onAutoSave: (rooms, freeTexts) => {
+          const activeId = tabStateRef.current.activeTabId;
+          if (!activeId) return;
+          const editor = editorRef.current;
+          const viewport = editor ? editor.getViewport() : { zoom: 1, panX: 0, panY: 0 };
+          const history = editor ? editor.getState().history : [];
+          saveProjectData(activeId, { rooms, freeTexts, viewport, history });
+        },
+        onViewportChange: (vp) => {
+          const activeId = tabStateRef.current.activeTabId;
+          if (!activeId) return;
+          const editor = editorRef.current;
+          const editorState = editor
+            ? editor.getState()
+            : { rooms: [], freeTexts: [], history: [] };
+          saveProjectData(activeId, {
+            rooms: editorState.rooms,
+            freeTexts: editorState.freeTexts,
+            viewport: vp,
+            history: editorState.history,
+          });
+        },
+      },
+      activeData ?? undefined,
+    );
     editorRef.current = api;
 
     const onResize = () => api.resize();
@@ -130,6 +232,142 @@ export default function App() {
       api.destroy();
     };
   }, [handleRoomEdit, handleMarkerEdit, handleFreeTextEdit, handleContextMenu]);
+
+  // --- Tab handlers ---
+
+  const handleTabClick = useCallback(
+    (id: string) => {
+      if (id === tabStateRef.current.activeTabId) return;
+      saveCurrentProject();
+      const data = loadProjectData(id);
+      if (data && editorRef.current) {
+        editorRef.current.loadProjectState(data);
+      }
+      const newTs = { ...tabStateRef.current, activeTabId: id };
+      updateTabState(newTs);
+    },
+    [saveCurrentProject, updateTabState],
+  );
+
+  const handleTabAdd = useCallback(() => {
+    saveCurrentProject();
+    const index = loadProjectIndex();
+    const { meta, data } = createNewProject();
+    setProjectIndex([...index, meta]);
+    const newTs = {
+      openTabs: [...tabStateRef.current.openTabs, meta.id],
+      activeTabId: meta.id,
+    };
+    updateTabState(newTs);
+    editorRef.current?.loadProjectState(data);
+  }, [saveCurrentProject, updateTabState]);
+
+  const handleTabClose = useCallback(
+    (id: string) => {
+      const ts = tabStateRef.current;
+      if (ts.openTabs.length <= 1) return;
+
+      // Save if closing the active tab
+      if (id === ts.activeTabId) {
+        saveCurrentProject();
+      }
+
+      const newTabs = ts.openTabs.filter((t) => t !== id);
+      let newActiveId = ts.activeTabId;
+
+      if (id === ts.activeTabId) {
+        // Switch to adjacent tab
+        const oldIdx = ts.openTabs.indexOf(id);
+        const newIdx = Math.min(oldIdx, newTabs.length - 1);
+        newActiveId = newTabs[newIdx];
+
+        const data = loadProjectData(newActiveId);
+        if (data && editorRef.current) {
+          editorRef.current.loadProjectState(data);
+        }
+      }
+
+      const newTs = { openTabs: newTabs, activeTabId: newActiveId };
+      updateTabState(newTs);
+    },
+    [saveCurrentProject, updateTabState],
+  );
+
+  const handleTabRename = useCallback((id: string, newName: string) => {
+    const index = loadProjectIndex();
+    const meta = index.find((m) => m.id === id);
+    if (meta) {
+      meta.name = newName;
+      meta.updatedAt = Date.now();
+      saveProjectIndex(index);
+      setProjectIndex([...index]);
+    }
+  }, []);
+
+  // --- Project list modal handlers ---
+
+  const handleOpenProject = useCallback(
+    (id: string) => {
+      const ts = tabStateRef.current;
+      if (ts.openTabs.includes(id)) {
+        // Already open - switch to it
+        handleTabClick(id);
+      } else {
+        // Open in a new tab
+        saveCurrentProject();
+        const newTabs = [...ts.openTabs, id];
+        const newTs = { openTabs: newTabs, activeTabId: id };
+        updateTabState(newTs);
+        const data = loadProjectData(id);
+        if (data && editorRef.current) {
+          editorRef.current.loadProjectState(data);
+        }
+      }
+      setProjectListOpen(false);
+    },
+    [handleTabClick, saveCurrentProject, updateTabState],
+  );
+
+  const handleDeleteProject = useCallback(
+    (id: string) => {
+      const index = loadProjectIndex();
+      if (index.length <= 1) return;
+
+      if (!confirm('このプロジェクトを削除しますか？')) return;
+
+      // Import and call deleteProject
+      import('./project-store.ts').then(({ deleteProject }) => {
+        deleteProject(id);
+        const newIndex = index.filter((m) => m.id !== id);
+        setProjectIndex(newIndex);
+
+        // If it was in open tabs, close it
+        const ts = tabStateRef.current;
+        if (ts.openTabs.includes(id)) {
+          const newTabs = ts.openTabs.filter((t) => t !== id);
+          let newActiveId = ts.activeTabId;
+          if (id === ts.activeTabId) {
+            if (newTabs.length === 0) {
+              // Last tab was deleted - create a new project
+              const { meta, data } = createNewProject();
+              setProjectIndex([...newIndex, meta]);
+              newTabs.push(meta.id);
+              newActiveId = meta.id;
+              editorRef.current?.loadProjectState(data);
+            } else {
+              newActiveId = newTabs[Math.min(ts.openTabs.indexOf(id), newTabs.length - 1)];
+              const data = loadProjectData(newActiveId);
+              if (data && editorRef.current) {
+                editorRef.current.loadProjectState(data);
+              }
+            }
+          }
+          updateTabState({ openTabs: newTabs, activeTabId: newActiveId });
+        }
+      });
+    },
+    [updateTabState],
+  );
 
   const handleLoad = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -148,21 +386,81 @@ export default function App() {
     e.target.value = '';
   };
 
+  // Build tabs array for TabBar
+  const tabs = tabState.openTabs
+    .map((id) => {
+      const meta = projectIndex.find((m) => m.id === id);
+      if (!meta) return null;
+      return { id, name: meta.name, isActive: id === tabState.activeTabId };
+    })
+    .filter((t): t is NonNullable<typeof t> => t !== null);
+
   /* eslint-disable no-irregular-whitespace */
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
 
-      {/* Toolbar */}
+      {/* Header */}
       <Box
         sx={{
+          height: 28,
+          bgcolor: '#1e1e1e',
+          display: 'flex',
+          alignItems: 'center',
+          px: 1.5,
+          gap: 1,
+          borderBottom: '1px solid #333',
+        }}
+      >
+        {/* TODO: アイコン画像に差し替え */}
+        <Box
+          component="span"
+          sx={{ fontSize: 14, lineHeight: 1 }}
+        >
+          🏚
+        </Box>
+        <Typography
+          variant="caption"
+          sx={{
+            color: '#bbb',
+            fontSize: 13,
+            fontWeight: 600,
+            letterSpacing: '0.05em',
+          }}
+        >
+          館エディタ
+        </Typography>
+      </Box>
+
+      {/* Tab Bar */}
+      <TabBar
+        tabs={tabs}
+        onTabClick={handleTabClick}
+        onTabClose={handleTabClose}
+        onTabAdd={handleTabAdd}
+        onTabRename={handleTabRename}
+        onOpenProjectList={() => setProjectListOpen(true)}
+      />
+
+      {/* Canvas */}
+      <div id="container" ref={containerRef}>
+        <canvas ref={canvasRef} />
+      </div>
+
+      {/* Toolbar (bottom) */}
+      <Box
+        sx={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
           height: 36,
           bgcolor: 'background.paper',
           display: 'flex',
           alignItems: 'center',
           px: 1,
           gap: 0.75,
-          borderBottom: '1px solid #444',
+          borderTop: '1px solid #444',
         }}
       >
         <Button
@@ -220,16 +518,11 @@ export default function App() {
         </Typography>
       </Box>
 
-      {/* Canvas */}
-      <div id="container" ref={containerRef}>
-        <canvas ref={canvasRef} />
-      </div>
-
       {/* Status bar */}
       <Box
         sx={{
           position: 'fixed',
-          bottom: 0,
+          bottom: 36,
           left: 0,
           right: 0,
           height: 24,
@@ -280,6 +573,16 @@ export default function App() {
         anchorPosition={ctxMenu ? { top: ctxMenu.y, left: ctxMenu.x } : undefined}
         items={ctxMenu?.items ?? []}
         onClose={() => setCtxMenu(null)}
+      />
+
+      {/* Project list modal */}
+      <ProjectListModal
+        open={projectListOpen}
+        projects={projectIndex}
+        openTabIds={tabState.openTabs}
+        onOpen={handleOpenProject}
+        onDelete={handleDeleteProject}
+        onClose={() => setProjectListOpen(false)}
       />
     </ThemeProvider>
   );

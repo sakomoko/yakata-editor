@@ -1,6 +1,5 @@
 import { findRoomById, findWallObjectById } from '../lookup.ts';
 import { selectSingle, clearSelection } from '../selection.ts';
-import { persistToStorage, persistViewport } from '../persistence.ts';
 import { pushUndo } from '../history.ts';
 import {
   hitWallObjectInRooms,
@@ -18,7 +17,7 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
   if (state.drag.type === 'pan') {
     state.drag = null;
     canvas.style.cursor = flags.isPanning ? 'grab' : 'crosshair';
-    persistViewport(viewport);
+    ec.callbacks.onViewportChange(viewport);
     return;
   }
 
@@ -38,7 +37,7 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
     const stillOnWallObj = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom, true);
     canvas.style.cursor = stillOnWallObj ? 'grab' : 'crosshair';
     ec.render();
-    persistToStorage(state.rooms, state.freeTexts);
+    ec.callbacks.onAutoSave(state.rooms, state.freeTexts);
     return;
   }
 
@@ -54,7 +53,7 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
     state.drag = null;
     canvas.style.cursor = 'crosshair';
     ec.render();
-    persistToStorage(state.rooms, state.freeTexts);
+    ec.callbacks.onAutoSave(state.rooms, state.freeTexts);
     return;
   }
 
@@ -101,5 +100,5 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
   // 共通クリーンアップ: areaSelect / create / move / resize / groupResize すべてここを通る
   state.drag = null;
   ec.render();
-  persistToStorage(state.rooms, state.freeTexts);
+  ec.callbacks.onAutoSave(state.rooms, state.freeTexts);
 }

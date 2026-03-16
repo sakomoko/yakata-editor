@@ -244,3 +244,22 @@ export interface EditorState {
   drag: DragState;
   mouse: MouseCoord;
 }
+
+export interface ProjectMeta {
+  id: string;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ProjectData {
+  rooms: Room[];
+  freeTexts: FreeText[];
+  viewport: { zoom: number; panX: number; panY: number };
+  history: string[];
+}
+
+export interface TabState {
+  openTabs: string[];
+  activeTabId: string;
+}

@@ -2,7 +2,7 @@ import type { Room, FreeText } from '../types.ts';
 import { GRID } from '../grid.ts';
 import { pushUndo, popUndo } from '../history.ts';
 import { clearSelection } from '../selection.ts';
-import { persistToStorage, exportPng, saveAsJson } from '../persistence.ts';
+import { exportPng, saveAsJson } from '../persistence.ts';
 import { computeRoomsBoundingBox, calcAutoFontSize } from '../room.ts';
 import { syncAllPairedOpenings } from '../adjacency.ts';
 import type { EditorContext } from './context.ts';
@@ -11,7 +11,7 @@ export function commitChange(ec: EditorContext, fn: () => void): void {
   pushUndo(ec.state.history, ec.state.rooms, ec.state.freeTexts);
   fn();
   ec.render();
-  persistToStorage(ec.state.rooms, ec.state.freeTexts);
+  ec.callbacks.onAutoSave(ec.state.rooms, ec.state.freeTexts);
 }
 
 export function undo(ec: EditorContext): void {
@@ -23,7 +23,7 @@ export function undo(ec: EditorContext): void {
   ec.flags.activeInteriorObjectId = undefined;
   ec.flags.activeFreeTextId = undefined;
   ec.render();
-  persistToStorage(ec.state.rooms, ec.state.freeTexts);
+  ec.callbacks.onAutoSave(ec.state.rooms, ec.state.freeTexts);
 }
 
 export function newProject(ec: EditorContext): void {
