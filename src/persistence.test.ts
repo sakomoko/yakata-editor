@@ -5,7 +5,14 @@ import {
   ensureFreeTextIds,
   parseStorageData,
 } from './persistence.ts';
-import type { WallDoor, WallOpening, StraightStairs, FoldingStairs, Marker } from './types.ts';
+import type {
+  WallDoor,
+  WallOpening,
+  StraightStairs,
+  FoldingStairs,
+  Marker,
+  SecurityCamera,
+} from './types.ts';
 
 describe('ensureWallObjectIds', () => {
   it('窓データを正しく復元する', () => {
@@ -278,6 +285,84 @@ describe('ensureInteriorObjectIds', () => {
     ];
     const result = ensureInteriorObjectIds(raw);
     expect((result[0] as Marker).label).toBeUndefined();
+  });
+
+  it('カメラデータを正しく復元する', () => {
+    const raw = [
+      {
+        type: 'camera',
+        x: 1,
+        y: 2,
+        w: 1,
+        h: 1,
+        angle: Math.PI / 4,
+        fovAngle: Math.PI / 6,
+        fovRange: 5,
+        fovColor: 'rgba(0,150,255,0.15)',
+        fovStrokeColor: 'rgba(0,150,255,0.4)',
+      },
+    ];
+    const result = ensureInteriorObjectIds(raw);
+    expect(result).toHaveLength(1);
+    const cam = result[0] as SecurityCamera;
+    expect(cam.type).toBe('camera');
+    expect(cam.angle).toBeCloseTo(Math.PI / 4);
+    expect(cam.fovAngle).toBeCloseTo(Math.PI / 6);
+    expect(cam.fovRange).toBe(5);
+    expect(cam.id).toBeTruthy();
+  });
+
+  it('カメラのプロパティが欠損した場合デフォルト値で復元する', () => {
+    const raw = [{ type: 'camera', x: 0, y: 0, w: 1, h: 1 }];
+    const result = ensureInteriorObjectIds(raw);
+    const cam = result[0] as SecurityCamera;
+    expect(cam.angle).toBe(0);
+    expect(cam.fovAngle).toBeCloseTo(Math.PI / 6);
+    expect(cam.fovRange).toBe(5);
+    expect(cam.fovColor).toBe('rgba(0,150,255,0.15)');
+    expect(cam.fovStrokeColor).toBe('rgba(0,150,255,0.4)');
+  });
+
+  it('カメラのfovAngleがクランプされる', () => {
+    const raw = [
+      { type: 'camera', x: 0, y: 0, w: 1, h: 1, fovAngle: 999 },
+    ];
+    const result = ensureInteriorObjectIds(raw);
+    const cam = result[0] as SecurityCamera;
+    expect(cam.fovAngle).toBeCloseTo(Math.PI / 2);
+  });
+
+  it('カメラのfovRangeがクランプされる', () => {
+    const raw = [
+      { type: 'camera', x: 0, y: 0, w: 1, h: 1, fovRange: 100 },
+    ];
+    const result = ensureInteriorObjectIds(raw);
+    const cam = result[0] as SecurityCamera;
+    expect(cam.fovRange).toBe(20);
+  });
+
+  it('カメラのangleがNaNの場合0にフォールバックする', () => {
+    const raw = [{ type: 'camera', x: 0, y: 0, w: 1, h: 1, angle: NaN }];
+    const result = ensureInteriorObjectIds(raw);
+    expect((result[0] as SecurityCamera).angle).toBe(0);
+  });
+
+  it('カメラのangleがInfinityの場合0にフォールバックする', () => {
+    const raw = [{ type: 'camera', x: 0, y: 0, w: 1, h: 1, angle: Infinity }];
+    const result = ensureInteriorObjectIds(raw);
+    expect((result[0] as SecurityCamera).angle).toBe(0);
+  });
+
+  it('カメラのfovAngleがNaNの場合デフォルトにフォールバックする', () => {
+    const raw = [{ type: 'camera', x: 0, y: 0, w: 1, h: 1, fovAngle: NaN }];
+    const result = ensureInteriorObjectIds(raw);
+    expect((result[0] as SecurityCamera).fovAngle).toBeCloseTo(Math.PI / 6);
+  });
+
+  it('カメラのfovRangeがInfinityの場合デフォルトにフォールバックする', () => {
+    const raw = [{ type: 'camera', x: 0, y: 0, w: 1, h: 1, fovRange: -Infinity }];
+    const result = ensureInteriorObjectIds(raw);
+    expect((result[0] as SecurityCamera).fovRange).toBe(5);
   });
 });
 

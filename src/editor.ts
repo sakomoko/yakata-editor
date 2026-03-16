@@ -5,7 +5,9 @@ import type {
   FreeText,
   FreeTextEditData,
   WallObject,
+  CameraColorPreset,
 } from './types.ts';
+import { CAMERA_COLOR_PRESETS } from './types.ts';
 import { GRID, drawGrid } from './grid.ts';
 import {
   drawRoom,
@@ -59,6 +61,16 @@ import {
   computeInteriorObjectResize,
   clampAllInteriorObjects,
 } from './interior-object.ts';
+import {
+  createSecurityCamera,
+  drawCameraFovOverlay,
+  drawCameraHandles,
+  hitCameraHandleInRooms,
+  computeCameraAngle,
+  computeCameraFovAngle,
+  computeCameraFovRange,
+  findCameraInRoom,
+} from './camera.ts';
 import {
   createFreeText,
   drawFreeText,
@@ -219,6 +231,22 @@ export function initEditor(
     for (const r of state.rooms) {
       const isSelected = state.selection.has(r.id);
       drawOutwardDoorsOverlay(ctx, r, isSelected, viewport.zoom, activeWallObjectId);
+    }
+
+    // 3rd pass: camera FOV overlay (drawn after doors so it's visible above rooms)
+    drawCameraFovOverlay(ctx, state.rooms, viewport.zoom);
+
+    // Camera handles for active camera
+    if (activeIntObjId) {
+      for (const r of state.rooms) {
+        const cam = r.interiorObjects?.find(
+          (o) => o.id === activeIntObjId && o.type === 'camera',
+        );
+        if (cam && cam.type === 'camera') {
+          drawCameraHandles(ctx, r, cam, viewport.zoom);
+          break;
+        }
+      }
     }
 
     drawFreeTextLayer('front');
@@ -433,6 +461,33 @@ export function initEditor(
       }
     }
 
+    // Check camera handle hit (rotate/fov)
+    const camHandleHit = hitCameraHandleInRooms(
+      selectedRooms,
+      m.px,
+      m.py,
+      viewport.zoom,
+      activeInteriorObjectId,
+    );
+    if (camHandleHit) {
+      pushUndo(state.history, state.rooms, state.freeTexts);
+      activeInteriorObjectId = camHandleHit.cam.id;
+      const dragType =
+        camHandleHit.hit.type === 'rotate'
+          ? 'rotateCameraAngle' as const
+          : camHandleHit.hit.type === 'fovRange'
+            ? 'adjustCameraFovRange' as const
+            : 'adjustCameraFovAngle' as const;
+      state.drag = {
+        type: dragType,
+        roomId: camHandleHit.room.id,
+        objectId: camHandleHit.cam.id,
+      };
+      canvas.style.cursor = 'grabbing';
+      render();
+      return;
+    }
+
     // Check interior object handle hit (resize)
     const intHandleHit = hitInteriorObjectHandleInRooms(selectedRooms, m.px, m.py, viewport.zoom);
     if (intHandleHit) {
@@ -614,6 +669,19 @@ export function initEditor(
             }
           }
         }
+        // Camera handle hover
+        const camHandleHover = hitCameraHandleInRooms(
+          selectedRooms,
+          m.px,
+          m.py,
+          viewport.zoom,
+          activeInteriorObjectId,
+        );
+        if (camHandleHover) {
+          canvas.style.cursor = 'grab';
+          updateStatus();
+          return;
+        }
         const intHandleHover = hitInteriorObjectHandleInRooms(
           selectedRooms,
           m.px,
@@ -765,6 +833,22 @@ export function initEditor(
           obj.h = result.h;
         }
       }
+    } else if (
+      state.drag.type === 'rotateCameraAngle' ||
+      state.drag.type === 'adjustCameraFovAngle' ||
+      state.drag.type === 'adjustCameraFovRange'
+    ) {
+      const drag = state.drag;
+      const found = findCameraInRoom(state.rooms, drag.roomId, drag.objectId);
+      if (found) {
+        if (drag.type === 'rotateCameraAngle') {
+          found.cam.angle = computeCameraAngle(found.room, found.cam, m.px, m.py);
+        } else if (drag.type === 'adjustCameraFovAngle') {
+          found.cam.fovAngle = computeCameraFovAngle(found.room, found.cam, m.px, m.py);
+        } else {
+          found.cam.fovRange = computeCameraFovRange(found.room, found.cam, m.px, m.py);
+        }
+      }
     } else if (state.drag.type === 'moveFreeText') {
       const drag = state.drag;
       const ft = state.freeTexts.find((f) => f.id === drag.freeTextId);
@@ -818,6 +902,18 @@ export function initEditor(
     }
 
     if (state.drag.type === 'moveInteriorObject' || state.drag.type === 'resizeInteriorObject') {
+      state.drag = null;
+      canvas.style.cursor = 'crosshair';
+      render();
+      persistToStorage(state.rooms, state.freeTexts);
+      return;
+    }
+
+    if (
+      state.drag.type === 'rotateCameraAngle' ||
+      state.drag.type === 'adjustCameraFovAngle' ||
+      state.drag.type === 'adjustCameraFovRange'
+    ) {
       state.drag = null;
       canvas.style.cursor = 'crosshair';
       render();
@@ -935,6 +1031,22 @@ export function initEditor(
       const objId = intObjHit.obj.id;
       activeInteriorObjectId = objId;
 
+      const deleteInteriorObject = (label: string) => {
+        items.push({ separator: true });
+        items.push({
+          label,
+          action: () => {
+            const room = state.rooms.find((r) => r.id === roomId);
+            if (!room) return;
+            commitChange(() => {
+              room.interiorObjects = room.interiorObjects?.filter((o) => o.id !== objId);
+              if (room.interiorObjects?.length === 0) room.interiorObjects = undefined;
+            });
+            activeInteriorObjectId = undefined;
+          },
+        });
+      };
+
       if (intObjHit.obj.type === 'stairs') {
         const directions: { label: string; dir: 'n' | 'e' | 's' | 'w' }[] = [
           { label: '↑ 上向き', dir: 'n' },
@@ -957,19 +1069,7 @@ export function initEditor(
             },
           });
         }
-        items.push({ separator: true });
-        items.push({
-          label: '階段を削除',
-          action: () => {
-            const room = state.rooms.find((r) => r.id === roomId);
-            if (!room) return;
-            commitChange(() => {
-              room.interiorObjects = room.interiorObjects?.filter((o) => o.id !== objId);
-              if (room.interiorObjects?.length === 0) room.interiorObjects = undefined;
-            });
-            activeInteriorObjectId = undefined;
-          },
-        });
+        deleteInteriorObject('階段を削除');
       }
 
       if (intObjHit.obj.type === 'marker') {
@@ -1013,19 +1113,33 @@ export function initEditor(
           }
         }
 
-        items.push({ separator: true });
-        items.push({
-          label: 'マーカーを削除',
-          action: () => {
-            const room = state.rooms.find((r) => r.id === roomId);
-            if (!room) return;
-            commitChange(() => {
-              room.interiorObjects = room.interiorObjects?.filter((o) => o.id !== objId);
-              if (room.interiorObjects?.length === 0) room.interiorObjects = undefined;
-            });
-            activeInteriorObjectId = undefined;
-          },
-        });
+        deleteInteriorObject('マーカーを削除');
+      }
+
+      if (intObjHit.obj.type === 'camera') {
+        const colorPresets: { label: string; key: CameraColorPreset }[] = [
+          { label: '青', key: 'blue' },
+          { label: '赤', key: 'red' },
+          { label: '緑', key: 'green' },
+          { label: '黄', key: 'yellow' },
+        ];
+        for (const preset of colorPresets) {
+          items.push({
+            label: `色: ${preset.label}`,
+            action: () => {
+              const room = state.rooms.find((r) => r.id === roomId);
+              if (!room) return;
+              const obj = room.interiorObjects?.find((o) => o.id === objId);
+              if (!obj || obj.type !== 'camera') return;
+              const colors = CAMERA_COLOR_PRESETS[preset.key];
+              commitChange(() => {
+                obj.fovColor = colors.fovColor;
+                obj.fovStrokeColor = colors.fovStrokeColor;
+              });
+            },
+          });
+        }
+        deleteInteriorObject('カメラを削除');
       }
 
       callbacks.onContextMenu({ screenX: e.clientX, screenY: e.clientY, items });
@@ -1249,6 +1363,27 @@ export function initEditor(
             room.interiorObjects.push(marker);
           });
           activeInteriorObjectId = marker.id;
+        },
+      });
+
+      // 防犯カメラ配置
+      const canPlaceCamera = contextRoom.w >= 1 && contextRoom.h >= 1;
+      items.push({
+        label: '防犯カメラを配置',
+        disabled: !canPlaceCamera,
+        action: () => {
+          const room = state.rooms.find((r) => r.id === roomId);
+          if (!room) return;
+          const cw = 1,
+            ch = 1;
+          const cx = Math.max(0, Math.min(Math.floor(cursorRelX), room.w - cw));
+          const cy = Math.max(0, Math.min(Math.floor(cursorRelY), room.h - ch));
+          const cam = createSecurityCamera(cx, cy);
+          commitChange(() => {
+            if (!room.interiorObjects) room.interiorObjects = [];
+            room.interiorObjects.push(cam);
+          });
+          activeInteriorObjectId = cam.id;
         },
       });
 

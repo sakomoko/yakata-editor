@@ -9,6 +9,7 @@ import type {
   ResizeDirection,
 } from './types.ts';
 import { GRID, HANDLE_SIZE, HANDLE_HIT } from './grid.ts';
+import { drawCameraIcon } from './camera.ts';
 
 const STAIRS_DEFAULT_W = 2;
 const STAIRS_DEFAULT_H = 3;
@@ -118,8 +119,8 @@ export function drawInteriorObjects(
     ctx.strokeStyle = style.color;
     ctx.lineWidth = style.lineWidth;
 
-    // Draw outer rectangle (skip for markers — they have no bounding box)
-    if (obj.type !== 'marker') {
+    // Draw outer rectangle (skip for markers and cameras — they have custom rendering)
+    if (obj.type !== 'marker' && obj.type !== 'camera') {
       ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
     }
 
@@ -141,6 +142,8 @@ export function drawInteriorObjects(
       if (obj.label) {
         drawMarkerLabel(ctx, rect, obj.label, style, obj.markerKind);
       }
+    } else if (obj.type === 'camera') {
+      drawCameraIcon(ctx, room, obj, isSelected, isActive, zoom);
     }
   }
 }

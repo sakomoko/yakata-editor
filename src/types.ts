@@ -58,7 +58,33 @@ export interface Marker extends InteriorObjectBase {
   label?: string;
 }
 
-export type RoomInteriorObject = StraightStairs | FoldingStairs | Marker;
+export interface SecurityCamera extends InteriorObjectBase {
+  type: 'camera';
+  /** カメラの向き（ラジアン、0=右/東、PI/2=下/南） */
+  angle: number;
+  /** 視野の半角（ラジアン）。デフォルト PI/6 (30°、全体で60°) */
+  fovAngle: number;
+  /** 視野の到達距離（グリッド単位）。デフォルト 5 */
+  fovRange: number;
+  /** 視野コーンの塗りつぶし色。デフォルト 'rgba(0,150,255,0.15)' */
+  fovColor: string;
+  /** 視野コーンの枠線色。デフォルト 'rgba(0,150,255,0.4)' */
+  fovStrokeColor: string;
+}
+
+export type CameraColorPreset = 'blue' | 'red' | 'green' | 'yellow';
+
+export const CAMERA_COLOR_PRESETS: Record<
+  CameraColorPreset,
+  { fovColor: string; fovStrokeColor: string }
+> = {
+  blue: { fovColor: 'rgba(0,150,255,0.15)', fovStrokeColor: 'rgba(0,150,255,0.4)' },
+  red: { fovColor: 'rgba(255,50,50,0.15)', fovStrokeColor: 'rgba(255,50,50,0.4)' },
+  green: { fovColor: 'rgba(50,200,50,0.15)', fovStrokeColor: 'rgba(50,200,50,0.4)' },
+  yellow: { fovColor: 'rgba(255,200,0,0.15)', fovStrokeColor: 'rgba(255,200,0,0.4)' },
+};
+
+export type RoomInteriorObject = StraightStairs | FoldingStairs | Marker | SecurityCamera;
 
 export interface Room {
   id: string;
@@ -171,6 +197,21 @@ export type DragState =
       freeTextId: string;
       dir: ResizeDirection;
       orig: { gx: number; gy: number; w: number; h: number };
+    }
+  | {
+      type: 'rotateCameraAngle';
+      roomId: string;
+      objectId: string;
+    }
+  | {
+      type: 'adjustCameraFovAngle';
+      roomId: string;
+      objectId: string;
+    }
+  | {
+      type: 'adjustCameraFovRange';
+      roomId: string;
+      objectId: string;
     }
   | null;
 
