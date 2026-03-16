@@ -5,7 +5,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
-import type { MarkerEditData } from './editor.ts';
+import type { MarkerEditData } from './editor/index.ts';
 
 interface Props {
   open: boolean;

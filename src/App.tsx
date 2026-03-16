@@ -10,7 +10,7 @@ import {
   type RoomEditData,
   type MarkerEditData,
   type ContextMenuRequest,
-} from './editor.ts';
+} from './editor/index.ts';
 import { loadFromFile } from './persistence.ts';
 import RoomDialog from './RoomDialog.tsx';
 import MarkerDialog from './MarkerDialog.tsx';

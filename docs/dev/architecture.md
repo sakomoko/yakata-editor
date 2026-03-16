@@ -9,11 +9,11 @@ yakata-editorは、Canvas APIベースのグリッド間取り図エディタ。
 ```
 ユーザー入力（マウス/キーボード）
     ↓
-editor.ts イベントハンドラ
+editor/ イベントハンドラ（mouse-down.ts, mouse-move.ts 等）
     ↓
-EditorState 更新
+EditorContext 経由で EditorState 更新
     ↓
-commitChange()
+commitChange()（editor/project.ts）
     ↓
 pushUndo() → render() → persistToStorage()
     ↓
@@ -28,7 +28,19 @@ Canvas 再描画 + localStorage 保存
 
 ### コアモジュール
 
-- **editor.ts** — オーケストレーター。`EditorState` を保持し、Canvas描画（`render()`）とマウス/キーボードイベントを処理。外部向けAPI（`initEditor`, `undo`, `newProject`, `loadProject`, `saveProject`, `exportAsPng`）を提供
+- **editor/** — オーケストレーター。`EditorContext` オブジェクトパターンで共有状態を管理し、各イベントハンドラを独立モジュールに分割
+  - **editor/index.ts** — `initEditor()` エントリポイント。状態初期化・イベント登録・API返却
+  - **editor/context.ts** — `EditorContext`, `EditorCallbacks`, `EditorAPI` 等のインターフェース定義
+  - **editor/render.ts** — `render()`, `updateStatus()` 描画処理
+  - **editor/project.ts** — `commitChange()`, `undo()`, `newProject()`, `loadProjectData()`, `saveProject()`, `exportAsPng()`, `applyRoomEdit()`
+  - **editor/mouse-down.ts** — `onMouseDown()` マウスダウンイベント処理
+  - **editor/mouse-move.ts** — `onMouseMove()` マウスムーブイベント処理
+  - **editor/mouse-up.ts** — `onMouseUp()` マウスアップイベント処理
+  - **editor/context-menu-handler.ts** — `onContextMenu()` 右クリックメニュー構築
+  - **editor/keyboard.ts** — `onKeyDown()`, `onKeyUp()` キーボードイベント処理
+  - **editor/wheel.ts** — `onWheel()` ホイールズーム・パン処理
+  - **editor/dblclick.ts** — `onDblClick()` ダブルクリックイベント処理
+  - **editor/utils.ts** — `labelDisplayWidth()`, `createMousePos()` ユーティリティ
 - **types.ts** — 全型定義（`Room`, `FreeText`, `WallObject`, `RoomInteriorObject`, `Project`, `EditorState`, `DragState`, `MouseCoord`, `Handle`）
 
 ### 機能モジュール
@@ -51,22 +63,22 @@ Canvas 再描画 + localStorage 保存
 
 ```
 main.ts
-  ├─ editor.ts
-  │   ├─ types.ts
-  │   ├─ grid.ts
-  │   ├─ room.ts → types.ts, grid.ts
-  │   ├─ wall-object.ts → types.ts, grid.ts
-  │   ├─ free-text.ts → types.ts, grid.ts
-  │   ├─ interior-object.ts → types.ts, grid.ts, camera.ts
-  │   ├─ camera.ts → types.ts, grid.ts
-  │   ├─ adjacency.ts → types.ts, wall-object.ts
-  │   ├─ link.ts → types.ts
-  │   ├─ z-order.ts → types.ts
-  │   ├─ selection.ts → types.ts
-  │   ├─ history.ts → types.ts
-  │   └─ persistence.ts → types.ts
-  ├─ App.tsx → RoomDialog.tsx, MarkerDialog.tsx, FreeTextDialog.tsx, ContextMenu.tsx, context-menu.ts
-  ├─ persistence.ts
+  ├─ App.tsx
+  │   ├─ editor/index.ts (initEditor)
+  │   │   ├─ editor/context.ts (EditorContext, EditorCallbacks, EditorAPI)
+  │   │   ├─ editor/render.ts → room.ts, wall-object.ts, camera.ts, free-text.ts, grid.ts
+  │   │   ├─ editor/project.ts → history.ts, selection.ts, persistence.ts, room.ts, adjacency.ts
+  │   │   ├─ editor/mouse-down.ts → room.ts, wall-object.ts, interior-object.ts, camera.ts, free-text.ts, link.ts
+  │   │   ├─ editor/mouse-move.ts → room.ts, wall-object.ts, interior-object.ts, camera.ts, free-text.ts, adjacency.ts
+  │   │   ├─ editor/mouse-up.ts → room.ts, wall-object.ts, free-text.ts, adjacency.ts
+  │   │   ├─ editor/context-menu-handler.ts → room.ts, wall-object.ts, interior-object.ts, camera.ts, free-text.ts, z-order.ts, link.ts, adjacency.ts
+  │   │   ├─ editor/keyboard.ts → z-order.ts, link.ts, adjacency.ts, viewport.ts
+  │   │   ├─ editor/wheel.ts → viewport.ts
+  │   │   ├─ editor/dblclick.ts → room.ts, interior-object.ts, free-text.ts
+  │   │   └─ editor/utils.ts → grid.ts, viewport.ts
+  │   ├─ RoomDialog.tsx, MarkerDialog.tsx, FreeTextDialog.tsx
+  │   ├─ ContextMenu.tsx → context-menu.ts
+  │   └─ persistence.ts
   └─ style.css
 ```
 
@@ -85,7 +97,7 @@ main.ts
 
 ## 状態管理
 
-`EditorState` が単一の状態オブジェクトとしてアプリケーション全体の状態を保持する。
+`EditorState` が単一の状態オブジェクトとしてアプリケーション全体の状態を保持する。各イベントハンドラは `EditorContext` オブジェクトを通じて状態・viewport・コールバック・描画関数にアクセスする。クラスではなく関数型スタイルを維持するため、コンテキストオブジェクトパターンを採用している。
 
 - `rooms: Room[]` — 全部屋データ
 - `freeTexts: FreeText[]` — 自由配置テキストデータ
