@@ -7,11 +7,7 @@ import TextField from '@mui/material/TextField';
 import Slider from '@mui/material/Slider';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
-
-export interface FreeTextEditData {
-  label: string;
-  fontSize: number;
-}
+import type { FreeTextEditData } from './types.ts';
 
 interface Props {
   open: boolean;

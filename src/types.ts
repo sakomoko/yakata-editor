@@ -85,6 +85,11 @@ export interface FreeText {
   zLayer: 'front' | 'back';
 }
 
+export interface FreeTextEditData {
+  label: string;
+  fontSize: number;
+}
+
 export interface Project {
   version: number;
   name: string;

@@ -1,4 +1,11 @@
-import type { EditorState, MouseCoord, Room, FreeText, WallObject } from './types.ts';
+import type {
+  EditorState,
+  MouseCoord,
+  Room,
+  FreeText,
+  FreeTextEditData,
+  WallObject,
+} from './types.ts';
 import { GRID, drawGrid } from './grid.ts';
 import {
   drawRoom,
@@ -61,7 +68,6 @@ import {
   findFreeTextsInArea,
   computeFreeTextResize,
 } from './free-text.ts';
-import type { FreeTextEditData } from './FreeTextDialog.tsx';
 import type { ContextMenuItem } from './context-menu.ts';
 import { bringToFront, sendToBack, bringForward, sendBackward } from './z-order.ts';
 import {
@@ -342,11 +348,8 @@ export function initEditor(
         maxY = 30 * GRID;
       }
 
-      bbox.x = minX;
-      bbox.y = minY;
-      bbox.w = maxX - minX;
-      bbox.h = maxY - minY;
-      const maxDim = Math.max(bbox.w, bbox.h);
+      const exportBbox = { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+      const maxDim = Math.max(exportBbox.w, exportBbox.h);
       const MAX_EXPORT_SIZE = 16384;
       const exportScale = maxDim > MAX_EXPORT_SIZE ? MAX_EXPORT_SIZE / maxDim : 1;
       if (exportScale < 1) {
@@ -355,10 +358,10 @@ export function initEditor(
         );
       }
       viewport.zoom = exportScale;
-      viewport.panX = bbox.x;
-      viewport.panY = bbox.y;
-      canvas.width = Math.max(1, Math.round(bbox.w * exportScale));
-      canvas.height = Math.max(1, Math.round(bbox.h * exportScale));
+      viewport.panX = exportBbox.x;
+      viewport.panY = exportBbox.y;
+      canvas.width = Math.max(1, Math.round(exportBbox.w * exportScale));
+      canvas.height = Math.max(1, Math.round(exportBbox.h * exportScale));
 
       render();
       exportPng(canvas);
@@ -839,6 +842,8 @@ export function initEditor(
       const containedFt = findFreeTextsInArea(state.freeTexts, area);
       if (contained.length > 0 || containedFt.length > 0) {
         // 範囲選択: 包含された部屋・FreeTextを選択
+        activeFreeTextId = undefined;
+        activeInteriorObjectId = undefined;
         if (!e.shiftKey) {
           clearSelection(state.selection);
         }
