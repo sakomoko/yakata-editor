@@ -13,6 +13,10 @@ export function pushUndo(history: string[], rooms: Room[], freeTexts: FreeText[]
   if (history.length > MAX_HISTORY) history.shift();
 }
 
+export function cancelLastUndo(history: string[]): void {
+  history.pop();
+}
+
 export function popUndo(history: string[]): Snapshot | null {
   if (history.length === 0) return null;
   const raw: unknown = JSON.parse(history.pop()!);
