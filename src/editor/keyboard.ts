@@ -12,6 +12,21 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
 
   const { canvas, state, viewport, flags } = ec;
 
+  // P キーでペイントモードトグル
+  if (e.key === 'p' && !e.metaKey && !e.ctrlKey && document.activeElement === document.body) {
+    e.preventDefault();
+    state.paintMode = !state.paintMode;
+    if (state.paintMode) {
+      clearSelection(state.selection);
+      flags.activeInteriorObjectId = undefined;
+      flags.activeFreeTextId = undefined;
+    }
+    canvas.style.cursor = 'crosshair';
+    ec.render();
+    ec.callbacks.onPaintModeChange?.(state.paintMode);
+    return;
+  }
+
   if (e.code === 'Space' && !flags.isPanning && document.activeElement === document.body) {
     e.preventDefault();
     flags.isPanning = true;
@@ -45,11 +60,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     return;
   }
 
-  if (
-    (e.metaKey || e.ctrlKey) &&
-    (e.key === ']' || e.key === '[') &&
-    state.selection.size === 1
-  ) {
+  if ((e.metaKey || e.ctrlKey) && (e.key === ']' || e.key === '[') && state.selection.size === 1) {
     e.preventDefault();
     const roomId = [...state.selection][0];
     const forward = e.key === ']';
@@ -60,7 +71,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
       : forward
         ? bringForward
         : sendBackward;
-    pushUndo(state.history, state.rooms, state.freeTexts);
+    pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
     const changed = fn(state.rooms, roomId);
     if (changed) {
       ec.render();
@@ -101,8 +112,9 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     if (state.selection.size > 0) {
       e.preventDefault();
       commitChange(ec, () => {
-        // 選択中のFreeTextも削除
+        // 選択中のFreeText・FreeStrokeも削除
         state.freeTexts = state.freeTexts.filter((f) => !state.selection.has(f.id));
+        state.freeStrokes = state.freeStrokes.filter((s) => !state.selection.has(s.id));
         state.rooms = state.rooms.filter((r) => !state.selection.has(r.id));
         cleanupSingletonGroups(state.rooms);
         syncAllPairedOpenings(state.rooms);

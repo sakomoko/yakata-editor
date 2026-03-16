@@ -37,6 +37,13 @@ import {
   hitCameraHandleInRooms,
 } from '../camera.ts';
 import { hitFreeText, hitFreeTextHandle, computeFreeTextResize } from '../free-text.ts';
+import {
+  hitFreeStrokeInList,
+  constrainToLine,
+  moveStroke as moveStrokeFn,
+  STROKE_HIT_TOLERANCE_PX,
+} from '../free-stroke.ts';
+import { findFreeStrokeById } from '../lookup.ts';
 import { syncPairedOpening } from '../adjacency.ts';
 import type { EditorContext } from './context.ts';
 import { updateStatus } from './render.ts';
@@ -46,6 +53,9 @@ import type { MouseCoord } from '../types.ts';
 /** 壁オブジェクト・インテリア・FreeText・部屋のヒット判定に基づくデフォルトカーソルを返す */
 function resolveDefaultCursor(ec: EditorContext, m: MouseCoord): string {
   const { state, viewport } = ec;
+  if (state.paintMode) return 'crosshair';
+  if (hitFreeStrokeInList(state.freeStrokes, m.px, m.py, STROKE_HIT_TOLERANCE_PX / viewport.zoom))
+    return 'grab';
   if (hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom, true)) return 'grab';
   if (hitInteriorObjectInRooms(state.rooms, m.px, m.py)) return 'grab';
   if (hitFreeText(state.freeTexts, m.px, m.py)) return 'grab';
@@ -343,6 +353,28 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
       ft.gy = result.gy;
       ft.w = result.w;
       ft.h = result.h;
+    }
+  } else if (state.drag.type === 'paint') {
+    const stroke = findFreeStrokeById(state.freeStrokes, state.drag.strokeId);
+    if (stroke) {
+      if (e.shiftKey && stroke.points.length > 0) {
+        const start = stroke.points[0];
+        const constrained = constrainToLine(start, { px: m.px, py: m.py });
+        // Shift 直線モード: 始点と終点のみ保持
+        stroke.points = [start, constrained];
+      } else {
+        stroke.points.push({ px: m.px, py: m.py });
+      }
+    }
+  } else if (state.drag.type === 'moveStroke') {
+    const drag = state.drag;
+    const stroke = findFreeStrokeById(state.freeStrokes, drag.id);
+    if (stroke) {
+      const dx = m.px - drag.offsetPx;
+      const dy = m.py - drag.offsetPy;
+      moveStrokeFn(stroke, dx, dy);
+      drag.offsetPx = m.px;
+      drag.offsetPy = m.py;
     }
   }
 

@@ -1,19 +1,20 @@
 import type { FreeText, GroupScaleOriginal } from '../types.ts';
 import { findFreeTextById } from '../lookup.ts';
 import { GRID } from '../grid.ts';
-import { hitHandle, hitRoom, computeGroupBoundingBox, hitGroupHandle, getAnchorForDir } from '../room.ts';
+import {
+  hitHandle,
+  hitRoom,
+  computeGroupBoundingBox,
+  hitGroupHandle,
+  getAnchorForDir,
+} from '../room.ts';
 import { toggleSelection, selectSingle, clearSelection, getSelectedRooms } from '../selection.ts';
 import { pushUndo } from '../history.ts';
-import {
-  hitWallObjectInRooms,
-  hitWallObjectEdgeInRooms,
-} from '../wall-object.ts';
-import {
-  hitInteriorObjectInRooms,
-  hitInteriorObjectHandleInRooms,
-} from '../interior-object.ts';
+import { hitWallObjectInRooms, hitWallObjectEdgeInRooms } from '../wall-object.ts';
+import { hitInteriorObjectInRooms, hitInteriorObjectHandleInRooms } from '../interior-object.ts';
 import { hitCameraHandleInRooms } from '../camera.ts';
 import { hitFreeText, hitFreeTextHandle } from '../free-text.ts';
+import { createFreeStroke, hitFreeStrokeInList, STROKE_HIT_TOLERANCE_PX } from '../free-stroke.ts';
 import { expandWithLinked } from '../link.ts';
 import type { EditorContext } from './context.ts';
 
@@ -37,11 +38,27 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
   const m = ec.mousePos(e);
   const shift = e.shiftKey;
 
+  // Paint mode: start new stroke
+  if (state.paintMode && e.button === 0) {
+    pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
+    const stroke = createFreeStroke(
+      [{ px: m.px, py: m.py }],
+      state.paintColor,
+      state.paintLineWidth,
+      state.paintOpacity,
+    );
+    state.freeStrokes.push(stroke);
+    state.drag = { type: 'paint', strokeId: stroke.id };
+    canvas.style.cursor = 'crosshair';
+    ec.render();
+    return;
+  }
+
   // Check wall object edge hit (resize) FIRST — on narrow walls, room handles overlap
   const selectedRooms = state.rooms.filter((r) => state.selection.has(r.id));
   const edgeHit = hitWallObjectEdgeInRooms(selectedRooms, m.px, m.py, viewport.zoom, true);
   if (edgeHit) {
-    pushUndo(state.history, state.rooms, state.freeTexts);
+    pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
     flags.activeInteriorObjectId = undefined;
     const horiz = edgeHit.obj.side === 'n' || edgeHit.obj.side === 's';
     state.drag = {
@@ -63,7 +80,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
     if (activeFt) {
       const ftHandleDir = hitFreeTextHandle(activeFt, m.px, m.py, viewport.zoom);
       if (ftHandleDir) {
-        pushUndo(state.history, state.rooms, state.freeTexts);
+        pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
         state.drag = {
           type: 'resizeFreeText',
           freeTextId: activeFt.id,
@@ -86,7 +103,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
     flags.activeInteriorObjectId,
   );
   if (camHandleHit) {
-    pushUndo(state.history, state.rooms, state.freeTexts);
+    pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
     flags.activeInteriorObjectId = camHandleHit.cam.id;
     const dragType =
       camHandleHit.hit.type === 'rotate'
@@ -107,7 +124,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
   // Check interior object handle hit (resize)
   const intHandleHit = hitInteriorObjectHandleInRooms(selectedRooms, m.px, m.py, viewport.zoom);
   if (intHandleHit) {
-    pushUndo(state.history, state.rooms, state.freeTexts);
+    pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
     flags.activeInteriorObjectId = intHandleHit.obj.id;
     state.drag = {
       type: 'resizeInteriorObject',
@@ -129,7 +146,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
 
   const handleHit = hitHandle(state.rooms, state.selection, m.px, m.py, viewport.zoom);
   if (handleHit) {
-    pushUndo(state.history, state.rooms, state.freeTexts);
+    pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
     const { handle, room } = handleHit;
     state.drag = {
       type: 'resize',
@@ -149,7 +166,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
       const selBB = computeGroupBoundingBox(selRooms);
       const groupHandle = hitGroupHandle(selBB, m.px, m.py, viewport.zoom);
       if (groupHandle) {
-        pushUndo(state.history, state.rooms, state.freeTexts);
+        pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
         const expanded = expandWithLinked(state.rooms, state.selection);
         const expandedRooms = state.rooms.filter((r) => expanded.has(r.id));
         // origBB/anchor は表示BBと一致する selBB を使用（ハンドル位置とスケール基準を統一）
@@ -194,7 +211,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
   // Check wall object hit (window drag) — skip auto-generated openings
   const wallHit = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom, true);
   if (wallHit) {
-    pushUndo(state.history, state.rooms, state.freeTexts);
+    pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
     flags.activeInteriorObjectId = undefined;
     state.drag = {
       type: 'moveWallObject',
@@ -209,7 +226,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
   // Check interior object hit (move)
   const intHit = hitInteriorObjectInRooms(state.rooms, m.px, m.py);
   if (intHit) {
-    pushUndo(state.history, state.rooms, state.freeTexts);
+    pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
     selectSingle(state.selection, intHit.room.id);
     flags.activeInteriorObjectId = intHit.obj.id;
     const snapToGrid = intHit.obj.type === 'stairs';
@@ -239,7 +256,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
     } else {
       selectSingle(state.selection, ft.id);
     }
-    pushUndo(state.history, state.rooms, state.freeTexts);
+    pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
     state.drag = {
       type: 'moveFreeText',
       freeTextId: ft.id,
@@ -248,6 +265,28 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
     };
     canvas.style.cursor = 'grabbing';
     ec.render();
+  }
+
+  // Check free stroke hit (select/move)
+  const strokeHitTolerance = STROKE_HIT_TOLERANCE_PX / viewport.zoom;
+  const strokeHit = hitFreeStrokeInList(state.freeStrokes, m.px, m.py, strokeHitTolerance);
+  if (strokeHit) {
+    if (shift) {
+      toggleSelection(state.selection, strokeHit.id);
+    } else {
+      selectSingle(state.selection, strokeHit.id);
+    }
+    pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
+    state.drag = {
+      type: 'moveStroke',
+      id: strokeHit.id,
+      offsetPx: m.px,
+      offsetPy: m.py,
+    };
+    flags.activeFreeTextId = undefined;
+    canvas.style.cursor = 'grabbing';
+    ec.render();
+    return;
   }
 
   // Check front-layer FreeText hit
@@ -271,7 +310,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
       ec.render();
       return;
     }
-    pushUndo(state.history, state.rooms, state.freeTexts);
+    pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
     const expanded = expandWithLinked(state.rooms, state.selection);
     const originals = new Map<string, { x: number; y: number }>();
     for (const room of state.rooms) {

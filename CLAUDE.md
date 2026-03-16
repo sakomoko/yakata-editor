@@ -25,7 +25,7 @@ Canvas上でのマウス操作 → editor/ のイベントハンドラ → state
 
 ### Module Structure
 
-- **types.ts** — 全型定義 (`Room`, `WallObject`, `Project`, `EditorState`, `DragState` discriminated union, `MouseCoord`, `ProjectMeta`, `ProjectData`, `TabState`)
+- **types.ts** — 全型定義 (`Room`, `WallObject`, `FreeStroke`, `Project`, `EditorState`, `DragState` discriminated union, `MouseCoord`, `ProjectMeta`, `ProjectData`, `TabState`)
 - **editor/** — エディタのオーケストレーター。`EditorContext`オブジェクトで共有状態を管理し、各ハンドラを独立モジュールに分割
   - **editor/index.ts** — `initEditor()` エントリポイント。状態初期化・イベント登録・API返却
   - **editor/context.ts** — `EditorContext`, `EditorCallbacks`, `EditorAPI` 等のインターフェース定義
@@ -39,12 +39,13 @@ Canvas上でのマウス操作 → editor/ のイベントハンドラ → state
   - **editor/wheel.ts** — `onWheel()` ホイールズーム・パン処理
   - **editor/dblclick.ts** — `onDblClick()` ダブルクリックイベント処理
   - **editor/utils.ts** — `labelDisplayWidth()`, `createMousePos()` ユーティリティ
-- **lookup.ts** — ID検索ヘルパー (`findRoomById`, `findRoomIndexById`, `findFreeTextById`, `findWallObjectById`, `findInteriorObjectById`)
+- **lookup.ts** — ID検索ヘルパー (`findRoomById`, `findRoomIndexById`, `findFreeTextById`, `findFreeStrokeById`, `findWallObjectById`, `findInteriorObjectById`)
 - **room.ts** — 部屋の生成(`createRoom`)、描画(`drawRoom`)、ヒット判定(`hitRoom`, `hitHandle`)、リサイズハンドル計算(`getHandles`)
 - **wall-object.ts** — 壁オブジェクト(窓など)の生成・ヒット判定・ピクセル座標変換・壁セグメント分割
 - **interior-object.ts** — 部屋内オブジェクト(階段・マーカー)の生成・描画・ヒット判定・クランプ・移動/リサイズ計算
 - **camera.ts** — 防犯カメラ(SecurityCamera)の生成・描画・ヒット判定・FOVハンドル計算・カラープリセット定数
 - **free-text.ts** — 自由配置テキスト(FreeText)の生成・描画・ヒット判定・リサイズ計算。部屋に属さない独立オブジェクト
+- **free-stroke.ts** — フリーペイントストローク(FreeStroke)の生成・描画・ヒット判定・バウンディングボックス・移動・点列間引き(Douglas-Peucker)・直線制約
 - **adjacency.ts** — 隣接部屋の壁オブジェクト自動同期。ペア開口の作成・削除・全再構築
 - **context-menu.ts** / **ContextMenu.tsx** — 壁の右クリックコンテキストメニュー(窓の追加・削除)
 - **selection.ts** — 選択状態管理 (Set\<string\>ベース)

@@ -10,6 +10,7 @@ import { getSingleSelected, getSelectedRooms } from '../selection.ts';
 import { drawOutwardDoorsOverlay } from '../wall-object.ts';
 import { drawCameraFovOverlay, drawCameraHandles } from '../camera.ts';
 import { drawFreeText, drawFreeTextHandles } from '../free-text.ts';
+import { drawFreeStroke, drawFreeStrokeBounds } from '../free-stroke.ts';
 import { drawLinkGroupIndicators } from '../link.ts';
 import type { EditorContext } from './context.ts';
 
@@ -114,6 +115,14 @@ export function render(ec: EditorContext): void {
     }
   }
 
+  // Free strokes (最前面レイヤー)
+  for (const stroke of state.freeStrokes) {
+    drawFreeStroke(ctx, stroke, viewport.zoom);
+    if (state.selection.has(stroke.id)) {
+      drawFreeStrokeBounds(ctx, stroke, viewport.zoom);
+    }
+  }
+
   if (state.drag && state.drag.type === 'create') {
     drawCreationPreview(ctx, state.drag.start, state.drag.cur, viewport.zoom);
   }
@@ -131,6 +140,9 @@ export function updateStatus(ec: EditorContext): void {
   const { state, viewport, callbacks } = ec;
   const zoomPct = Math.round(viewport.zoom * 100);
   let text = `(${state.mouse.gx}, ${state.mouse.gy})　部屋: ${state.rooms.length}　|　${zoomPct}%`;
+  if (state.paintMode) {
+    text += '　|　ペイントモード';
+  }
   if (state.selection.size === 1) {
     const sel = getSingleSelected(state.rooms, state.selection);
     if (sel) {

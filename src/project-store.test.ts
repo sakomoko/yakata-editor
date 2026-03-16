@@ -50,9 +50,9 @@ describe('generateDefaultName', () => {
   });
 
   it('increments number to avoid conflicts', () => {
-    expect(
-      generateDefaultName(['無題のプロジェクト', '無題のプロジェクト (2)']),
-    ).toBe('無題のプロジェクト (3)');
+    expect(generateDefaultName(['無題のプロジェクト', '無題のプロジェクト (2)'])).toBe(
+      '無題のプロジェクト (3)',
+    );
   });
 });
 
@@ -62,9 +62,7 @@ describe('loadProjectIndex / saveProjectIndex', () => {
   });
 
   it('round-trips project index', () => {
-    const index: ProjectMeta[] = [
-      { id: 'a', name: 'test', createdAt: 1000, updatedAt: 2000 },
-    ];
+    const index: ProjectMeta[] = [{ id: 'a', name: 'test', createdAt: 1000, updatedAt: 2000 }];
     saveProjectIndex(index);
     expect(loadProjectIndex()).toEqual(index);
   });
@@ -104,6 +102,7 @@ describe('loadProjectData / saveProjectData', () => {
     const data: ProjectData = {
       rooms: [{ id: 'r1', x: 0, y: 0, w: 5, h: 3, label: 'Room' }],
       freeTexts: [],
+      freeStrokes: [],
       viewport: { zoom: 1.5, panX: 10, panY: 20 },
       history: ['snapshot1'],
     };
@@ -123,10 +122,7 @@ describe('loadProjectData / saveProjectData', () => {
   });
 
   it('provides default viewport for missing viewport', () => {
-    storage.set(
-      'yakata_project_proj1',
-      JSON.stringify({ rooms: [], freeTexts: [] }),
-    );
+    storage.set('yakata_project_proj1', JSON.stringify({ rooms: [], freeTexts: [] }));
     const loaded = loadProjectData('proj1');
     expect(loaded!.data.viewport).toEqual({ zoom: 1, panX: 0, panY: 0 });
   });
@@ -228,7 +224,13 @@ describe('migrateIfNeeded', () => {
   });
 
   it('migrates old madori_data', () => {
-    storage.set('madori_data', JSON.stringify({ rooms: [{ id: 'r1', x: 0, y: 0, w: 5, h: 3, label: 'Old Room' }], freeTexts: [] }));
+    storage.set(
+      'madori_data',
+      JSON.stringify({
+        rooms: [{ id: 'r1', x: 0, y: 0, w: 5, h: 3, label: 'Old Room' }],
+        freeTexts: [],
+      }),
+    );
     storage.set('madori_viewport', JSON.stringify({ zoom: 2, panX: 100, panY: 200 }));
 
     migrateIfNeeded();

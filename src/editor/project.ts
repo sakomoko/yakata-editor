@@ -1,14 +1,15 @@
-import type { Room, FreeText } from '../types.ts';
+import type { Room, FreeText, FreeStroke } from '../types.ts';
 import { GRID } from '../grid.ts';
 import { pushUndo, popUndo } from '../history.ts';
 import { clearSelection } from '../selection.ts';
 import { exportPng, saveAsJson } from '../persistence.ts';
+import { getStrokeBounds } from '../free-stroke.ts';
 import { computeRoomsBoundingBox, calcAutoFontSize } from '../room.ts';
 import { syncAllPairedOpenings } from '../adjacency.ts';
 import type { EditorContext } from './context.ts';
 
 export function commitChange(ec: EditorContext, fn: () => void): void {
-  pushUndo(ec.state.history, ec.state.rooms, ec.state.freeTexts);
+  pushUndo(ec.state.history, ec.state.rooms, ec.state.freeTexts, ec.state.freeStrokes);
   fn();
   ec.render();
   ec.callbacks.onAutoSave();
@@ -19,6 +20,8 @@ export function undo(ec: EditorContext): void {
   if (!restored) return;
   ec.state.rooms = restored.rooms;
   ec.state.freeTexts = restored.freeTexts;
+  ec.state.freeStrokes = restored.freeStrokes;
+  ec.state.drag = null;
   clearSelection(ec.state.selection);
   ec.flags.activeInteriorObjectId = undefined;
   ec.flags.activeFreeTextId = undefined;
@@ -28,13 +31,14 @@ export function undo(ec: EditorContext): void {
 
 export function newProject(ec: EditorContext): void {
   if (
-    (ec.state.rooms.length || ec.state.freeTexts.length) &&
+    (ec.state.rooms.length || ec.state.freeTexts.length || ec.state.freeStrokes.length) &&
     !confirm('現在の間取り図をクリアしますか？')
   )
     return;
   commitChange(ec, () => {
     ec.state.rooms = [];
     ec.state.freeTexts = [];
+    ec.state.freeStrokes = [];
     clearSelection(ec.state.selection);
   });
   ec.flags.activeInteriorObjectId = undefined;
@@ -43,11 +47,12 @@ export function newProject(ec: EditorContext): void {
 
 export function loadProjectData(
   ec: EditorContext,
-  data: { rooms: Room[]; freeTexts: FreeText[] },
+  data: { rooms: Room[]; freeTexts: FreeText[]; freeStrokes?: FreeStroke[] },
 ): void {
   commitChange(ec, () => {
     ec.state.rooms = data.rooms;
     ec.state.freeTexts = data.freeTexts;
+    ec.state.freeStrokes = data.freeStrokes ?? [];
     clearSelection(ec.state.selection);
     syncAllPairedOpenings(ec.state.rooms);
   });
@@ -56,7 +61,7 @@ export function loadProjectData(
 }
 
 export async function saveProject(ec: EditorContext): Promise<void> {
-  await saveAsJson(ec.state.rooms, ec.state.freeTexts);
+  await saveAsJson(ec.state.rooms, ec.state.freeTexts, ec.state.freeStrokes);
 }
 
 export function exportAsPng(ec: EditorContext): void {
@@ -90,6 +95,16 @@ export function exportAsPng(ec: EditorContext): void {
       if (ftY < minY) minY = ftY;
       if (ftR > maxX) maxX = ftR;
       if (ftB > maxY) maxY = ftB;
+    }
+
+    for (const stroke of state.freeStrokes) {
+      const bounds = getStrokeBounds(stroke);
+      if (bounds) {
+        if (bounds.x < minX) minX = bounds.x;
+        if (bounds.y < minY) minY = bounds.y;
+        if (bounds.x + bounds.w > maxX) maxX = bounds.x + bounds.w;
+        if (bounds.y + bounds.h > maxY) maxY = bounds.y + bounds.h;
+      }
     }
 
     // rooms も FreeText もない場合のフォールバック

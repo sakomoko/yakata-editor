@@ -1,4 +1,4 @@
-import type { FreeText, Room, RoomInteriorObject, WallObject } from './types.ts';
+import type { FreeStroke, FreeText, Room, RoomInteriorObject, WallObject } from './types.ts';
 
 export function findRoomById(rooms: Room[], roomId: string): Room | undefined {
   return rooms.find((r) => r.id === roomId);
@@ -21,4 +21,11 @@ export function findInteriorObjectById(
   objectId: string,
 ): RoomInteriorObject | undefined {
   return room.interiorObjects?.find((o) => o.id === objectId);
+}
+
+export function findFreeStrokeById(
+  strokes: FreeStroke[],
+  strokeId: string,
+): FreeStroke | undefined {
+  return strokes.find((s) => s.id === strokeId);
 }

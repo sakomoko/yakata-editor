@@ -93,6 +93,7 @@ export default function App() {
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(
     null,
   );
+  const [paintMode, setPaintMode] = useState(false);
 
   // Multi-project state
   // tabState: React state (レンダリング用), tabStateRef: ref (コールバック内での最新値参照用)
@@ -165,9 +166,15 @@ export default function App() {
     const editor = editorRef.current;
     const activeId = tabStateRef.current.activeTabId;
     if (!editor || !activeId) return;
-    const { rooms, freeTexts, history } = editor.getState();
+    const { rooms, freeTexts, freeStrokes, history } = editor.getState();
     const viewport = editor.getViewport();
-    saveProjectData(activeId, { rooms, freeTexts, viewport, history } satisfies ProjectData);
+    saveProjectData(activeId, {
+      rooms,
+      freeTexts,
+      freeStrokes,
+      viewport,
+      history,
+    } satisfies ProjectData);
     debouncedTouchUpdatedAt(activeId);
   }, []);
 
@@ -197,6 +204,7 @@ export default function App() {
         result?.data ?? {
           rooms: [],
           freeTexts: [],
+          freeStrokes: [],
           viewport: { zoom: 1, panX: 0, panY: 0 },
           history: [],
         },
@@ -281,6 +289,7 @@ export default function App() {
         onAutoSave: () => saveCurrentProject(),
         // onViewportChange はホイール等で高頻度に呼ばれるため、debounce で全データシリアライズの頻度を抑制
         onViewportChange: () => debouncedSaveCurrentProject(),
+        onPaintModeChange: (mode: boolean) => setPaintMode(mode),
       },
       activeResult?.data ?? undefined,
     );
@@ -437,11 +446,7 @@ export default function App() {
         }}
       >
         {/* TODO: アイコン画像に差し替え */}
-        <Box
-          component="span"
-          sx={{ fontSize: 14, lineHeight: 1 }}
-          aria-hidden="true"
-        >
+        <Box component="span" sx={{ fontSize: 14, lineHeight: 1 }} aria-hidden="true">
           🏚
         </Box>
         <Typography
@@ -535,6 +540,76 @@ export default function App() {
         >
           戻す (⌘Z)
         </Button>
+        <Divider orientation="vertical" flexItem sx={{ borderColor: '#555', mx: 0.5 }} />
+        <Button
+          size="small"
+          variant="contained"
+          color="inherit"
+          sx={{
+            ...toolbarButtonSx,
+            ...(paintMode && {
+              bgcolor: '#1976d2',
+              color: '#fff',
+              borderColor: '#1976d2',
+              '&:hover': { bgcolor: '#1565c0', color: '#fff', boxShadow: 'none' },
+            }),
+          }}
+          onClick={() => {
+            const next = !paintMode;
+            setPaintMode(next);
+            editorRef.current?.setPaintMode(next);
+          }}
+        >
+          ペン (P)
+        </Button>
+        {paintMode && (
+          <>
+            <input
+              type="color"
+              value={editorRef.current?.getPaintState().paintColor ?? '#ff0000'}
+              onChange={(e) => editorRef.current?.setPaintColor(e.target.value)}
+              style={{ width: 28, height: 24, border: 'none', padding: 0, cursor: 'pointer' }}
+              title="ペン色"
+            />
+            <select
+              value={editorRef.current?.getPaintState().paintLineWidth ?? 3}
+              onChange={(e) => editorRef.current?.setPaintLineWidth(Number(e.target.value))}
+              style={{
+                height: 24,
+                fontSize: 11,
+                background: '#444',
+                color: '#ccc',
+                border: '1px solid #555',
+                borderRadius: 3,
+              }}
+              title="ペン太さ"
+            >
+              <option value={1}>1px</option>
+              <option value={2}>2px</option>
+              <option value={3}>3px</option>
+              <option value={6}>6px</option>
+              <option value={10}>10px</option>
+            </select>
+            <select
+              value={editorRef.current?.getPaintState().paintOpacity ?? 1}
+              onChange={(e) => editorRef.current?.setPaintOpacity(Number(e.target.value))}
+              style={{
+                height: 24,
+                fontSize: 11,
+                background: '#444',
+                color: '#ccc',
+                border: '1px solid #555',
+                borderRadius: 3,
+              }}
+              title="不透明度"
+            >
+              <option value={1}>100%</option>
+              <option value={0.8}>80%</option>
+              <option value={0.5}>50%</option>
+              <option value={0.3}>30%</option>
+            </select>
+          </>
+        )}
         <Typography
           variant="caption"
           sx={{ color: '#ddd', ml: 'auto', whiteSpace: 'nowrap', fontSize: 13 }}

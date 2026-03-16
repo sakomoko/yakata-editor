@@ -139,6 +139,29 @@ interface FreeText {
 
 デフォルトサイズは3×2グリッド。部屋の境界制約なし。移動はグリッドスナップ、リサイズは最小1×1グリッド。
 
+## FreeStroke
+
+フリーペイントのストロークデータ。ピクセル座標（ワールド座標系）で点列を保持し、常に最前面レイヤーに描画される。
+
+```typescript
+interface FreeStroke {
+  id: string;              // UUID
+  points: { px: number; py: number }[];  // ピクセル座標の点列
+  color: string;           // 色（hex形式、例: '#ff0000'）
+  lineWidth: number;       // 太さ（ピクセル単位）
+  opacity: number;         // 不透明度（0.0〜1.0）
+}
+```
+
+| プロパティ | 説明 |
+|-----------|------|
+| `points` | ピクセル座標の点列（ワールド座標系）。mouseup時にDouglas-Peuckerアルゴリズムで間引きされる |
+| `color` | 描画色（hex形式、3〜8桁） |
+| `lineWidth` | 線の太さ（0.5〜20px） |
+| `opacity` | 不透明度（0.0〜1.0） |
+
+グリッドスナップなし。描画時の `lineWidth` はズームレベルで割ることで、画面上の見た目の太さを一定に保つ。ヒット判定は各線分への最短距離で判定し、`lineWidth / 2` を許容距離に加算。
+
 ## Room
 
 部屋を表す基本データ構造。座標・サイズはすべてグリッド単位。
@@ -170,6 +193,7 @@ interface Project {
   gridSize: number;        // グリッドサイズ（px）
   rooms: Room[];           // 部屋の配列
   freeTexts?: FreeText[];  // 自由配置テキストの配列（後方互換のためoptional）
+  freeStrokes?: FreeStroke[]; // フリーペイントストロークの配列（後方互換のためoptional）
 }
 ```
 
@@ -192,6 +216,8 @@ type DragState =
   | { type: 'rotateCameraAngle'; roomId: string; objectId: string }
   | { type: 'adjustCameraFovAngle'; roomId: string; objectId: string }
   | { type: 'adjustCameraFovRange'; roomId: string; objectId: string }
+  | { type: 'paint'; strokeId: string }
+  | { type: 'moveStroke'; id: string; offsetPx: number; offsetPy: number }
   | { type: 'groupResize'; dir: CornerDirection; origBB: { x: number; y: number; w: number; h: number }; anchor: { gx: number; gy: number }; originals: Map<string, GroupScaleOriginal> }
   | null;
 ```
@@ -212,6 +238,8 @@ type DragState =
 | `rotateCameraAngle` | カメラの回転ハンドルをドラッグ | カメラの向き（angle）を変更 |
 | `adjustCameraFovAngle` | カメラの広がりハンドルをドラッグ | 視野の半角（fovAngle）を調整 |
 | `adjustCameraFovRange` | カメラの距離ハンドルをドラッグ | 視野の到達距離（fovRange）を調整 |
+| `paint` | ペイントモードでドラッグ | 新規ストロークを描画（点列をリアルタイム追加、Shift押下で直線制約） |
+| `moveStroke` | 通常モードでストロークをドラッグ | ストローク全体をオフセット移動 |
 | `groupResize` | グループBBの4隅ハンドルをドラッグ（部屋2つ以上選択時） | アスペクト比維持で選択部屋を一括スケーリング |
 | `null` | ドラッグなし | 通常状態 |
 
@@ -223,10 +251,15 @@ type DragState =
 interface EditorState {
   rooms: Room[];           // 全部屋データ
   freeTexts: FreeText[];   // 自由配置テキストデータ
-  selection: Set<string>;  // 選択中の部屋/FreeTextのID
+  freeStrokes: FreeStroke[]; // フリーペイントストロークデータ
+  selection: Set<string>;  // 選択中の部屋/FreeText/FreeStrokeのID
   history: string[];       // Undoスナップショット（JSON文字列、最大50件）
   drag: DragState;         // 現在のドラッグ操作
   mouse: MouseCoord;       // 現在のマウス座標
+  paintMode: boolean;      // ペイントモードON/OFF
+  paintColor: string;      // 現在の描画色（hex）
+  paintLineWidth: number;  // 現在の太さ（px）
+  paintOpacity: number;    // 現在の不透明度（0.0〜1.0）
 }
 ```
 
@@ -305,6 +338,7 @@ interface ProjectMeta {
 interface ProjectData {
   rooms: Room[];
   freeTexts: FreeText[];
+  freeStrokes: FreeStroke[];
   viewport: { zoom: number; panX: number; panY: number };
   history: string[];   // Undoスナップショット（JSON文字列）
 }

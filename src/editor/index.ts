@@ -40,10 +40,15 @@ export function initEditor(
   const state: EditorState = {
     rooms: initialData?.rooms ?? [],
     freeTexts: initialData?.freeTexts ?? [],
+    freeStrokes: initialData?.freeStrokes ?? [],
     selection: new Set(),
     history: initialData?.history ?? [],
     drag: null,
     mouse: { px: 0, py: 0, gx: 0, gy: 0 },
+    paintMode: false,
+    paintColor: '#ff0000',
+    paintLineWidth: 3,
+    paintOpacity: 1.0,
   };
 
   const viewport = initialData?.viewport
@@ -123,14 +128,41 @@ export function initEditor(
     getState: () => ({
       rooms: state.rooms,
       freeTexts: state.freeTexts,
+      freeStrokes: state.freeStrokes,
       history: state.history,
     }),
     getViewport: () => ({ ...viewport }),
+    setPaintMode: (on: boolean) => {
+      state.paintMode = on;
+      if (on) {
+        clearSelection(state.selection);
+        flags.activeInteriorObjectId = undefined;
+        flags.activeFreeTextId = undefined;
+      }
+      ec.render();
+    },
+    setPaintColor: (color: string) => {
+      state.paintColor = color;
+    },
+    setPaintLineWidth: (width: number) => {
+      state.paintLineWidth = width;
+    },
+    setPaintOpacity: (opacity: number) => {
+      state.paintOpacity = opacity;
+    },
+    getPaintState: () => ({
+      paintMode: state.paintMode,
+      paintColor: state.paintColor,
+      paintLineWidth: state.paintLineWidth,
+      paintOpacity: state.paintOpacity,
+    }),
     loadProjectState: (data: ProjectData) => {
       state.rooms = data.rooms;
       state.freeTexts = data.freeTexts;
+      state.freeStrokes = data.freeStrokes;
       state.history = data.history;
       state.drag = null;
+      state.paintMode = false;
       clearSelection(state.selection);
       flags.isPanning = false;
       flags.activeInteriorObjectId = undefined;

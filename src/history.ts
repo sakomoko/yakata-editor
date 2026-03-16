@@ -1,14 +1,20 @@
-import type { Room, FreeText } from './types.ts';
+import type { Room, FreeText, FreeStroke } from './types.ts';
 
 const MAX_HISTORY = 50;
 
 interface Snapshot {
   rooms: Room[];
   freeTexts: FreeText[];
+  freeStrokes: FreeStroke[];
 }
 
-export function pushUndo(history: string[], rooms: Room[], freeTexts: FreeText[] = []): void {
-  const snapshot: Snapshot = { rooms, freeTexts };
+export function pushUndo(
+  history: string[],
+  rooms: Room[],
+  freeTexts: FreeText[] = [],
+  freeStrokes: FreeStroke[] = [],
+): void {
+  const snapshot: Snapshot = { rooms, freeTexts, freeStrokes };
   history.push(JSON.stringify(snapshot));
   if (history.length > MAX_HISTORY) history.shift();
 }
@@ -24,11 +30,12 @@ export function popUndo(history: string[]): Snapshot | null {
   const raw: unknown = JSON.parse(history.pop()!);
   // 後方互換: 旧形式は配列（rooms only）
   if (Array.isArray(raw)) {
-    return { rooms: raw as Room[], freeTexts: [] };
+    return { rooms: raw as Room[], freeTexts: [], freeStrokes: [] };
   }
   const obj = raw as Record<string, unknown>;
   return {
     rooms: (obj.rooms as Room[]) ?? [],
     freeTexts: (obj.freeTexts as FreeText[]) ?? [],
+    freeStrokes: (obj.freeStrokes as FreeStroke[]) ?? [],
   };
 }

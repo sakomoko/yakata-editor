@@ -71,7 +71,11 @@ export function loadProjectData(id: string): LoadProjectResult | null {
     if (!parsed || typeof parsed !== 'object') return null;
     const obj = parsed as Record<string, unknown>;
 
-    const storageData = parseStorageData({ rooms: obj.rooms, freeTexts: obj.freeTexts });
+    const storageData = parseStorageData({
+      rooms: obj.rooms,
+      freeTexts: obj.freeTexts,
+      freeStrokes: obj.freeStrokes,
+    });
     const viewport = parseViewport(obj.viewport);
     const history: string[] = Array.isArray(obj.history)
       ? (obj.history as unknown[]).filter((h): h is string => typeof h === 'string')
@@ -81,6 +85,7 @@ export function loadProjectData(id: string): LoadProjectResult | null {
       data: {
         rooms: storageData.rooms,
         freeTexts: storageData.freeTexts,
+        freeStrokes: storageData.freeStrokes,
         viewport,
         history,
       },
@@ -165,6 +170,7 @@ export function createNewProject(name?: string): { meta: ProjectMeta; data: Proj
   const data: ProjectData = {
     rooms: [],
     freeTexts: [],
+    freeStrokes: [],
     viewport: { zoom: 1, panX: 0, panY: 0 },
     history: [],
   };
@@ -209,6 +215,7 @@ export function migrateIfNeeded(): void {
       const data: ProjectData = {
         rooms: storageData.rooms,
         freeTexts: storageData.freeTexts,
+        freeStrokes: storageData.freeStrokes,
         viewport,
         history: [],
       };

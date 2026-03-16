@@ -1,11 +1,10 @@
-import { findRoomById, findWallObjectById } from '../lookup.ts';
+import { findRoomById, findWallObjectById, findFreeStrokeById } from '../lookup.ts';
 import { selectSingle, clearSelection } from '../selection.ts';
-import { pushUndo } from '../history.ts';
-import {
-  hitWallObjectInRooms,
-} from '../wall-object.ts';
+import { pushUndo, cancelLastUndo } from '../history.ts';
+import { hitWallObjectInRooms } from '../wall-object.ts';
 import { createRoom, findRoomsInArea, normalizeArea } from '../room.ts';
 import { findFreeTextsInArea } from '../free-text.ts';
+import { simplifyPoints } from '../free-stroke.ts';
 import { syncPairedOpening, syncAllPairedOpenings } from '../adjacency.ts';
 import type { EditorContext } from './context.ts';
 
@@ -36,6 +35,38 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
     const m = ec.mousePos(e);
     const stillOnWallObj = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom, true);
     canvas.style.cursor = stillOnWallObj ? 'grab' : 'crosshair';
+    ec.render();
+    ec.callbacks.onAutoSave();
+    return;
+  }
+
+  if (state.drag.type === 'paint') {
+    const stroke = findFreeStrokeById(state.freeStrokes, state.drag.strokeId);
+    if (stroke) {
+      stroke.points = simplifyPoints(stroke.points, 1.5);
+      // 点が少ない、または始点≒終点の微小ストロークは削除してUndoを汚さない
+      const isTiny =
+        stroke.points.length < 2 ||
+        (stroke.points.length === 2 &&
+          Math.hypot(
+            stroke.points[1].px - stroke.points[0].px,
+            stroke.points[1].py - stroke.points[0].py,
+          ) < 2);
+      if (isTiny) {
+        state.freeStrokes = state.freeStrokes.filter((s) => s.id !== stroke.id);
+        cancelLastUndo(state.history);
+      }
+    }
+    state.drag = null;
+    canvas.style.cursor = 'crosshair';
+    ec.render();
+    ec.callbacks.onAutoSave();
+    return;
+  }
+
+  if (state.drag.type === 'moveStroke') {
+    state.drag = null;
+    canvas.style.cursor = 'crosshair';
     ec.render();
     ec.callbacks.onAutoSave();
     return;
@@ -79,7 +110,7 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
       }
     } else if (area.w > 0 && area.h > 0) {
       // 部屋作成: 包含する部屋がなければ新規作成にフォールバック
-      pushUndo(state.history, state.rooms, state.freeTexts);
+      pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
       const room = createRoom(area.x, area.y, area.w, area.h);
       state.rooms.push(room);
       clearSelection(state.selection);
