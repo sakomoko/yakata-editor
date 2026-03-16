@@ -69,6 +69,10 @@ describe('findRoomIndexById', () => {
   it('returns -1 when not found', () => {
     expect(findRoomIndexById(rooms, 'r999')).toBe(-1);
   });
+
+  it('returns -1 for empty array', () => {
+    expect(findRoomIndexById([], 'r1')).toBe(-1);
+  });
 });
 
 describe('findFreeTextById', () => {

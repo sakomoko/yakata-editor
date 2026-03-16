@@ -1,4 +1,4 @@
-import type { FreeText, Room, RoomInteriorObject, WallObject } from './types';
+import type { FreeText, Room, RoomInteriorObject, WallObject } from './types.ts';
 
 export function findRoomById(rooms: Room[], roomId: string): Room | undefined {
   return rooms.find((r) => r.id === roomId);
