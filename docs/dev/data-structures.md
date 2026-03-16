@@ -283,3 +283,40 @@ interface GroupScaleOriginal {
 ```
 
 スケーリング計算は常に元データから行い、累積誤差を防ぐ。サイズ計算は右端/下端から位置を引く方式で、隣接部屋間の隙間/重なりを防止する。
+
+## ProjectMeta
+
+プロジェクトのメタデータ。プロジェクトインデックス（`yakata_project_index`）に格納される。
+
+```typescript
+interface ProjectMeta {
+  id: string;          // UUID
+  name: string;        // プロジェクト名
+  createdAt: number;   // 作成日時（Unix timestamp ms）
+  updatedAt: number;   // 更新日時（Unix timestamp ms）
+}
+```
+
+## ProjectData
+
+プロジェクトの実データ。`yakata_project_{id}` キーに格納される。
+
+```typescript
+interface ProjectData {
+  rooms: Room[];
+  freeTexts: FreeText[];
+  viewport: { zoom: number; panX: number; panY: number };
+  history: string[];   // Undoスナップショット（JSON文字列）
+}
+```
+
+## TabState
+
+タブの状態。`yakata_tab_state` キーに格納される。
+
+```typescript
+interface TabState {
+  openTabs: string[];  // 開いているプロジェクトIDの配列（順序付き）
+  activeTabId: string; // 現在アクティブなプロジェクトID
+}
+```
