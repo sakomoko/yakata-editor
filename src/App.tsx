@@ -14,7 +14,8 @@ import {
 import { loadFromFile } from './persistence.ts';
 import RoomDialog from './RoomDialog.tsx';
 import MarkerDialog from './MarkerDialog.tsx';
-import FreeTextDialog, { type FreeTextEditData } from './FreeTextDialog.tsx';
+import type { FreeTextEditData } from './types.ts';
+import FreeTextDialog from './FreeTextDialog.tsx';
 import ContextMenu from './ContextMenu.tsx';
 import type { ContextMenuItem } from './context-menu.ts';
 

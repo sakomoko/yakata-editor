@@ -196,10 +196,7 @@ export function ensureFreeTextIds(objects: unknown[]): FreeText[] {
         w: obj.w as number,
         h: obj.h as number,
         label: obj.label as string,
-        fontSize:
-          typeof obj.fontSize === 'number'
-            ? Math.max(4, Math.min(80, obj.fontSize))
-            : 14,
+        fontSize: typeof obj.fontSize === 'number' ? Math.max(4, Math.min(80, obj.fontSize)) : 14,
         zLayer: VALID_Z_LAYERS.has(obj.zLayer as string)
           ? (obj.zLayer as 'front' | 'back')
           : 'front',

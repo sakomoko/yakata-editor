@@ -26,4 +26,3 @@ export function getSingleSelected(rooms: Room[], selection: Set<string>): Room |
 export function getSelectedRooms(rooms: Room[], selection: Set<string>): Room[] {
   return rooms.filter((r) => selection.has(r.id));
 }
-
