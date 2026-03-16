@@ -8,7 +8,7 @@ import Slider from '@mui/material/Slider';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
-import type { RoomEditData } from './editor.ts';
+import type { RoomEditData } from './editor/index.ts';
 
 interface Props {
   open: boolean;
