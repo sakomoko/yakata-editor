@@ -180,7 +180,7 @@ export default function App() {
           variant="contained"
           color="inherit"
           sx={toolbarButtonSx}
-          onClick={() => editorRef.current?.saveProject()}
+          onClick={() => editorRef.current?.saveProject().catch(console.error)}
         >
           保存
         </Button>

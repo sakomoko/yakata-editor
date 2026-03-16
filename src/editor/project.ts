@@ -55,8 +55,8 @@ export function loadProjectData(
   ec.flags.activeFreeTextId = undefined;
 }
 
-export function saveProject(ec: EditorContext): void {
-  saveAsJson(ec.state.rooms, ec.state.freeTexts);
+export async function saveProject(ec: EditorContext): Promise<void> {
+  await saveAsJson(ec.state.rooms, ec.state.freeTexts);
 }
 
 export function exportAsPng(ec: EditorContext): void {

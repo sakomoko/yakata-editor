@@ -326,10 +326,39 @@ export function loadFromStorage(): StorageData {
   }
 }
 
-export function saveAsJson(rooms: Room[], freeTexts: FreeText[] = []): void {
+export async function saveAsJson(rooms: Room[], freeTexts: FreeText[] = []): Promise<void> {
   const data = { rooms, freeTexts };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  triggerDownload(URL.createObjectURL(blob), '間取り図.json');
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+
+  if (typeof window.showSaveFilePicker === 'function') {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: '間取り図.json',
+        types: [
+          {
+            description: 'JSON ファイル',
+            accept: { 'application/json': ['.json'] },
+          },
+        ],
+      });
+      const writable = await handle.createWritable();
+      try {
+        await writable.write(blob);
+      } finally {
+        await writable.close();
+      }
+      return;
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      console.warn('showSaveFilePicker failed, falling back to download:', err);
+    }
+  }
+
+  // フォールバック: ファイル名を入力してダウンロード
+  const filename = prompt('ファイル名を入力してください', '間取り図.json');
+  if (!filename) return;
+  triggerDownload(URL.createObjectURL(blob), filename);
 }
 
 export function loadFromFile(file: File): Promise<StorageData> {

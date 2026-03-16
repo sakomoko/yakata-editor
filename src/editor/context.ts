@@ -30,7 +30,7 @@ export interface EditorAPI {
   undo: () => void;
   newProject: () => void;
   loadProject: (data: { rooms: Room[]; freeTexts: FreeText[] }) => void;
-  saveProject: () => void;
+  saveProject: () => Promise<void>;
   exportAsPng: () => void;
   resize: () => void;
   destroy: () => void;
