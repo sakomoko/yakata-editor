@@ -8,6 +8,8 @@ import {
   cleanupSingletonGroups,
   hasAdjacentPair,
   hasLinkedRoom,
+  linkGroupColor,
+  getLinkedIndicators,
 } from './link.ts';
 
 function makeRoom(overrides: Partial<Room> & { x: number; y: number; w: number; h: number }): Room {
@@ -196,5 +198,47 @@ describe('hasLinkedRoom', () => {
     const a = makeRoom({ x: 0, y: 0, w: 3, h: 3 });
     const rooms = [a];
     expect(hasLinkedRoom(rooms, new Set([a.id]))).toBe(false);
+  });
+});
+
+describe('linkGroupColor', () => {
+  it('同じIDで同じ色を返す', () => {
+    const id = 'test-group-id';
+    expect(linkGroupColor(id)).toBe(linkGroupColor(id));
+  });
+
+  it('異なるIDで異なる色を返す', () => {
+    expect(linkGroupColor('group-a')).not.toBe(linkGroupColor('group-b'));
+  });
+
+  it('hsl形式の文字列を返す', () => {
+    expect(linkGroupColor('test')).toMatch(/^hsl\(\d+, 70%, 50%\)$/);
+  });
+});
+
+describe('getLinkedIndicators', () => {
+  it('選択部屋のlinkGroupメンバー全員を返す', () => {
+    const group = 'g1';
+    const a = makeRoom({ x: 0, y: 0, w: 3, h: 3, linkGroup: group });
+    const b = makeRoom({ x: 3, y: 0, w: 3, h: 3, linkGroup: group });
+    const c = makeRoom({ x: 6, y: 0, w: 3, h: 3 });
+    const rooms = [a, b, c];
+    const result = getLinkedIndicators(rooms, new Set([a.id]));
+    expect(result.has(a.id)).toBe(true);
+    expect(result.has(b.id)).toBe(true);
+    expect(result.has(c.id)).toBe(false);
+    expect(result.get(a.id)).toBe(linkGroupColor(group));
+  });
+
+  it('選択なしで空Mapを返す', () => {
+    const a = makeRoom({ x: 0, y: 0, w: 3, h: 3, linkGroup: 'g1' });
+    const result = getLinkedIndicators([a], new Set());
+    expect(result.size).toBe(0);
+  });
+
+  it('linkGroupなしの部屋を選択しても空Mapを返す', () => {
+    const a = makeRoom({ x: 0, y: 0, w: 3, h: 3 });
+    const result = getLinkedIndicators([a], new Set([a.id]));
+    expect(result.size).toBe(0);
   });
 });
