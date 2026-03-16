@@ -71,15 +71,16 @@ export default function TabBar({
               <span style={tabLabelStyle}>{tab.name}</span>
             )}
             {tabs.length > 1 && (
-              <span
+              <button
                 style={closeStyle}
                 onClick={(e) => {
                   e.stopPropagation();
                   onTabClose(tab.id);
                 }}
+                title="タブを閉じる"
               >
                 ×
-              </span>
+              </button>
             )}
           </div>
         ))}
@@ -153,6 +154,9 @@ const closeStyle: React.CSSProperties = {
   lineHeight: '14px',
   color: '#888',
   cursor: 'pointer',
+  background: 'none',
+  border: 'none',
+  padding: 0,
 };
 
 const inputStyle: React.CSSProperties = {

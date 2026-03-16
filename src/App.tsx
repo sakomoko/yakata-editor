@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -169,6 +169,13 @@ export default function App() {
     debouncedTouchUpdatedAt(activeId);
   }, []);
 
+  // Debounced version for high-frequency events (wheel scroll etc.)
+  // useMemo ensures stable reference across re-renders
+  const debouncedSaveCurrentProject = useMemo(
+    () => createDebouncedFn(() => saveCurrentProject(), 300),
+    [saveCurrentProject],
+  );
+
   // Update tabState in both state and ref
   const updateTabState = useCallback((newState: TabState) => {
     tabStateRef.current = newState;
@@ -178,11 +185,19 @@ export default function App() {
 
   // Load project into editor with fallback for missing data
   const loadProjectIntoEditor = useCallback((id: string) => {
-    const data = loadProjectData(id);
+    const result = loadProjectData(id);
+    if (result?.warning) {
+      alert(result.warning);
+    }
     const editor = editorRef.current;
     if (editor) {
       editor.loadProjectState(
-        data ?? { rooms: [], freeTexts: [], viewport: { zoom: 1, panX: 0, panY: 0 }, history: [] },
+        result?.data ?? {
+          rooms: [],
+          freeTexts: [],
+          viewport: { zoom: 1, panX: 0, panY: 0 },
+          history: [],
+        },
       );
     }
   }, []);
@@ -246,7 +261,10 @@ export default function App() {
     saveTabState(ts);
 
     // Load active project data
-    const activeData = ts.activeTabId ? loadProjectData(ts.activeTabId) : null;
+    const activeResult = ts.activeTabId ? loadProjectData(ts.activeTabId) : null;
+    if (activeResult?.warning) {
+      setTimeout(() => alert(activeResult.warning), 0);
+    }
 
     const api = initEditor(
       canvas,
@@ -260,9 +278,9 @@ export default function App() {
         // editorRef は init 完了後にセットされるが、コールバックはユーザー操作時のみ呼ばれるので問題ない
         onAutoSave: () => saveCurrentProject(),
         // onViewportChange はホイール等で高頻度に呼ばれるため、debounce で全データシリアライズの頻度を抑制
-        onViewportChange: createDebouncedFn(() => saveCurrentProject(), 300),
+        onViewportChange: () => debouncedSaveCurrentProject(),
       },
-      activeData ?? undefined,
+      activeResult?.data ?? undefined,
     );
     editorRef.current = api;
 
@@ -377,6 +395,8 @@ export default function App() {
         return;
       }
       editorRef.current?.loadProject(data);
+      // インポート後に即保存してプロジェクトデータに反映
+      saveCurrentProject();
     } catch (err) {
       console.error('loadFromFile error:', err);
       alert('ファイルを読み込めませんでした');
@@ -384,14 +404,18 @@ export default function App() {
     e.target.value = '';
   };
 
-  // Build tabs array for TabBar
-  const tabs = tabState.openTabs
-    .map((id) => {
-      const meta = projectIndex.find((m) => m.id === id);
-      if (!meta) return null;
-      return { id, name: meta.name, isActive: id === tabState.activeTabId };
-    })
-    .filter((t): t is NonNullable<typeof t> => t !== null);
+  // Build tabs array for TabBar (memoized)
+  const tabs = useMemo(
+    () =>
+      tabState.openTabs
+        .map((id) => {
+          const meta = projectIndex.find((m) => m.id === id);
+          if (!meta) return null;
+          return { id, name: meta.name, isActive: id === tabState.activeTabId };
+        })
+        .filter((t): t is NonNullable<typeof t> => t !== null),
+    [tabState, projectIndex],
+  );
 
   /* eslint-disable no-irregular-whitespace */
   return (

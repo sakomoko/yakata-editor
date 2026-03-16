@@ -110,11 +110,11 @@ describe('loadProjectData / saveProjectData', () => {
     saveProjectData('proj1', data);
     const loaded = loadProjectData('proj1');
     expect(loaded).not.toBeNull();
-    expect(loaded!.rooms).toHaveLength(1);
-    expect(loaded!.rooms[0].label).toBe('Room');
-    expect(loaded!.viewport.zoom).toBe(1.5);
-    expect(loaded!.viewport.panX).toBe(10);
-    expect(loaded!.history).toEqual(['snapshot1']);
+    expect(loaded!.data.rooms).toHaveLength(1);
+    expect(loaded!.data.rooms[0].label).toBe('Room');
+    expect(loaded!.data.viewport.zoom).toBe(1.5);
+    expect(loaded!.data.viewport.panX).toBe(10);
+    expect(loaded!.data.history).toEqual(['snapshot1']);
   });
 
   it('returns null for corrupt data', () => {
@@ -128,7 +128,7 @@ describe('loadProjectData / saveProjectData', () => {
       JSON.stringify({ rooms: [], freeTexts: [] }),
     );
     const loaded = loadProjectData('proj1');
-    expect(loaded!.viewport).toEqual({ zoom: 1, panX: 0, panY: 0 });
+    expect(loaded!.data.viewport).toEqual({ zoom: 1, panX: 0, panY: 0 });
   });
 
   it('clamps zoom value', () => {
@@ -141,7 +141,7 @@ describe('loadProjectData / saveProjectData', () => {
       }),
     );
     const loaded = loadProjectData('proj1');
-    expect(loaded!.viewport.zoom).toBe(4); // MAX_ZOOM
+    expect(loaded!.data.viewport.zoom).toBe(4); // MAX_ZOOM
   });
 });
 
@@ -240,11 +240,11 @@ describe('migrateIfNeeded', () => {
     // New data exists
     const index = loadProjectIndex();
     expect(index).toHaveLength(1);
-    const data = loadProjectData(index[0].id);
-    expect(data!.rooms).toHaveLength(1);
-    expect(data!.rooms[0].label).toBe('Old Room');
-    expect(data!.viewport.zoom).toBe(2);
-    expect(data!.viewport.panX).toBe(100);
+    const result = loadProjectData(index[0].id);
+    expect(result!.data.rooms).toHaveLength(1);
+    expect(result!.data.rooms[0].label).toBe('Old Room');
+    expect(result!.data.viewport.zoom).toBe(2);
+    expect(result!.data.viewport.panX).toBe(100);
   });
 
   it('is idempotent', () => {

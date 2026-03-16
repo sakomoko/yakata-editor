@@ -58,7 +58,12 @@ export function saveProjectIndex(index: ProjectMeta[]): void {
 
 // --- Project Data ---
 
-export function loadProjectData(id: string): ProjectData | null {
+export interface LoadProjectResult {
+  data: ProjectData;
+  warning?: string;
+}
+
+export function loadProjectData(id: string): LoadProjectResult | null {
   try {
     const raw = localStorage.getItem(PROJECT_KEY_PREFIX + id);
     if (!raw) return null;
@@ -67,19 +72,19 @@ export function loadProjectData(id: string): ProjectData | null {
     const obj = parsed as Record<string, unknown>;
 
     const storageData = parseStorageData({ rooms: obj.rooms, freeTexts: obj.freeTexts });
-    if (storageData.warning) {
-      console.warn(`Project ${id}: ${storageData.warning}`);
-    }
     const viewport = parseViewport(obj.viewport);
     const history: string[] = Array.isArray(obj.history)
       ? (obj.history as unknown[]).filter((h): h is string => typeof h === 'string')
       : [];
 
     return {
-      rooms: storageData.rooms,
-      freeTexts: storageData.freeTexts,
-      viewport,
-      history,
+      data: {
+        rooms: storageData.rooms,
+        freeTexts: storageData.freeTexts,
+        viewport,
+        history,
+      },
+      warning: storageData.warning,
     };
   } catch {
     return null;
