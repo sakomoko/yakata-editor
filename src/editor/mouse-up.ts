@@ -86,7 +86,11 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
       clearSelection(state.selection);
       state.selection.add(room.id);
     }
-  } else if (state.drag.type === 'move' || state.drag.type === 'resize') {
+  } else if (
+    state.drag.type === 'move' ||
+    state.drag.type === 'resize' ||
+    state.drag.type === 'groupResize'
+  ) {
     // 部屋の移動・リサイズ後にペア開口を再同期
     syncAllPairedOpenings(state.rooms);
   }
