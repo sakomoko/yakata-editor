@@ -141,7 +141,8 @@ export default function App() {
         return;
       }
       editorRef.current?.loadProject(data);
-    } catch {
+    } catch (err) {
+      console.error('loadFromFile error:', err);
       alert('ファイルを読み込めませんでした');
     }
     e.target.value = '';
