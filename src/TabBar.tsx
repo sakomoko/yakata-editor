@@ -54,7 +54,7 @@ export default function TabBar({
     setCtxMenu({ x: e.clientX, y: e.clientY, tabId });
   }, []);
 
-  const activeId = tabs.find((t) => t.isActive)?.id ?? false;
+  const activeId = tabs.find((t) => t.isActive)?.id ?? '';
 
   const ctxMenuItems: ContextMenuItem[] = useMemo(() => {
     if (!ctxMenu) return [];
@@ -142,23 +142,24 @@ export default function TabBar({
                     {tab.name}
                   </Box>
                   {tabs.length > 1 && (
-                    <Box
-                      component="span"
+                    <IconButton
+                      size="small"
                       onClick={(e) => {
                         e.stopPropagation();
                         onTabClose(tab.id);
                       }}
+                      aria-label="タブを閉じる"
                       sx={{
-                        fontSize: 16,
-                        lineHeight: 1,
+                        fontSize: 14,
+                        width: 20,
+                        height: 20,
                         color: '#888',
-                        cursor: 'pointer',
                         ml: 0.5,
                         '&:hover': { color: '#fff' },
                       }}
                     >
                       ×
-                    </Box>
+                    </IconButton>
                   )}
                 </Box>
               )

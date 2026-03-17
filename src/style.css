@@ -16,7 +16,6 @@ body {
   min-height: 0;
   overflow: hidden;
   background: #888;
-  margin-bottom: 36px;
 }
 canvas {
   display: block;
