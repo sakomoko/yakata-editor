@@ -1,7 +1,12 @@
 import type { ProjectMeta, ProjectData, TabState } from './types.ts';
 import type { ViewportState } from './viewport.ts';
 import { parseStorageData } from './persistence.ts';
-import { parseViewport, deduplicateName, generateDefaultName } from './shared/project-utils.ts';
+import {
+  parseViewport,
+  deduplicateName,
+  generateDefaultName,
+  isValidProjectMeta,
+} from './shared/project-utils.ts';
 
 const INDEX_KEY = 'yakata_project_index';
 const PROJECT_KEY_PREFIX = 'yakata_project_';
@@ -17,14 +22,7 @@ export function loadProjectIndex(): ProjectMeta[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (item): item is ProjectMeta =>
-        item !== null &&
-        item !== undefined &&
-        typeof item === 'object' &&
-        typeof (item as Record<string, unknown>).id === 'string' &&
-        typeof (item as Record<string, unknown>).name === 'string',
-    );
+    return parsed.filter(isValidProjectMeta);
   } catch {
     return [];
   }
@@ -114,10 +112,12 @@ export async function syncWithServer(): Promise<void> {
   try {
     const res = await fetch('/api/projects');
     if (res.ok) {
-      serverIndex = (await res.json()) as ProjectMeta[];
+      const json: unknown[] = await res.json();
+      serverIndex = json.filter(isValidProjectMeta);
     }
   } catch {
-    // サーバー未起動の場合はフル同期にフォールバック
+    // サーバー未起動の場合は同期をスキップ
+    return;
   }
   const serverMap = new Map(serverIndex.map((m) => [m.id, m]));
 
@@ -133,7 +133,7 @@ export async function syncWithServer(): Promise<void> {
     for (const meta of index) {
       const serverMeta = serverMap.get(meta.id);
       // サーバーに存在し、ローカルのupdatedAtがサーバー以下ならスキップ
-      if (serverMeta && meta.updatedAt <= (serverMeta.updatedAt ?? 0)) continue;
+      if (serverMeta && (meta.updatedAt ?? 0) <= (serverMeta.updatedAt ?? 0)) continue;
 
       const result = loadProjectData(meta.id);
       if (result) {

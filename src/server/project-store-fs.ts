@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import type { ProjectMeta, ProjectData } from '../types.ts';
 import { parseStorageData } from '../persistence.ts';
-import { parseViewport, generateDefaultName } from '../shared/project-utils.ts';
+import { parseViewport, generateDefaultName, isValidProjectMeta } from '../shared/project-utils.ts';
 
 // Re-export parseViewport for api-plugin.ts
 export { parseViewport } from '../shared/project-utils.ts';
@@ -57,14 +57,7 @@ export function loadProjectIndex(): ProjectMeta[] {
     const raw = fs.readFileSync(indexPath(), 'utf-8');
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (item): item is ProjectMeta =>
-        item !== null &&
-        item !== undefined &&
-        typeof item === 'object' &&
-        typeof (item as Record<string, unknown>).id === 'string' &&
-        typeof (item as Record<string, unknown>).name === 'string',
-    );
+    return parsed.filter(isValidProjectMeta);
   } catch {
     return [];
   }
