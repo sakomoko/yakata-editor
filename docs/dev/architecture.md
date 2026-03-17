@@ -96,7 +96,7 @@ main.ts
   │   │   ├─ editor/dblclick.ts → room.ts, interior-object.ts, free-text.ts
   │   │   └─ editor/utils.ts → grid.ts, viewport.ts
   │   ├─ project-store.ts → persistence.ts (parseStorageData), viewport.ts
-  │   ├─ TabBar.tsx → ContextMenu.tsx, context-menu.ts
+  │   ├─ TabBar.tsx → @mui/material (Tabs, Tab, IconButton), ContextMenu.tsx, context-menu.ts
   │   ├─ ProjectListModal.tsx
   │   ├─ RoomDialog.tsx, MarkerDialog.tsx, FreeTextDialog.tsx
   │   ├─ ContextMenu.tsx → context-menu.ts
