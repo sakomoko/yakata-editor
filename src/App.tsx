@@ -116,7 +116,7 @@ export default function App() {
   const [projectListOpen, setProjectListOpen] = useState(false);
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const deleteTargetIdRef = useRef<string | null>(null);
 
   const handleRoomEdit = useCallback(
     (data: RoomEditData): Promise<{ label: string; fontSize?: number } | null> => {
@@ -418,7 +418,7 @@ export default function App() {
     (id: string) => {
       const index = loadProjectIndex();
       if (index.length <= 1) return;
-      setDeleteTargetId(id);
+      deleteTargetIdRef.current = id;
       setDeleteConfirmOpen(true);
     },
     [],
@@ -447,12 +447,12 @@ export default function App() {
   const handleDeleteConfirmClose = useCallback(
     (confirmed: boolean) => {
       setDeleteConfirmOpen(false);
-      if (confirmed && deleteTargetId) {
-        executeDeleteProject(deleteTargetId);
+      if (confirmed && deleteTargetIdRef.current) {
+        executeDeleteProject(deleteTargetIdRef.current);
       }
-      setDeleteTargetId(null);
+      deleteTargetIdRef.current = null;
     },
-    [deleteTargetId, executeDeleteProject],
+    [executeDeleteProject],
   );
 
   const handleDuplicateProject = useCallback(
@@ -785,7 +785,11 @@ export default function App() {
       <Dialog open={deleteConfirmOpen} onClose={() => handleDeleteConfirmClose(false)}>
         <DialogTitle>プロジェクトの削除</DialogTitle>
         <DialogContent>
-          <DialogContentText>このプロジェクトを削除しますか？</DialogContentText>
+          <DialogContentText>
+            プロジェクト「
+            {projectIndex.find((m) => m.id === deleteTargetIdRef.current)?.name ?? ''}
+            」を削除しますか？この操作は取り消せません。
+          </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => handleDeleteConfirmClose(false)}>キャンセル</Button>
