@@ -15,6 +15,7 @@ interface ProjectListModalProps {
   projects: ProjectMeta[];
   openTabIds: string[];
   onOpen: (id: string) => void;
+  onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
   onClose: () => void;
 }
@@ -29,6 +30,7 @@ export default function ProjectListModal({
   projects,
   openTabIds,
   onOpen,
+  onDuplicate,
   onDelete,
   onClose,
 }: ProjectListModalProps) {
@@ -46,8 +48,11 @@ export default function ProjectListModal({
                 key={p.id}
                 secondaryAction={
                   <>
-                    <Button size="small" onClick={() => onOpen(p.id)} sx={{ mr: 1 }}>
+                    <Button size="small" onClick={() => onOpen(p.id)} sx={{ mr: 0.5 }}>
                       開く
+                    </Button>
+                    <Button size="small" onClick={() => onDuplicate(p.id)} sx={{ mr: 0.5 }}>
+                      複製
                     </Button>
                     {projects.length > 1 && (
                       <IconButton
