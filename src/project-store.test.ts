@@ -15,7 +15,7 @@ import {
   touchProjectUpdatedAt,
 } from './project-store.ts';
 import type { ProjectData, ProjectMeta } from './types.ts';
-import { MIN_ZOOM } from './viewport.ts';
+import { MIN_ZOOM, MAX_ZOOM } from './viewport.ts';
 
 // Mock localStorage
 const storage = new Map<string, string>();
@@ -330,7 +330,8 @@ describe('migrateIfNeeded', () => {
     const index = loadProjectIndex();
     expect(index).toHaveLength(1);
     expect(index[0].name).toBe('無題のプロジェクト');
-    // Broken old data key should be left as-is (migration creates empty project)
+    // Broken old data key should be left as-is (migration creates empty project but does not delete broken key)
+    expect(storage.has('madori_data')).toBe(true);
     const tabState = loadTabState();
     expect(tabState).not.toBeNull();
     expect(tabState!.openTabs).toHaveLength(1);
@@ -617,7 +618,7 @@ describe('deleteProject edge cases', () => {
 
 describe('loadProjectData viewport edge cases', () => {
   it('falls back to default when viewport panX is null (e.g. serialized from non-finite value)', () => {
-    // JSON.stringify(Infinity) produces null — panX becomes null which fails Number.isFinite check
+    // JSON.stringify({ panX: Infinity }) → { panX: null } — null は Number.isFinite チェックで弾かれる
     storage.set(
       'yakata_project_vp1',
       JSON.stringify({
@@ -650,5 +651,18 @@ describe('loadProjectData viewport edge cases', () => {
     );
     const result = loadProjectData('vp3');
     expect(result!.data.viewport.zoom).toBe(MIN_ZOOM);
+  });
+
+  it('clamps zoom above maximum', () => {
+    storage.set(
+      'yakata_project_vp4',
+      JSON.stringify({
+        rooms: [],
+        freeTexts: [],
+        viewport: { zoom: 999, panX: 0, panY: 0 },
+      }),
+    );
+    const result = loadProjectData('vp4');
+    expect(result!.data.viewport.zoom).toBe(MAX_ZOOM);
   });
 });
