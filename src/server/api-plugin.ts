@@ -126,11 +126,11 @@ export function yakataApiPlugin(): Plugin {
             if (method === 'PUT' && projectId) {
               const body = await readBody(req);
               const parsed = JSON.parse(body) as unknown;
-              if (!parsed || typeof parsed !== 'object' || !Array.isArray((parsed as Record<string, unknown>).rooms)) {
+              const obj = parsed as Record<string, unknown>;
+              if (!parsed || typeof parsed !== 'object' || !Array.isArray(obj.rooms)) {
                 sendJson(res, 400, { error: 'Invalid project data: rooms array required' });
                 return;
               }
-              const obj = parsed as Record<string, unknown>;
               const validated = parseStorageData({
                 rooms: obj.rooms,
                 freeTexts: obj.freeTexts,
