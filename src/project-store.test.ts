@@ -28,13 +28,24 @@ const localStorageMock = {
   },
   key: vi.fn((_i: number) => null),
 };
-Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock });
+Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock, configurable: true });
 
 // Mock crypto.randomUUID
 let uuidCounter = 0;
 vi.stubGlobal('crypto', {
   randomUUID: () => `test-uuid-${++uuidCounter}`,
 });
+
+function emptyProjectData(overrides?: Partial<ProjectData>): ProjectData {
+  return {
+    rooms: [],
+    freeTexts: [],
+    freeStrokes: [],
+    viewport: { zoom: 1, panX: 0, panY: 0 },
+    history: [],
+    ...overrides,
+  };
+}
 
 beforeEach(() => {
   storage.clear();
@@ -233,13 +244,7 @@ describe('duplicateProject', () => {
 
   it('names the copy with のコピー suffix', () => {
     const { meta } = createNewProject('My Project');
-    saveProjectData(meta.id, {
-      rooms: [],
-      freeTexts: [],
-      freeStrokes: [],
-      viewport: { zoom: 1, panX: 0, panY: 0 },
-      history: [],
-    });
+    saveProjectData(meta.id, emptyProjectData());
 
     const result = duplicateProject(meta.id);
     expect(result!.meta.name).toBe('My Project のコピー');
@@ -247,13 +252,7 @@ describe('duplicateProject', () => {
 
   it('appends number when duplicate name already exists', () => {
     const { meta: orig } = createNewProject('My Project');
-    saveProjectData(orig.id, {
-      rooms: [],
-      freeTexts: [],
-      freeStrokes: [],
-      viewport: { zoom: 1, panX: 0, panY: 0 },
-      history: [],
-    });
+    saveProjectData(orig.id, emptyProjectData());
 
     // First copy
     const first = duplicateProject(orig.id);
@@ -266,13 +265,7 @@ describe('duplicateProject', () => {
 
   it('clears history in the duplicated project', () => {
     const { meta } = createNewProject('With History');
-    saveProjectData(meta.id, {
-      rooms: [],
-      freeTexts: [],
-      freeStrokes: [],
-      viewport: { zoom: 1, panX: 0, panY: 0 },
-      history: ['snap1', 'snap2', 'snap3'],
-    });
+    saveProjectData(meta.id, emptyProjectData({ history: ['snap1', 'snap2', 'snap3'] }));
 
     const result = duplicateProject(meta.id);
     expect(result!.data.history).toEqual([]);
@@ -466,13 +459,9 @@ describe('tab switching state isolation', () => {
     const projA = createNewProject('A');
     const projB = createNewProject('B');
 
-    const initialData: ProjectData = {
+    const initialData = emptyProjectData({
       rooms: [{ id: 'r1', x: 0, y: 0, w: 3, h: 3, label: 'Shared Label' }],
-      freeTexts: [],
-      freeStrokes: [],
-      viewport: { zoom: 1, panX: 0, panY: 0 },
-      history: [],
-    };
+    });
     saveProjectData(projA.meta.id, initialData);
     saveProjectData(projB.meta.id, initialData);
 
@@ -624,7 +613,8 @@ describe('deleteProject edge cases', () => {
 });
 
 describe('loadProjectData viewport edge cases', () => {
-  it('falls back to default when viewport has non-finite panX', () => {
+  it('falls back to default when viewport panX is null (e.g. serialized from non-finite value)', () => {
+    // JSON.stringify(Infinity) produces null, so this tests the typeof !== 'number' branch
     storage.set(
       'yakata_project_vp1',
       JSON.stringify({
