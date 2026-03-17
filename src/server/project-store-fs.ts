@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import type { ProjectMeta, ProjectData } from '../types.ts';
 import { parseStorageData } from '../persistence.ts';
-import { clampZoom } from '../viewport.ts';
+import { parseViewport, generateDefaultName, isValidProjectMeta } from '../shared/project-utils.ts';
 
 export interface LoadProjectResult {
   data: ProjectData;
@@ -31,7 +31,8 @@ function projectPath(id: string): string {
   return path.join(dataDir, 'projects', `${id}.json`);
 }
 
-function writeAtomic(filePath: string, content: string): void {
+/** @internal Exported for testing */
+export function writeAtomic(filePath: string, content: string): void {
   const dir = path.dirname(filePath);
   ensureDir(dir);
   const tmp = filePath + '.tmp.' + crypto.randomUUID();
@@ -48,41 +49,12 @@ function writeAtomic(filePath: string, content: string): void {
   }
 }
 
-interface ViewportRaw {
-  zoom?: unknown;
-  panX?: unknown;
-  panY?: unknown;
-}
-
-export function parseViewport(raw: unknown): { zoom: number; panX: number; panY: number } {
-  const fallback = { zoom: 1, panX: 0, panY: 0 };
-  if (!raw || typeof raw !== 'object') return fallback;
-  const vp = raw as ViewportRaw;
-  if (
-    typeof vp.zoom === 'number' &&
-    typeof vp.panX === 'number' &&
-    typeof vp.panY === 'number' &&
-    Number.isFinite(vp.panX) &&
-    Number.isFinite(vp.panY)
-  ) {
-    return { zoom: clampZoom(vp.zoom), panX: vp.panX, panY: vp.panY };
-  }
-  return fallback;
-}
-
 export function loadProjectIndex(): ProjectMeta[] {
   try {
     const raw = fs.readFileSync(indexPath(), 'utf-8');
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (item): item is ProjectMeta =>
-        item !== null &&
-        item !== undefined &&
-        typeof item === 'object' &&
-        typeof (item as Record<string, unknown>).id === 'string' &&
-        typeof (item as Record<string, unknown>).name === 'string',
-    );
+    return parsed.filter(isValidProjectMeta);
   } catch {
     return [];
   }
@@ -138,14 +110,6 @@ export function deleteProject(id: string): void {
   saveProjectIndex(index);
 }
 
-function generateDefaultName(existingNames: string[]): string {
-  const base = '無題のプロジェクト';
-  if (!existingNames.includes(base)) return base;
-  let n = 2;
-  while (existingNames.includes(`${base} (${n})`)) n++;
-  return `${base} (${n})`;
-}
-
 export function createNewProject(name?: string): { meta: ProjectMeta; data: ProjectData } {
   const index = loadProjectIndex();
   const existingNames = index.map((m) => m.name);
@@ -167,4 +131,3 @@ export function createNewProject(name?: string): { meta: ProjectMeta; data: Proj
 
   return { meta, data };
 }
-

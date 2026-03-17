@@ -3,19 +3,23 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { Room, WallSide } from '../types.ts';
 import { parseStorageData } from '../persistence.ts';
+import { fileURLToPath } from 'node:url';
+import { isFilePath, UUID_RE } from '../shared/project-utils.ts';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 
-interface ValidationResult {
+export interface ValidationResult {
   errors: string[];
   warnings: string[];
 }
 
-function wallLength(room: Room, side: WallSide): number {
+/** @internal Exported for testing */
+export function wallLength(room: Room, side: WallSide): number {
   return side === 'n' || side === 's' ? room.w : room.h;
 }
 
-function validate(filePath: string): ValidationResult {
+/** @internal Exported for testing */
+export function validate(filePath: string): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -141,9 +145,7 @@ function main(): void {
     }
     filePath = path.join(DATA_DIR, 'projects', `${index[0].id}.json`);
   } else {
-    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const isFile = arg.endsWith('.json') || arg.includes('/') || arg.includes('\\');
-    if (isFile) {
+    if (isFilePath(arg)) {
       filePath = path.resolve(arg);
     } else if (UUID_RE.test(arg)) {
       filePath = path.join(DATA_DIR, 'projects', `${arg}.json`);
@@ -175,4 +177,7 @@ function main(): void {
   process.exit(result.errors.length > 0 ? 1 : 0);
 }
 
-main();
+// Only run when executed directly (not imported as module for testing)
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main();
+}

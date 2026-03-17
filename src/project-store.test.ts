@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   generateDefaultName,
   deduplicateName,
@@ -13,6 +13,7 @@ import {
   migrateIfNeeded,
   deleteProject,
   touchProjectUpdatedAt,
+  syncWithServer,
 } from './project-store.ts';
 import type { ProjectData, ProjectMeta } from './types.ts';
 import { MIN_ZOOM, MAX_ZOOM } from './viewport.ts';
@@ -679,5 +680,142 @@ describe('loadProjectData viewport edge cases', () => {
     const result = loadProjectData('vp5');
     // zoom が null になるため parseViewport の typeof チェックで弾かれ、panX/panY も含め全体がデフォルトに
     expect(result!.data.viewport).toEqual({ zoom: 1, panX: 0, panY: 0 });
+  });
+});
+
+describe('syncWithServer', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+  // Default fetch response for fire-and-forget calls (syncToServer, syncIndexToServer)
+  const defaultFetchResponse = { ok: true, json: () => Promise.resolve([]) };
+
+  beforeEach(() => {
+    storage.clear();
+    // Use mockImplementation that always returns a resolved promise by default,
+    // so fire-and-forget fetch calls (from saveProjectIndex/saveProjectData) don't break.
+    fetchMock = vi.fn().mockResolvedValue(defaultFetchResponse);
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('skips syncing projects with older updatedAt than server', async () => {
+    // Setup local project with updatedAt = 1000
+    const meta: ProjectMeta = { id: 'p1', name: 'テスト', createdAt: 1000, updatedAt: 1000 };
+    saveProjectIndex([meta]);
+    saveProjectData('p1', {
+      rooms: [],
+      freeTexts: [],
+      freeStrokes: [],
+      viewport: { zoom: 1, panX: 0, panY: 0 },
+      history: [],
+    });
+
+    // Reset mock call history after setup (setup triggers fire-and-forget syncs)
+    fetchMock.mockClear();
+
+    // Server has newer updatedAt = 2000
+    const serverIndex: ProjectMeta[] = [
+      { id: 'p1', name: 'テスト', createdAt: 1000, updatedAt: 2000 },
+    ];
+
+    // All calls now return the default, but configure specific responses:
+    fetchMock.mockImplementation((url: string) => {
+      if (typeof url === 'string' && url === '/api/projects') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(serverIndex),
+        });
+      }
+      return Promise.resolve({ ok: true });
+    });
+
+    await syncWithServer();
+
+    // Should NOT have PUT /api/projects/p1 since server is newer
+    const putProjectCalls = fetchMock.mock.calls.filter(
+      (call: unknown[]) =>
+        typeof call[0] === 'string' &&
+        (call[0] as string).includes('/api/projects/p1') &&
+        (call[1] as RequestInit | undefined)?.method === 'PUT',
+    );
+    expect(putProjectCalls).toHaveLength(0);
+  });
+
+  it('syncs projects with newer updatedAt than server', async () => {
+    // Setup local project with updatedAt = 3000 (newer)
+    const meta: ProjectMeta = { id: 'p2', name: 'テスト2', createdAt: 1000, updatedAt: 3000 };
+    saveProjectIndex([meta]);
+    saveProjectData('p2', {
+      rooms: [],
+      freeTexts: [],
+      freeStrokes: [],
+      viewport: { zoom: 1, panX: 0, panY: 0 },
+      history: [],
+    });
+
+    fetchMock.mockClear();
+
+    const serverIndex: ProjectMeta[] = [
+      { id: 'p2', name: 'テスト2', createdAt: 1000, updatedAt: 1000 },
+    ];
+
+    fetchMock.mockImplementation((url: string) => {
+      if (typeof url === 'string' && url === '/api/projects') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(serverIndex),
+        });
+      }
+      return Promise.resolve({ ok: true });
+    });
+
+    await syncWithServer();
+
+    // Should have PUT /api/projects/p2 since local is newer
+    const putProjectCalls = fetchMock.mock.calls.filter(
+      (call: unknown[]) =>
+        typeof call[0] === 'string' &&
+        (call[0] as string).includes('/api/projects/p2') &&
+        (call[1] as RequestInit | undefined)?.method === 'PUT',
+    );
+    expect(putProjectCalls).toHaveLength(1);
+  });
+
+  it('syncs new local projects not on server', async () => {
+    // Setup local project that doesn't exist on server
+    const meta: ProjectMeta = { id: 'new-id', name: '新規', createdAt: 1000, updatedAt: 1000 };
+    saveProjectIndex([meta]);
+    saveProjectData('new-id', {
+      rooms: [],
+      freeTexts: [],
+      freeStrokes: [],
+      viewport: { zoom: 1, panX: 0, panY: 0 },
+      history: [],
+    });
+
+    fetchMock.mockClear();
+
+    fetchMock.mockImplementation((url: string) => {
+      if (typeof url === 'string' && url === '/api/projects') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([]),
+        });
+      }
+      return Promise.resolve({ ok: true });
+    });
+
+    await syncWithServer();
+
+    // Should PUT the new project data
+    const putProjectCalls = fetchMock.mock.calls.filter(
+      (call: unknown[]) =>
+        typeof call[0] === 'string' &&
+        (call[0] as string).includes('/api/projects/new-id') &&
+        (call[1] as RequestInit | undefined)?.method === 'PUT',
+    );
+    expect(putProjectCalls).toHaveLength(1);
   });
 });

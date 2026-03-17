@@ -1,31 +1,18 @@
 import type { ProjectMeta, ProjectData, TabState } from './types.ts';
-import { parseStorageData } from './persistence.ts';
 import type { ViewportState } from './viewport.ts';
-import { clampZoom } from './viewport.ts';
+import { parseStorageData } from './persistence.ts';
+import {
+  parseViewport,
+  deduplicateName,
+  generateDefaultName,
+  isValidProjectMeta,
+} from './shared/project-utils.ts';
 
 const INDEX_KEY = 'yakata_project_index';
 const PROJECT_KEY_PREFIX = 'yakata_project_';
 const TAB_STATE_KEY = 'yakata_tab_state';
 const OLD_STORAGE_KEY = 'madori_data';
 const OLD_VIEWPORT_KEY = 'madori_viewport';
-
-// --- Viewport validation (shared) ---
-
-function parseViewport(raw: unknown): ViewportState {
-  const fallback: ViewportState = { zoom: 1, panX: 0, panY: 0 };
-  if (!raw || typeof raw !== 'object') return fallback;
-  const vp = raw as Record<string, unknown>;
-  if (
-    typeof vp.zoom === 'number' &&
-    typeof vp.panX === 'number' &&
-    typeof vp.panY === 'number' &&
-    Number.isFinite(vp.panX) &&
-    Number.isFinite(vp.panY)
-  ) {
-    return { zoom: clampZoom(vp.zoom), panX: vp.panX, panY: vp.panY };
-  }
-  return fallback;
-}
 
 // --- Index ---
 
@@ -35,14 +22,7 @@ export function loadProjectIndex(): ProjectMeta[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (item): item is ProjectMeta =>
-        item !== null &&
-        item !== undefined &&
-        typeof item === 'object' &&
-        typeof (item as Record<string, unknown>).id === 'string' &&
-        typeof (item as Record<string, unknown>).name === 'string',
-    );
+    return parsed.filter(isValidProjectMeta);
   } catch {
     return [];
   }
@@ -121,11 +101,27 @@ function syncIndexToServer(index: ProjectMeta[]): void {
   });
 }
 
-/** 起動時にlocalStorageの全プロジェクトをサーバーへ送り、サーバー側の新規プロジェクトも取得する */
+/** 起動時にlocalStorageの全プロジェクトをサーバーへ送り、サーバー側の新規プロジェクトも取得する。
+ *  updatedAt を比較し、ローカル側がサーバーより新しいプロジェクトのみ送信する。 */
 export async function syncWithServer(): Promise<void> {
   if (!import.meta.env.DEV) return;
-  // localStorage → サーバー（PUT完了を待ってからGETする）
   const index = loadProjectIndex();
+
+  // まずサーバーのindexを取得して updatedAt を比較
+  let serverIndex: ProjectMeta[] = [];
+  try {
+    const res = await fetch('/api/projects');
+    if (res.ok) {
+      const json: unknown[] = await res.json();
+      serverIndex = json.filter(isValidProjectMeta);
+    }
+  } catch {
+    // サーバー未起動の場合は同期をスキップ
+    return;
+  }
+  const serverMap = new Map(serverIndex.map((m) => [m.id, m]));
+
+  // localStorage → サーバー（updatedAtが新しいもののみ）
   if (index.length > 0) {
     const puts: Promise<unknown>[] = [
       fetch('/api/projects', {
@@ -135,6 +131,10 @@ export async function syncWithServer(): Promise<void> {
       }),
     ];
     for (const meta of index) {
+      const serverMeta = serverMap.get(meta.id);
+      // サーバーに存在し、ローカルのupdatedAtがサーバー以下ならスキップ
+      if (serverMeta && (meta.updatedAt ?? 0) <= (serverMeta.updatedAt ?? 0)) continue;
+
       const result = loadProjectData(meta.id);
       if (result) {
         puts.push(
@@ -247,19 +247,8 @@ export function saveTabState(tabState: TabState): void {
   }
 }
 
-// --- Name generation ---
-
-/** baseName が existingNames に含まれていれば末尾に連番を付けてユニークにする */
-export function deduplicateName(baseName: string, existingNames: string[]): string {
-  if (!existingNames.includes(baseName)) return baseName;
-  let n = 2;
-  while (existingNames.includes(`${baseName} (${n})`)) n++;
-  return `${baseName} (${n})`;
-}
-
-export function generateDefaultName(existingNames: string[]): string {
-  return deduplicateName('無題のプロジェクト', existingNames);
-}
+// Re-export shared utilities for backward compatibility
+export { deduplicateName, generateDefaultName } from './shared/project-utils.ts';
 
 // --- Register (shared create logic) ---
 
