@@ -24,7 +24,7 @@ import {
   saveTabState,
   createNewProject,
   saveProjectIndex,
-  syncAllToServer,
+  syncWithServer,
   duplicateProject,
 } from './project-store.ts';
 import RoomDialog from './RoomDialog.tsx';
@@ -261,7 +261,7 @@ export default function App() {
 
     // Migration & initial load
     migrateIfNeeded();
-    syncAllToServer();
+    syncWithServer();
     let index = loadProjectIndex();
     setProjectIndex(index);
 

@@ -158,14 +158,3 @@ export function createNewProject(name?: string): { meta: ProjectMeta; data: Proj
   return { meta, data };
 }
 
-export function listProjectIds(): string[] {
-  const projectsDir = path.join(dataDir, 'projects');
-  try {
-    return fs
-      .readdirSync(projectsDir)
-      .filter((f: string) => f.endsWith('.json'))
-      .map((f: string) => f.replace(/\.json$/, ''));
-  } catch {
-    return [];
-  }
-}

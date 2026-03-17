@@ -20,17 +20,23 @@ function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let size = 0;
+    let rejected = false;
     req.on('data', (chunk: Buffer) => {
       size += chunk.length;
-      if (size > MAX_BODY_SIZE) {
+      if (size > MAX_BODY_SIZE && !rejected) {
+        rejected = true;
         req.destroy();
         reject(new Error('Body too large'));
         return;
       }
-      chunks.push(chunk);
+      if (!rejected) chunks.push(chunk);
     });
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
-    req.on('error', reject);
+    req.on('end', () => {
+      if (!rejected) resolve(Buffer.concat(chunks).toString('utf-8'));
+    });
+    req.on('error', (err) => {
+      if (!rejected) reject(err);
+    });
   });
 }
 
@@ -93,7 +99,7 @@ export function yakataApiPlugin(): Plugin {
 
             if (method === 'POST' && !projectId) {
               const body = await readBody(req);
-              const parsed = body ? (JSON.parse(body) as Record<string, unknown>) : {};
+              const parsed = body.trim() ? (JSON.parse(body) as Record<string, unknown>) : {};
               const name = typeof parsed.name === 'string' ? parsed.name : undefined;
               const result = createNewProject(name);
               sendJson(res, 201, result);

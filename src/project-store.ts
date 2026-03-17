@@ -121,22 +121,20 @@ function syncIndexToServer(index: ProjectMeta[]): void {
   });
 }
 
-/** 起動時にlocalStorageの全プロジェクトをサーバーへ送る */
-export function syncAllToServer(): void {
+/** 起動時にlocalStorageの全プロジェクトをサーバーへ送り、サーバー側の新規プロジェクトも取得する */
+export async function syncWithServer(): Promise<void> {
   if (!import.meta.env.DEV) return;
+  // localStorage → サーバー
   const index = loadProjectIndex();
-  if (index.length === 0) return;
-  syncIndexToServer(index);
-  for (const meta of index) {
-    try {
-      const raw = localStorage.getItem(PROJECT_KEY_PREFIX + meta.id);
-      if (!raw) continue;
-      const data = JSON.parse(raw) as ProjectData;
-      syncToServer(meta.id, data);
-    } catch {
-      // skip
+  if (index.length > 0) {
+    syncIndexToServer(index);
+    for (const meta of index) {
+      const result = loadProjectData(meta.id);
+      if (result) syncToServer(meta.id, result.data);
     }
   }
+  // サーバー → localStorage
+  await syncFromServer();
 }
 
 export async function syncFromServer(): Promise<void> {
