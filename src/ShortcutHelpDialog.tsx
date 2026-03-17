@@ -42,6 +42,12 @@ const shortcuts: { category: string; items: { keys: string; description: string 
       { keys: 'P', description: 'ペイントモード切替' },
     ],
   },
+  {
+    category: 'ヘルプ',
+    items: [
+      { keys: '?', description: 'ショートカットキー一覧を表示' },
+    ],
+  },
 ];
 
 interface Props {
@@ -54,7 +60,7 @@ export default function ShortcutHelpDialog({ open, onClose }: Props) {
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         ショートカットキー一覧
-        <IconButton onClick={onClose} size="small" sx={{ color: '#999' }}>
+        <IconButton onClick={onClose} size="small" sx={{ color: '#999' }} aria-label="閉じる">
           ✕
         </IconButton>
       </DialogTitle>
@@ -66,7 +72,7 @@ export default function ShortcutHelpDialog({ open, onClose }: Props) {
             </Typography>
             {section.items.map((item) => (
               <Box
-                key={item.keys}
+                key={`${section.category}-${item.keys}`}
                 sx={{
                   display: 'flex',
                   justifyContent: 'space-between',
