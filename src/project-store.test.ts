@@ -665,4 +665,19 @@ describe('loadProjectData viewport edge cases', () => {
     const result = loadProjectData('vp4');
     expect(result!.data.viewport.zoom).toBe(MAX_ZOOM);
   });
+
+  it('falls back to full default when zoom is Infinity (serialized as null)', () => {
+    // JSON.stringify({ zoom: Infinity }) → { zoom: null } — typeof null !== 'number' なので全体フォールバック
+    storage.set(
+      'yakata_project_vp5',
+      JSON.stringify({
+        rooms: [],
+        freeTexts: [],
+        viewport: { zoom: Infinity, panX: 100, panY: 200 },
+      }),
+    );
+    const result = loadProjectData('vp5');
+    // zoom が null になるため parseViewport の typeof チェックで弾かれ、panX/panY も含め全体がデフォルトに
+    expect(result!.data.viewport).toEqual({ zoom: 1, panX: 0, panY: 0 });
+  });
 });
