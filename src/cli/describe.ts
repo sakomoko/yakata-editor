@@ -5,6 +5,7 @@ import type { Room, WallObject, RoomInteriorObject, FreeText, FreeStroke } from 
 import { parseStorageData } from '../persistence.ts';
 import { findAdjacentRoomsOnWall } from '../adjacency.ts';
 import type { WallSide } from '../types.ts';
+import { fileURLToPath } from 'node:url';
 import { isFilePath, UUID_RE } from '../shared/project-utils.ts';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -204,10 +205,6 @@ function main(): void {
 }
 
 // Only run when executed directly (not imported as module for testing)
-const isDirectRun =
-  typeof process !== 'undefined' &&
-  process.argv[1] &&
-  (process.argv[1].endsWith('/describe.ts') || process.argv[1].endsWith('/describe.js'));
-if (isDirectRun) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main();
 }

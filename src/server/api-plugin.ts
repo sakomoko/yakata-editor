@@ -3,7 +3,7 @@ import type { Plugin, ViteDevServer } from 'vite';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import * as path from 'node:path';
 import { parseStorageData } from '../persistence.ts';
-import { isValidProjectMeta, UUID_RE } from '../shared/project-utils.ts';
+import { isValidProjectMeta, UUID_RE, parseViewport } from '../shared/project-utils.ts';
 import {
   setDataDir,
   loadProjectIndex,
@@ -12,7 +12,6 @@ import {
   saveProjectData,
   deleteProject,
   createNewProject,
-  parseViewport,
 } from './project-store-fs.ts';
 
 const MAX_BODY_SIZE = 10 * 1024 * 1024; // 10 MB

@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   generateDefaultName,
-  deduplicateName,
   loadProjectIndex,
   saveProjectIndex,
   loadProjectData,
@@ -329,16 +328,6 @@ describe('migrateIfNeeded', () => {
     migrateIfNeeded();
     const secondIndex = loadProjectIndex();
     expect(secondIndex).toEqual(firstIndex);
-  });
-});
-
-describe('deduplicateName (re-exported)', () => {
-  it('returns baseName if not in existingNames', () => {
-    expect(deduplicateName('テスト', [])).toBe('テスト');
-  });
-
-  it('appends (2) when baseName exists', () => {
-    expect(deduplicateName('テスト', ['テスト'])).toBe('テスト (2)');
   });
 });
 

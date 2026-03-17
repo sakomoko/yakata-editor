@@ -24,6 +24,19 @@ describe('parseViewport', () => {
     expect(parseViewport({ zoom: 1, panX: 0 })).toEqual({ zoom: 1, panX: 0, panY: 0 });
   });
 
+  it('returns fallback if zoom is not finite', () => {
+    expect(parseViewport({ zoom: NaN, panX: 0, panY: 0 })).toEqual({
+      zoom: 1,
+      panX: 0,
+      panY: 0,
+    });
+    expect(parseViewport({ zoom: Infinity, panX: 0, panY: 0 })).toEqual({
+      zoom: 1,
+      panX: 0,
+      panY: 0,
+    });
+  });
+
   it('returns fallback if panX/panY are not finite', () => {
     expect(parseViewport({ zoom: 1, panX: Infinity, panY: 0 })).toEqual({
       zoom: 1,

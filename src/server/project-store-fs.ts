@@ -6,9 +6,6 @@ import type { ProjectMeta, ProjectData } from '../types.ts';
 import { parseStorageData } from '../persistence.ts';
 import { parseViewport, generateDefaultName, isValidProjectMeta } from '../shared/project-utils.ts';
 
-// Re-export parseViewport for api-plugin.ts
-export { parseViewport } from '../shared/project-utils.ts';
-
 export interface LoadProjectResult {
   data: ProjectData;
   warning?: string;

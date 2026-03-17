@@ -12,6 +12,7 @@ export function parseViewport(raw: unknown): ViewportState {
     typeof vp.zoom === 'number' &&
     typeof vp.panX === 'number' &&
     typeof vp.panY === 'number' &&
+    Number.isFinite(vp.zoom) &&
     Number.isFinite(vp.panX) &&
     Number.isFinite(vp.panY)
   ) {
