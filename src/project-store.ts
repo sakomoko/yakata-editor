@@ -54,6 +54,7 @@ export function saveProjectIndex(index: ProjectMeta[]): void {
   } catch {
     // storage full or unavailable
   }
+  syncIndexToServer(index);
 }
 
 // --- Project Data ---
@@ -96,6 +97,103 @@ export function loadProjectData(id: string): LoadProjectResult | null {
   }
 }
 
+// --- Dev-mode server sync ---
+
+function syncToServer(id: string, data: ProjectData): void {
+  if (!import.meta.env.DEV) return;
+  fetch(`/api/projects/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }).catch(() => {
+    // fire-and-forget
+  });
+}
+
+function syncIndexToServer(index: ProjectMeta[]): void {
+  if (!import.meta.env.DEV) return;
+  fetch('/api/projects', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(index),
+  }).catch(() => {
+    // fire-and-forget
+  });
+}
+
+/** 起動時にlocalStorageの全プロジェクトをサーバーへ送り、サーバー側の新規プロジェクトも取得する */
+export async function syncWithServer(): Promise<void> {
+  if (!import.meta.env.DEV) return;
+  // localStorage → サーバー（PUT完了を待ってからGETする）
+  const index = loadProjectIndex();
+  if (index.length > 0) {
+    const puts: Promise<unknown>[] = [
+      fetch('/api/projects', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(index),
+      }),
+    ];
+    for (const meta of index) {
+      const result = loadProjectData(meta.id);
+      if (result) {
+        puts.push(
+          fetch(`/api/projects/${meta.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(result.data),
+          }),
+        );
+      }
+    }
+    await Promise.allSettled(puts);
+  }
+  // サーバー → localStorage
+  await syncFromServer();
+}
+
+async function syncFromServer(): Promise<void> {
+  if (!import.meta.env.DEV) return;
+  try {
+    const res = await fetch('/api/projects');
+    if (!res.ok) return;
+    const serverIndex = (await res.json()) as ProjectMeta[];
+    const localIndex = loadProjectIndex();
+    const localIds = new Set(localIndex.map((m) => m.id));
+
+    const newMetas = serverIndex.filter((m) => !localIds.has(m.id));
+    const results = await Promise.all(
+      newMetas.map(async (meta) => {
+        try {
+          const dataRes = await fetch(`/api/projects/${meta.id}`);
+          if (!dataRes.ok) return null;
+          const { data } = (await dataRes.json()) as { meta: ProjectMeta; data: ProjectData };
+          return { meta, data };
+        } catch {
+          return null;
+        }
+      }),
+    );
+    for (const result of results) {
+      if (!result) continue;
+      localIndex.push(result.meta);
+      try {
+        localStorage.setItem(PROJECT_KEY_PREFIX + result.meta.id, JSON.stringify(result.data));
+      } catch {
+        // storage full
+      }
+    }
+    // indexもlocalStorageのみに保存
+    try {
+      localStorage.setItem(INDEX_KEY, JSON.stringify(localIndex));
+    } catch {
+      // storage full
+    }
+  } catch {
+    // server not available
+  }
+}
+
 /** プロジェクトデータのみ保存（updatedAt は更新しない） */
 export function saveProjectData(id: string, data: ProjectData): void {
   try {
@@ -103,6 +201,7 @@ export function saveProjectData(id: string, data: ProjectData): void {
   } catch {
     // storage full or unavailable
   }
+  syncToServer(id, data);
 }
 
 /** updatedAt を現在時刻に更新して index を保存 */

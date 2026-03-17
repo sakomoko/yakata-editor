@@ -24,6 +24,7 @@ import {
   saveTabState,
   createNewProject,
   saveProjectIndex,
+  syncWithServer,
   duplicateProject,
 } from './project-store.ts';
 import RoomDialog from './RoomDialog.tsx';
@@ -260,6 +261,17 @@ export default function App() {
 
     // Migration & initial load
     migrateIfNeeded();
+    const preSyncCount = loadProjectIndex().length;
+    syncWithServer()
+      .then(() => {
+        const postSyncIndex = loadProjectIndex();
+        if (postSyncIndex.length !== preSyncCount) {
+          setProjectIndex(postSyncIndex);
+        }
+      })
+      .catch(() => {
+        // dev server not available
+      });
     let index = loadProjectIndex();
     setProjectIndex(index);
 

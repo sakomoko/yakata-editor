@@ -18,9 +18,13 @@ commitChange()（editor/project.ts）
 pushUndo() → render() → callbacks.onAutoSave()
     ↓
 Canvas 再描画 + App.tsx → project-store.ts → localStorage 保存
+                                                 ↓ (開発モード時)
+                                            REST API → server/project-store-fs.ts → data/*.json
 ```
 
 エディタはストレージに直接依存せず、`onAutoSave` / `onViewportChange` コールバックを通じて App.tsx に通知する。App.tsx が `project-store.ts` を使ってアクティブプロジェクトのキーに保存する。
+
+開発モード（`import.meta.env.DEV`）時は、localStorage保存と同時にREST API経由でファイルストレージにも同期する（fire-and-forget）。これにより、CLIツールやAIエージェントがファイルシステム上のプロジェクトデータに直接アクセスできる。
 
 ## モジュール構成
 
@@ -61,8 +65,18 @@ Canvas 再描画 + App.tsx → project-store.ts → localStorage 保存
 - **selection.ts** — `Set<string>` ベースの選択状態管理
 - **history.ts** — Undoスタック（JSON snapshot方式、最大50件）
 - **grid.ts** — グリッド定数（`GRID=20px`）とビューポート対応のグリッド描画
-- **project-store.ts** — マルチプロジェクト対応のlocalStorageストレージ層。プロジェクトindex・プロジェクトデータ・タブ状態のCRUD、旧形式からの自動マイグレーション、デフォルト名生成（`deduplicateName`）、プロジェクト複製（`duplicateProject`）
+- **project-store.ts** — マルチプロジェクト対応のlocalStorageストレージ層。プロジェクトindex・プロジェクトデータ・タブ状態のCRUD、旧形式からの自動マイグレーション、デフォルト名生成（`deduplicateName`）、プロジェクト複製（`duplicateProject`）。開発モード時はREST API経由でファイルストレージへの自動同期機能を提供
 - **persistence.ts** — データバリデーション（`parseStorageData`）、JSON/PNGエクスポート、ファイルインポート
+
+### サーバーサイド（開発時のみ）
+
+- **server/api-plugin.ts** — Viteプラグイン。`configureServer` フックでREST APIミドルウェアを登録。`GET/POST/PUT/DELETE /api/projects` エンドポイントを提供
+- **server/project-store-fs.ts** — ファイルベースのプロジェクトストレージ。`data/index.json`（メタデータ）と `data/projects/{id}.json`（プロジェクトデータ）をatomic write（一時ファイル→rename）で読み書き。`persistence.ts` のバリデーション関数を再利用
+
+### CLIツール
+
+- **cli/describe.ts** — プロジェクトJSONを読み取り、部屋一覧・壁オブジェクト・隣接関係・インテリアオブジェクト・フリーテキストなどを人間/AI可読な形式で出力。`adjacency.ts` の隣接判定ロジックを再利用
+- **cli/validate.ts** — プロジェクトJSONの整合性チェック。部屋サイズの正値検証、壁オブジェクトのoffset範囲検証、pairedWith参照の相互整合性、部屋の重なり検出
 
 ## モジュール依存関係
 
@@ -89,6 +103,12 @@ main.ts
   │   ├─ ShortcutHelpDialog.tsx → platform.ts
   │   └─ persistence.ts
   └─ style.css
+
+server/api-plugin.ts (Viteプラグイン)
+  └─ server/project-store-fs.ts → persistence.ts, viewport.ts
+
+cli/describe.ts → persistence.ts, adjacency.ts
+cli/validate.ts → persistence.ts
 ```
 
 ## 座標系
@@ -137,3 +157,31 @@ main.ts
 - `updatedAt` の更新はdebounce付き（2秒）で、高頻度の保存イベントでindex読み書きが毎回走るのを防止
 
 **マイグレーション:** 初回アクセス時に旧 `madori_data` / `madori_viewport` キーから新形式に自動移行し、旧キーは削除される。
+
+## AI/CLIアクセス（開発時のみ）
+
+開発サーバー起動時、ViteプラグインがREST APIを提供し、ブラウザのlocalStorageと同期してファイルストレージにプロジェクトデータを保存する。
+
+**ファイルストレージ:**
+| パス | 内容 |
+|------|------|
+| `data/index.json` | `ProjectMeta[]` — 全プロジェクトのメタデータ |
+| `data/projects/{id}.json` | `ProjectData` — 個別プロジェクトデータ |
+
+**REST API:**
+| メソッド | パス | 動作 |
+|---------|------|------|
+| `GET` | `/api/projects` | プロジェクト一覧（`ProjectMeta[]`） |
+| `POST` | `/api/projects` | 新規プロジェクト作成（body: `{ name?: string }`） |
+| `PUT` | `/api/projects` | プロジェクトindex全体保存（body: `ProjectMeta[]`） |
+| `GET` | `/api/projects/:id` | プロジェクトデータ取得（`{ meta, data }`） |
+| `PUT` | `/api/projects/:id` | プロジェクトデータ保存（body: `ProjectData`） |
+| `DELETE` | `/api/projects/:id` | プロジェクト削除 |
+
+**同期フロー:**
+- ブラウザ起動時: `syncAllToServer()` で全localStorageプロジェクトをサーバーに送信
+- 保存時: `saveProjectData()` / `saveProjectIndex()` がlocalStorage保存と同時にAPI呼び出し（fire-and-forget）
+
+**CLIツール:**
+- `npx tsx src/cli/describe.ts [id|path]` — 間取り構造の可読出力
+- `npx tsx src/cli/validate.ts [id|path]` — データ整合性チェック
