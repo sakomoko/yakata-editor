@@ -110,10 +110,7 @@ export function linkGroupColor(groupId: string): string {
 }
 
 /** 選択中の部屋の linkGroup に属する全部屋IDと色のマップを返す */
-export function getLinkedIndicators(
-  rooms: Room[],
-  selection: Set<string>,
-): Map<string, string> {
+export function getLinkedIndicators(rooms: Room[], selection: Set<string>): Map<string, string> {
   const result = new Map<string, string>();
   const groups = collectLinkedGroups(rooms, selection);
   if (groups.size === 0) return result;

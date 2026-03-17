@@ -5,10 +5,7 @@ import type { ViewportState } from '../viewport.ts';
 
 /** CJK文字を2カラム換算した表示幅をグリッド単位で返す */
 export function labelDisplayWidth(label: string): number {
-  const cols = [...label].reduce(
-    (n, c) => n + (/[\u3000-\u9fff\uff00-\uffef]/.test(c) ? 2 : 1),
-    0,
-  );
+  const cols = [...label].reduce((n, c) => n + (/[\u3000-\u9fff\uff00-\uffef]/.test(c) ? 2 : 1), 0);
   return Math.ceil(cols / 2) + 1;
 }
 

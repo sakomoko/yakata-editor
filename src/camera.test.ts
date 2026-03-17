@@ -257,13 +257,7 @@ describe('hitCameraHandleInRooms', () => {
     const handles1 = getCameraHandlePositions(room, cam1);
 
     // cam1のハンドル位置だがactiveIdがcam-2なのでヒットしない
-    const result = hitCameraHandleInRooms(
-      [room],
-      handles1.rotate.x,
-      handles1.rotate.y,
-      1,
-      'cam-2',
-    );
+    const result = hitCameraHandleInRooms([room], handles1.rotate.x, handles1.rotate.y, 1, 'cam-2');
     expect(result).toBeNull();
   });
 

@@ -32,10 +32,7 @@ export default function ProjectListModal({
   onDelete,
   onClose,
 }: ProjectListModalProps) {
-  const sorted = useMemo(
-    () => [...projects].sort((a, b) => b.updatedAt - a.updatedAt),
-    [projects],
-  );
+  const sorted = useMemo(() => [...projects].sort((a, b) => b.updatedAt - a.updatedAt), [projects]);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -72,7 +69,11 @@ export default function ProjectListModal({
                     <>
                       {p.name}
                       {isOpen && (
-                        <Chip label="開いている" size="small" sx={{ ml: 1, height: 18, fontSize: 10 }} />
+                        <Chip
+                          label="開いている"
+                          size="small"
+                          sx={{ ml: 1, height: 18, fontSize: 10 }}
+                        />
                       )}
                     </>
                   }
