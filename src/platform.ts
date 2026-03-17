@@ -1,6 +1,6 @@
 // NOTE: iPadOS 13+ Safari は UA に 'Macintosh' を含むため Mac として検出される。
 // キーボードショートカット表示用途では Bluetooth キーボード接続時の挙動として問題ない。
-const ua = typeof navigator !== 'undefined' ? navigator.userAgent.toLowerCase() : '';
+const ua = navigator.userAgent.toLowerCase();
 export const isMac = ua.includes('macintosh') || ua.includes('mac os');
 export const modKey = isMac ? '⌘' : 'Ctrl';
 
