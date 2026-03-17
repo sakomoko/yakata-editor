@@ -13,7 +13,12 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
   const { canvas, state, viewport, flags } = ec;
 
   // P キーでペイントモードトグル
-  if (e.key.toLowerCase() === 'p' && !e.metaKey && !e.ctrlKey && document.activeElement === document.body) {
+  if (
+    e.key.toLowerCase() === 'p' &&
+    !e.metaKey &&
+    !e.ctrlKey &&
+    document.activeElement === document.body
+  ) {
     e.preventDefault();
     state.paintMode = !state.paintMode;
     if (state.paintMode) {

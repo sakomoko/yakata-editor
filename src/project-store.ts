@@ -165,7 +165,10 @@ export function generateDefaultName(existingNames: string[]): string {
 // --- Register (shared create logic) ---
 
 /** プロジェクトを新IDで登録し、indexとdataをlocalStorageに保存する */
-function registerProject(name: string, data: ProjectData): { meta: ProjectMeta; data: ProjectData } {
+function registerProject(
+  name: string,
+  data: ProjectData,
+): { meta: ProjectMeta; data: ProjectData } {
   const now = Date.now();
   const id = crypto.randomUUID();
   const meta: ProjectMeta = { id, name, createdAt: now, updatedAt: now };
@@ -208,9 +211,7 @@ export function duplicateProject(
   const projectName = deduplicateName(baseName, existingNames);
 
   // Deep copy data, clear history for the new project
-  const clonedData: ProjectData = JSON.parse(
-    JSON.stringify({ ...result.data, history: [] }),
-  );
+  const clonedData: ProjectData = JSON.parse(JSON.stringify({ ...result.data, history: [] }));
 
   return registerProject(projectName, clonedData);
 }

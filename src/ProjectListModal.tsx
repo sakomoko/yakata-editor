@@ -51,11 +51,7 @@ export default function ProjectListModal({
                     <Button size="small" onClick={() => onOpen(p.id)} sx={{ mr: 0.5 }}>
                       開く
                     </Button>
-                    <Button
-                      size="small"
-                      onClick={() => onDuplicate(p.id)}
-                      sx={{ mr: 0.5 }}
-                    >
+                    <Button size="small" onClick={() => onDuplicate(p.id)} sx={{ mr: 0.5 }}>
                       複製
                     </Button>
                     {projects.length > 1 && (
