@@ -25,6 +25,7 @@ import {
   createNewProject,
   saveProjectIndex,
   syncAllToServer,
+  duplicateProject,
 } from './project-store.ts';
 import RoomDialog from './RoomDialog.tsx';
 import MarkerDialog from './MarkerDialog.tsx';
@@ -339,18 +340,24 @@ export default function App() {
     [saveCurrentProject, loadProjectIntoEditor, updateTabState],
   );
 
+  // Open a newly created/duplicated project in a new tab
+  const openProjectInNewTab = useCallback(
+    (meta: ProjectMeta, data: ProjectData) => {
+      setProjectIndex((prev) => [...prev, meta]);
+      updateTabState({
+        openTabs: [...tabStateRef.current.openTabs, meta.id],
+        activeTabId: meta.id,
+      });
+      editorRef.current?.loadProjectState(data);
+    },
+    [updateTabState],
+  );
+
   const handleTabAdd = useCallback(() => {
     saveCurrentProject();
-    const index = loadProjectIndex();
     const { meta, data } = createNewProject();
-    setProjectIndex([...index, meta]);
-    const newTs = {
-      openTabs: [...tabStateRef.current.openTabs, meta.id],
-      activeTabId: meta.id,
-    };
-    updateTabState(newTs);
-    editorRef.current?.loadProjectState(data);
-  }, [saveCurrentProject, updateTabState]);
+    openProjectInNewTab(meta, data);
+  }, [saveCurrentProject, openProjectInNewTab]);
 
   const handleTabClose = useCallback(
     (id: string) => {
@@ -405,17 +412,26 @@ export default function App() {
       if (ts.openTabs.includes(id)) {
         const { newTabs, newActiveId } = removeTabAndSwitch(id, ts.openTabs);
         if (newTabs.length === 0) {
-          // All tabs closed — create a new project
           const { meta, data } = createNewProject();
-          setProjectIndex([...newIndex, meta]);
-          updateTabState({ openTabs: [meta.id], activeTabId: meta.id });
-          editorRef.current?.loadProjectState(data);
+          openProjectInNewTab(meta, data);
         } else {
           updateTabState({ openTabs: newTabs, activeTabId: newActiveId });
         }
       }
     },
-    [removeTabAndSwitch, updateTabState],
+    [removeTabAndSwitch, updateTabState, openProjectInNewTab],
+  );
+
+  const handleDuplicateProject = useCallback(
+    (id: string) => {
+      if (id === tabStateRef.current.activeTabId) {
+        saveCurrentProject();
+      }
+      const result = duplicateProject(id);
+      if (!result) return;
+      openProjectInNewTab(result.meta, result.data);
+    },
+    [saveCurrentProject, openProjectInNewTab],
   );
 
   const handleLoad = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -490,6 +506,7 @@ export default function App() {
         onTabClick={handleTabClick}
         onTabClose={handleTabClose}
         onTabAdd={handleTabAdd}
+        onTabDuplicate={handleDuplicateProject}
         onTabRename={handleTabRename}
         onOpenProjectList={() => setProjectListOpen(true)}
       />
@@ -723,6 +740,7 @@ export default function App() {
         projects={projectIndex}
         openTabIds={tabState.openTabs}
         onOpen={handleOpenProject}
+        onDuplicate={handleDuplicateProject}
         onDelete={handleDeleteProject}
         onClose={() => setProjectListOpen(false)}
       />

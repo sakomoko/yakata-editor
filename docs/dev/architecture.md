@@ -65,7 +65,7 @@ Canvas 再描画 + App.tsx → project-store.ts → localStorage 保存
 - **selection.ts** — `Set<string>` ベースの選択状態管理
 - **history.ts** — Undoスタック（JSON snapshot方式、最大50件）
 - **grid.ts** — グリッド定数（`GRID=20px`）とビューポート対応のグリッド描画
-- **project-store.ts** — マルチプロジェクト対応のlocalStorageストレージ層。プロジェクトindex・プロジェクトデータ・タブ状態のCRUD、旧形式からの自動マイグレーション、デフォルト名生成。開発モード時はREST API経由でファイルストレージへの自動同期機能を提供
+- **project-store.ts** — マルチプロジェクト対応のlocalStorageストレージ層。プロジェクトindex・プロジェクトデータ・タブ状態のCRUD、旧形式からの自動マイグレーション、デフォルト名生成（`deduplicateName`）、プロジェクト複製（`duplicateProject`）。開発モード時はREST API経由でファイルストレージへの自動同期機能を提供
 - **persistence.ts** — データバリデーション（`parseStorageData`）、JSON/PNGエクスポート、ファイルインポート
 
 ### サーバーサイド（開発時のみ）
@@ -96,7 +96,8 @@ main.ts
   │   │   ├─ editor/dblclick.ts → room.ts, interior-object.ts, free-text.ts
   │   │   └─ editor/utils.ts → grid.ts, viewport.ts
   │   ├─ project-store.ts → persistence.ts (parseStorageData), viewport.ts
-  │   ├─ TabBar.tsx, ProjectListModal.tsx
+  │   ├─ TabBar.tsx → ContextMenu.tsx, context-menu.ts
+  │   ├─ ProjectListModal.tsx
   │   ├─ RoomDialog.tsx, MarkerDialog.tsx, FreeTextDialog.tsx
   │   ├─ ContextMenu.tsx → context-menu.ts
   │   ├─ ShortcutHelpDialog.tsx → platform.ts

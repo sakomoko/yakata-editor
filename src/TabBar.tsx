@@ -1,10 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import ContextMenu from './ContextMenu.tsx';
+import type { ContextMenuItem } from './context-menu.ts';
 
 export interface TabBarProps {
   tabs: Array<{ id: string; name: string; isActive: boolean }>;
   onTabClick: (id: string) => void;
   onTabClose: (id: string) => void;
   onTabAdd: () => void;
+  onTabDuplicate: (id: string) => void;
   onTabRename: (id: string, newName: string) => void;
   onOpenProjectList: () => void;
 }
@@ -14,12 +17,14 @@ export default function TabBar({
   onTabClick,
   onTabClose,
   onTabAdd,
+  onTabDuplicate,
   onTabRename,
   onOpenProjectList,
 }: TabBarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
 
   useEffect(() => {
     if (editingId && inputRef.current) {
@@ -28,10 +33,10 @@ export default function TabBar({
     }
   }, [editingId]);
 
-  const handleDoubleClick = (id: string, name: string) => {
+  const handleDoubleClick = useCallback((id: string, name: string) => {
     setEditingId(id);
     setEditValue(name);
-  };
+  }, []);
 
   const commitRename = () => {
     if (editingId && editValue.trim()) {
@@ -39,6 +44,35 @@ export default function TabBar({
     }
     setEditingId(null);
   };
+
+  const handleContextMenu = useCallback((e: React.MouseEvent, tabId: string) => {
+    e.preventDefault();
+    setCtxMenu({ x: e.clientX, y: e.clientY, tabId });
+  }, []);
+
+  const ctxMenuItems: ContextMenuItem[] = useMemo(() => {
+    if (!ctxMenu) return [];
+    const tabId = ctxMenu.tabId;
+    const tabName = tabs.find((t) => t.id === tabId)?.name ?? '';
+    const items: ContextMenuItem[] = [
+      {
+        label: 'プロジェクトを複製',
+        action: () => onTabDuplicate(tabId),
+      },
+      {
+        label: '名前を変更',
+        action: () => handleDoubleClick(tabId, tabName),
+      },
+    ];
+    if (tabs.length > 1) {
+      items.push({ separator: true });
+      items.push({
+        label: 'タブを閉じる',
+        action: () => onTabClose(tabId),
+      });
+    }
+    return items;
+  }, [ctxMenu, tabs, onTabDuplicate, onTabClose, handleDoubleClick]);
 
   return (
     <div style={barStyle}>
@@ -52,6 +86,7 @@ export default function TabBar({
             }}
             onClick={() => onTabClick(tab.id)}
             onDoubleClick={() => handleDoubleClick(tab.id, tab.name)}
+            onContextMenu={(e) => handleContextMenu(e, tab.id)}
           >
             {editingId === tab.id ? (
               <input
@@ -101,6 +136,12 @@ export default function TabBar({
       >
         ☰
       </button>
+      <ContextMenu
+        open={ctxMenu !== null}
+        anchorPosition={ctxMenu ? { top: ctxMenu.y, left: ctxMenu.x } : undefined}
+        items={ctxMenuItems}
+        onClose={() => setCtxMenu(null)}
+      />
     </div>
   );
 }
