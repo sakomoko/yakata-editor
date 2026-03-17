@@ -142,7 +142,8 @@ export function updateStatus(ec: EditorContext): void {
   const gx = String(state.mouse.gx).padStart(5);
   const gy = String(state.mouse.gy).padStart(5);
   const zoom = String(zoomPct).padStart(5);
-  let text = `(${gx},${gy})  部屋: ${state.rooms.length}　|${zoom}%`;
+  const rooms = String(state.rooms.length).padStart(3);
+  let text = `(${gx},${gy})  部屋:${rooms}　|${zoom}%`;
   if (state.paintMode) {
     text += '　|　ペイントモード';
   }

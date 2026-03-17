@@ -3,6 +3,8 @@ import Box from '@mui/material/Box';
 import MuiTab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import IconButton from '@mui/material/IconButton';
+import AddIcon from '@mui/icons-material/Add';
+import MenuIcon from '@mui/icons-material/Menu';
 import ContextMenu from './ContextMenu.tsx';
 import type { ContextMenuItem } from './context-menu.ts';
 
@@ -54,7 +56,7 @@ export default function TabBar({
     setCtxMenu({ x: e.clientX, y: e.clientY, tabId });
   }, []);
 
-  const activeId = tabs.find((t) => t.isActive)?.id ?? '';
+  const activeId: string | false = tabs.find((t) => t.isActive)?.id ?? false;
 
   const ctxMenuItems: ContextMenuItem[] = useMemo(() => {
     if (!ctxMenu) return [];
@@ -99,6 +101,7 @@ export default function TabBar({
           },
         }}
       >
+        {/* onDoubleClick/onContextMenu: ButtonBase経由で動作。MUIバージョンアップ時に要確認 */}
         {tabs.map((tab) => (
           <MuiTab
             key={tab.id}
@@ -174,7 +177,7 @@ export default function TabBar({
         aria-label="新規プロジェクト"
         sx={{ color: '#aaa', '&:hover': { color: '#fff' } }}
       >
-        +
+        <AddIcon />
       </IconButton>
       <IconButton
         onClick={onOpenProjectList}
@@ -182,7 +185,7 @@ export default function TabBar({
         aria-label="プロジェクト一覧"
         sx={{ color: '#aaa', mr: 0.5, '&:hover': { color: '#fff' } }}
       >
-        ☰
+        <MenuIcon />
       </IconButton>
 
       <ContextMenu
