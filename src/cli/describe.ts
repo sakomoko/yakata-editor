@@ -5,10 +5,11 @@ import type { Room, WallObject, RoomInteriorObject, FreeText, FreeStroke } from 
 import { parseStorageData } from '../persistence.ts';
 import { findAdjacentRoomsOnWall } from '../adjacency.ts';
 import type { WallSide } from '../types.ts';
+import { isFilePath, UUID_RE } from '../shared/project-utils.ts';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 
-interface ProjectFile {
+export interface ProjectFile {
   rooms: Room[];
   freeTexts: FreeText[];
   freeStrokes: FreeStroke[];
@@ -33,12 +34,14 @@ function loadProject(filePath: string): ProjectFile {
   return { rooms: data.rooms, freeTexts: data.freeTexts, freeStrokes: data.freeStrokes };
 }
 
-function sideLabel(side: WallSide): string {
+/** @internal Exported for testing */
+export function sideLabel(side: WallSide): string {
   const map: Record<WallSide, string> = { n: '北壁', e: '東壁', s: '南壁', w: '西壁' };
   return map[side];
 }
 
-function describeWallObject(obj: WallObject): string {
+/** @internal Exported for testing */
+export function describeWallObject(obj: WallObject): string {
   const parts = [`offset: ${obj.offset}, 幅: ${obj.width}`];
   if (obj.type === 'door') {
     parts.push(`swing: ${obj.swing}, hinge: ${obj.hinge}`);
@@ -47,7 +50,8 @@ function describeWallObject(obj: WallObject): string {
   return `${sideLabel(obj.side)}: ${typeLabel} (${parts.join(', ')})`;
 }
 
-function describeInterior(obj: RoomInteriorObject): string {
+/** @internal Exported for testing */
+export function describeInterior(obj: RoomInteriorObject): string {
   if (obj.type === 'stairs') {
     const kind = obj.stairsType === 'straight' ? '直線階段' : '折り返し階段';
     const dirMap: Record<string, string> = { n: '北', e: '東', s: '南', w: '西' };
@@ -64,7 +68,8 @@ function describeInterior(obj: RoomInteriorObject): string {
   return `不明なオブジェクト`;
 }
 
-function describeProject(project: ProjectFile): string {
+/** @internal Exported for testing */
+export function describeProject(project: ProjectFile): string {
   const lines: string[] = [];
   const { rooms, freeTexts, freeStrokes } = project;
 
@@ -179,11 +184,9 @@ function main(): void {
   }
 
   // Determine if it's a file path or project ID
-  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const isFilePath = arg.endsWith('.json') || arg.includes('/') || arg.includes('\\');
   let filePath: string;
 
-  if (isFilePath) {
+  if (isFilePath(arg)) {
     filePath = path.resolve(arg);
   } else if (UUID_RE.test(arg)) {
     filePath = path.join(DATA_DIR, 'projects', `${arg}.json`);
@@ -200,4 +203,11 @@ function main(): void {
   console.log(describeProject(loadProject(filePath)));
 }
 
-main();
+// Only run when executed directly (not imported as module for testing)
+const isDirectRun =
+  typeof process !== 'undefined' &&
+  process.argv[1] &&
+  (process.argv[1].endsWith('/describe.ts') || process.argv[1].endsWith('/describe.js'));
+if (isDirectRun) {
+  main();
+}

@@ -2,8 +2,8 @@
 import type { Plugin, ViteDevServer } from 'vite';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import * as path from 'node:path';
-import type { ProjectMeta } from '../types.ts';
 import { parseStorageData } from '../persistence.ts';
+import { isValidProjectMeta, UUID_RE } from '../shared/project-utils.ts';
 import {
   setDataDir,
   loadProjectIndex,
@@ -16,7 +16,6 @@ import {
 } from './project-store-fs.ts';
 
 const MAX_BODY_SIZE = 10 * 1024 * 1024; // 10 MB
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -45,12 +44,6 @@ function readBody(req: IncomingMessage): Promise<string> {
 function sendJson(res: ServerResponse, status: number, data: unknown): void {
   res.writeHead(status, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(data));
-}
-
-function isValidProjectMeta(item: unknown): item is ProjectMeta {
-  if (!item || typeof item !== 'object') return false;
-  const obj = item as Record<string, unknown>;
-  return typeof obj.id === 'string' && typeof obj.name === 'string';
 }
 
 export function yakataApiPlugin(): Plugin {
