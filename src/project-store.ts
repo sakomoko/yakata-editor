@@ -150,36 +150,69 @@ export function saveTabState(tabState: TabState): void {
 
 // --- Name generation ---
 
-export function generateDefaultName(existingNames: string[]): string {
-  const base = '無題のプロジェクト';
-  if (!existingNames.includes(base)) return base;
+/** baseName が existingNames に含まれていれば末尾に連番を付けてユニークにする */
+export function deduplicateName(baseName: string, existingNames: string[]): string {
+  if (!existingNames.includes(baseName)) return baseName;
   let n = 2;
-  while (existingNames.includes(`${base} (${n})`)) n++;
-  return `${base} (${n})`;
+  while (existingNames.includes(`${baseName} (${n})`)) n++;
+  return `${baseName} (${n})`;
 }
 
-// --- New Project ---
+export function generateDefaultName(existingNames: string[]): string {
+  return deduplicateName('無題のプロジェクト', existingNames);
+}
 
-export function createNewProject(name?: string): { meta: ProjectMeta; data: ProjectData } {
-  const index = loadProjectIndex();
-  const existingNames = index.map((m) => m.name);
-  const projectName = name ?? generateDefaultName(existingNames);
+// --- Register (shared create logic) ---
+
+/** プロジェクトを新IDで登録し、indexとdataをlocalStorageに保存する */
+function registerProject(name: string, data: ProjectData): { meta: ProjectMeta; data: ProjectData } {
   const now = Date.now();
   const id = crypto.randomUUID();
-  const meta: ProjectMeta = { id, name: projectName, createdAt: now, updatedAt: now };
-  const data: ProjectData = {
-    rooms: [],
-    freeTexts: [],
-    freeStrokes: [],
-    viewport: { zoom: 1, panX: 0, panY: 0 },
-    history: [],
-  };
+  const meta: ProjectMeta = { id, name, createdAt: now, updatedAt: now };
 
+  const index = loadProjectIndex();
   index.push(meta);
   saveProjectIndex(index);
   saveProjectData(id, data);
 
   return { meta, data };
+}
+
+// --- New Project ---
+
+export function createNewProject(name?: string): { meta: ProjectMeta; data: ProjectData } {
+  const existingNames = loadProjectIndex().map((m) => m.name);
+  const projectName = name ?? generateDefaultName(existingNames);
+  return registerProject(projectName, {
+    rooms: [],
+    freeTexts: [],
+    freeStrokes: [],
+    viewport: { zoom: 1, panX: 0, panY: 0 },
+    history: [],
+  });
+}
+
+// --- Duplicate Project ---
+
+export function duplicateProject(
+  sourceId: string,
+  name?: string,
+): { meta: ProjectMeta; data: ProjectData } | null {
+  const result = loadProjectData(sourceId);
+  if (!result) return null;
+
+  const index = loadProjectIndex();
+  const sourceMeta = index.find((m) => m.id === sourceId);
+  const existingNames = index.map((m) => m.name);
+  const baseName = name ?? (sourceMeta ? `${sourceMeta.name} のコピー` : '無題のプロジェクト');
+  const projectName = deduplicateName(baseName, existingNames);
+
+  // Deep copy data, clear history for the new project
+  const clonedData: ProjectData = JSON.parse(
+    JSON.stringify({ ...result.data, history: [] }),
+  );
+
+  return registerProject(projectName, clonedData);
 }
 
 // --- Migration ---
