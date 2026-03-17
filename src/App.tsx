@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
+import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -8,7 +9,15 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
+import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
+import AddIcon from '@mui/icons-material/Add';
+import SaveIcon from '@mui/icons-material/Save';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import ImageIcon from '@mui/icons-material/Image';
+import UndoIcon from '@mui/icons-material/Undo';
+import BrushIcon from '@mui/icons-material/Brush';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import {
   initEditor,
   type EditorAPI,
@@ -505,64 +514,71 @@ export default function App() {
     [tabState, projectIndex],
   );
 
-  /* eslint-disable no-irregular-whitespace */
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
 
-      {/* Header */}
-      <Box
-        sx={{
-          height: 28,
-          bgcolor: '#1e1e1e',
-          display: 'flex',
-          alignItems: 'center',
-          px: 1.5,
-          gap: 1,
-          borderBottom: '1px solid #333',
-        }}
+      {/* Header + Tab Bar */}
+      <AppBar
+        position="static"
+        color="inherit"
+        elevation={3}
+        sx={{ bgcolor: '#383838' }}
       >
-        {/* TODO: アイコン画像に差し替え */}
-        <Box component="span" sx={{ fontSize: 14, lineHeight: 1 }} aria-hidden="true">
-          🏚
-        </Box>
-        <Typography
-          variant="caption"
-          sx={{
-            color: '#bbb',
-            fontSize: 13,
-            fontWeight: 600,
-            letterSpacing: '0.05em',
-          }}
-        >
-          館エディタ
-        </Typography>
-      </Box>
+        <Toolbar variant="dense" disableGutters>
+          {/* Title area */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              pl: 2.5,
+              pr: 4,
+              gap: 1.5,
+              flexShrink: 0,
+            }}
+          >
+            {/* TODO: アイコン画像に差し替え */}
+            <Box component="span" sx={{ fontSize: 20, lineHeight: 1 }} aria-hidden="true">
+              🏚
+            </Box>
+            <Typography
+              variant="subtitle2"
+              sx={{
+                color: '#eee',
+                fontSize: 15,
+                fontWeight: 600,
+                letterSpacing: '0.05em',
+              }}
+            >
+              館エディタ
+            </Typography>
+          </Box>
 
-      {/* Tab Bar */}
-      <TabBar
-        tabs={tabs}
-        onTabClick={handleTabClick}
-        onTabClose={handleTabClose}
-        onTabAdd={handleTabAdd}
-        onTabDuplicate={handleDuplicateProject}
-        onTabRename={handleTabRename}
-        onOpenProjectList={() => setProjectListOpen(true)}
-      />
+          {/* Tab Bar */}
+          <TabBar
+            tabs={tabs}
+            onTabClick={handleTabClick}
+            onTabClose={handleTabClose}
+            onTabAdd={handleTabAdd}
+            onTabDuplicate={handleDuplicateProject}
+            onTabRename={handleTabRename}
+            onOpenProjectList={() => setProjectListOpen(true)}
+          />
+        </Toolbar>
+      </AppBar>
 
       {/* Canvas */}
       <div id="container" ref={containerRef}>
         <canvas ref={canvasRef} />
       </div>
 
-      {/* Toolbar (bottom) */}
+      {/* Bottom bar (status + toolbar) */}
       <Box
         sx={{
           position: 'fixed',
           bottom: 0,
           left: 0,
           right: 0,
-          height: 36,
           bgcolor: 'background.paper',
           display: 'flex',
           alignItems: 'center',
@@ -571,168 +587,175 @@ export default function App() {
           borderTop: '1px solid #444',
         }}
       >
-        <Button
-          size="small"
-          variant="contained"
-          color="inherit"
-          sx={toolbarButtonSx}
-          onClick={handleTabAdd}
+        {/* Status (left) */}
+        <Box
+          sx={{
+            color: '#999',
+            fontSize: '0.9rem',
+            fontFamily: 'monospace',
+            whiteSpace: 'pre',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            width: 220,
+            flexShrink: 0,
+            mr: 1,
+          }}
         >
-          新規プロジェクト
-        </Button>
-        <Divider orientation="vertical" flexItem sx={{ borderColor: '#555', mx: 0.5 }} />
+          {status}
+        </Box>
+
+        <Divider orientation="vertical" flexItem sx={{ borderColor: '#555' }} />
+
+        {/* Commands (right) */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+          <Button
+            size="small"
+            variant="contained"
+            color="inherit"
+            sx={toolbarButtonSx}
+            startIcon={<AddIcon />}
+            onClick={handleTabAdd}
+          >
+            新規プロジェクト
+          </Button>
+          <Divider orientation="vertical" flexItem sx={{ borderColor: '#555', mx: 0.5 }} />
+          <Button
+            size="small"
+            variant="contained"
+            color="inherit"
+            sx={toolbarButtonSx}
+            startIcon={<SaveIcon />}
+            onClick={() => editorRef.current?.saveProject().catch(console.error)}
+          >
+            保存
+          </Button>
+          <Button
+            size="small"
+            variant="contained"
+            color="inherit"
+            sx={toolbarButtonSx}
+            startIcon={<FolderOpenIcon />}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            開く
+          </Button>
+          <Button
+            size="small"
+            variant="contained"
+            color="inherit"
+            sx={toolbarButtonSx}
+            startIcon={<ImageIcon />}
+            onClick={() => editorRef.current?.exportAsPng()}
+          >
+            PNG出力
+          </Button>
+          <Divider orientation="vertical" flexItem sx={{ borderColor: '#555', mx: 0.5 }} />
+          <Button
+            size="small"
+            variant="contained"
+            color="inherit"
+            sx={toolbarButtonSx}
+            startIcon={<UndoIcon />}
+            onClick={() => editorRef.current?.undo()}
+          >
+            戻す ({modKeyCombo('Z')})
+          </Button>
+          <Divider orientation="vertical" flexItem sx={{ borderColor: '#555', mx: 0.5 }} />
+          <Button
+            size="small"
+            variant="contained"
+            color="inherit"
+            sx={{
+              ...toolbarButtonSx,
+              ...(paintMode && {
+                bgcolor: '#1976d2',
+                color: '#fff',
+                borderColor: '#1976d2',
+                '&:hover': { bgcolor: '#1565c0', color: '#fff', boxShadow: 'none' },
+              }),
+            }}
+            startIcon={<BrushIcon />}
+            onClick={() => {
+              editorRef.current?.setPaintMode(!paintMode);
+            }}
+          >
+            ペン (P)
+          </Button>
+          {paintMode && (
+            <>
+              <input
+                type="color"
+                value={paintColor}
+                onChange={(e) => {
+                  setPaintColor(e.target.value);
+                  editorRef.current?.setPaintColor(e.target.value);
+                }}
+                style={{ width: 28, height: 24, border: 'none', padding: 0, cursor: 'pointer' }}
+                title="ペン色"
+              />
+              <select
+                value={paintLineWidth}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setPaintLineWidth(v);
+                  editorRef.current?.setPaintLineWidth(v);
+                }}
+                style={{
+                  height: 24,
+                  fontSize: 11,
+                  background: '#444',
+                  color: '#ccc',
+                  border: '1px solid #555',
+                  borderRadius: 3,
+                }}
+                title="ペン太さ"
+              >
+                <option value={1}>1px</option>
+                <option value={2}>2px</option>
+                <option value={3}>3px</option>
+                <option value={6}>6px</option>
+                <option value={10}>10px</option>
+              </select>
+              <select
+                value={paintOpacity}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setPaintOpacity(v);
+                  editorRef.current?.setPaintOpacity(v);
+                }}
+                style={{
+                  height: 24,
+                  fontSize: 11,
+                  background: '#444',
+                  color: '#ccc',
+                  border: '1px solid #555',
+                  borderRadius: 3,
+                }}
+                title="不透明度"
+              >
+                <option value={1}>100%</option>
+                <option value={0.8}>80%</option>
+                <option value={0.5}>50%</option>
+                <option value={0.3}>30%</option>
+              </select>
+            </>
+          )}
+        </Box>
+
         <Button
           size="small"
           variant="contained"
           color="inherit"
-          sx={toolbarButtonSx}
-          onClick={() => editorRef.current?.saveProject().catch(console.error)}
-        >
-          保存
-        </Button>
-        <Button
-          size="small"
-          variant="contained"
-          color="inherit"
-          sx={toolbarButtonSx}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          開く
-        </Button>
-        <Button
-          size="small"
-          variant="contained"
-          color="inherit"
-          sx={toolbarButtonSx}
-          onClick={() => editorRef.current?.exportAsPng()}
-        >
-          PNG出力
-        </Button>
-        <Divider orientation="vertical" flexItem sx={{ borderColor: '#555', mx: 0.5 }} />
-        <Button
-          size="small"
-          variant="contained"
-          color="inherit"
-          sx={toolbarButtonSx}
-          onClick={() => editorRef.current?.undo()}
-        >
-          戻す ({modKeyCombo('Z')})
-        </Button>
-        <Divider orientation="vertical" flexItem sx={{ borderColor: '#555', mx: 0.5 }} />
-        <Button
-          size="small"
-          variant="contained"
-          color="inherit"
+          onClick={() => setShortcutHelpOpen(true)}
+          startIcon={<HelpOutlineIcon />}
           sx={{
             ...toolbarButtonSx,
-            ...(paintMode && {
-              bgcolor: '#1976d2',
-              color: '#fff',
-              borderColor: '#1976d2',
-              '&:hover': { bgcolor: '#1565c0', color: '#fff', boxShadow: 'none' },
-            }),
-          }}
-          onClick={() => {
-            editorRef.current?.setPaintMode(!paintMode);
-          }}
-        >
-          ペン (P)
-        </Button>
-        {paintMode && (
-          <>
-            <input
-              type="color"
-              value={paintColor}
-              onChange={(e) => {
-                setPaintColor(e.target.value);
-                editorRef.current?.setPaintColor(e.target.value);
-              }}
-              style={{ width: 28, height: 24, border: 'none', padding: 0, cursor: 'pointer' }}
-              title="ペン色"
-            />
-            <select
-              value={paintLineWidth}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                setPaintLineWidth(v);
-                editorRef.current?.setPaintLineWidth(v);
-              }}
-              style={{
-                height: 24,
-                fontSize: 11,
-                background: '#444',
-                color: '#ccc',
-                border: '1px solid #555',
-                borderRadius: 3,
-              }}
-              title="ペン太さ"
-            >
-              <option value={1}>1px</option>
-              <option value={2}>2px</option>
-              <option value={3}>3px</option>
-              <option value={6}>6px</option>
-              <option value={10}>10px</option>
-            </select>
-            <select
-              value={paintOpacity}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                setPaintOpacity(v);
-                editorRef.current?.setPaintOpacity(v);
-              }}
-              style={{
-                height: 24,
-                fontSize: 11,
-                background: '#444',
-                color: '#ccc',
-                border: '1px solid #555',
-                borderRadius: 3,
-              }}
-              title="不透明度"
-            >
-              <option value={1}>100%</option>
-              <option value={0.8}>80%</option>
-              <option value={0.5}>50%</option>
-              <option value={0.3}>30%</option>
-            </select>
-          </>
-        )}
-        <Button
-          variant="outlined"
-          size="small"
-          onClick={() => setShortcutHelpOpen(true)}
-          sx={{
             ml: 'auto',
-            minWidth: 32,
-            px: 1,
-            fontSize: 14,
-            color: '#ccc',
-            borderColor: '#555',
-            '&:hover': { borderColor: '#888', bgcolor: 'rgba(255,255,255,0.08)' },
           }}
           title="ショートカットキー一覧 (?)"
         >
           ?
         </Button>
-      </Box>
-
-      {/* Status bar */}
-      <Box
-        sx={{
-          position: 'fixed',
-          bottom: 36,
-          left: 0,
-          right: 0,
-          height: 24,
-          bgcolor: 'background.paper',
-          color: '#999',
-          fontSize: 11,
-          lineHeight: '24px',
-          px: '10px',
-          borderTop: '1px solid #444',
-        }}
-      >
-        {status}
       </Box>
 
       {/* Hidden file input */}
@@ -808,7 +831,6 @@ export default function App() {
       </Dialog>
     </ThemeProvider>
   );
-  /* eslint-enable no-irregular-whitespace */
 }
 
 const toolbarButtonSx = {

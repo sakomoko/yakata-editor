@@ -139,7 +139,10 @@ export function render(ec: EditorContext): void {
 export function updateStatus(ec: EditorContext): void {
   const { state, viewport, callbacks } = ec;
   const zoomPct = Math.round(viewport.zoom * 100);
-  let text = `(${state.mouse.gx}, ${state.mouse.gy})　部屋: ${state.rooms.length}　|　${zoomPct}%`;
+  const gx = String(state.mouse.gx).padStart(4);
+  const gy = String(state.mouse.gy).padStart(4);
+  const zoom = String(zoomPct).padStart(4);
+  let text = `(${gx},${gy})  部屋: ${state.rooms.length}　|${zoom}%`;
   if (state.paintMode) {
     text += '　|　ペイントモード';
   }
