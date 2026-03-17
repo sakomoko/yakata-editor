@@ -450,10 +450,13 @@ export default function App() {
       if (confirmed && deleteTargetIdRef.current) {
         executeDeleteProject(deleteTargetIdRef.current);
       }
-      deleteTargetIdRef.current = null;
     },
     [executeDeleteProject],
   );
+
+  const handleDeleteConfirmExited = useCallback(() => {
+    deleteTargetIdRef.current = null;
+  }, []);
 
   const handleDuplicateProject = useCallback(
     (id: string) => {
@@ -782,7 +785,11 @@ export default function App() {
       <ShortcutHelpDialog open={shortcutHelpOpen} onClose={() => setShortcutHelpOpen(false)} />
 
       {/* Delete confirmation dialog */}
-      <Dialog open={deleteConfirmOpen} onClose={() => handleDeleteConfirmClose(false)}>
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={() => handleDeleteConfirmClose(false)}
+        TransitionProps={{ onExited: handleDeleteConfirmExited }}
+      >
         <DialogTitle>プロジェクトの削除</DialogTitle>
         <DialogContent>
           <DialogContentText>
@@ -792,8 +799,8 @@ export default function App() {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => handleDeleteConfirmClose(false)}>キャンセル</Button>
-          <Button onClick={() => handleDeleteConfirmClose(true)} color="error" autoFocus>
+          <Button onClick={() => handleDeleteConfirmClose(false)} autoFocus>キャンセル</Button>
+          <Button onClick={() => handleDeleteConfirmClose(true)} color="error">
             削除
           </Button>
         </DialogActions>
