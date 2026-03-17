@@ -341,7 +341,7 @@ export default function App() {
   // Open a newly created/duplicated project in a new tab
   const openProjectInNewTab = useCallback(
     (meta: ProjectMeta, data: ProjectData) => {
-      setProjectIndex(loadProjectIndex());
+      setProjectIndex((prev) => [...prev, meta]);
       updateTabState({
         openTabs: [...tabStateRef.current.openTabs, meta.id],
         activeTabId: meta.id,

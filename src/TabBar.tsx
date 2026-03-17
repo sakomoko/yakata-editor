@@ -45,10 +45,10 @@ export default function TabBar({
     setEditingId(null);
   };
 
-  const handleContextMenu = (e: React.MouseEvent, tabId: string) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent, tabId: string) => {
     e.preventDefault();
     setCtxMenu({ x: e.clientX, y: e.clientY, tabId });
-  };
+  }, []);
 
   const ctxMenuItems: ContextMenuItem[] = useMemo(() => {
     if (!ctxMenu) return [];

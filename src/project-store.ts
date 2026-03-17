@@ -199,7 +199,6 @@ export function createNewProject(name?: string): { meta: ProjectMeta; data: Proj
 
 export function duplicateProject(
   sourceId: string,
-  name?: string,
 ): { meta: ProjectMeta; data: ProjectData } | null {
   const result = loadProjectData(sourceId);
   if (!result) return null;
@@ -207,11 +206,11 @@ export function duplicateProject(
   const index = loadProjectIndex();
   const sourceMeta = index.find((m) => m.id === sourceId);
   const existingNames = index.map((m) => m.name);
-  const baseName = name ?? (sourceMeta ? `${sourceMeta.name} のコピー` : '無題のプロジェクト');
+  const baseName = sourceMeta ? `${sourceMeta.name} のコピー` : '無題のプロジェクト';
   const projectName = deduplicateName(baseName, existingNames);
 
   // Deep copy data, then clear history for the new project
-  const clonedData: ProjectData = JSON.parse(JSON.stringify(result.data));
+  const clonedData: ProjectData = structuredClone(result.data);
   clonedData.history = [];
 
   return registerProject(projectName, clonedData);
