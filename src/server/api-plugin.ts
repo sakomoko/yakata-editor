@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import type { Plugin, ViteDevServer } from 'vite';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import * as path from 'node:path';

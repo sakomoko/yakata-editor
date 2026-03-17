@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { Room, WallObject, RoomInteriorObject, FreeText, FreeStroke } from '../types.ts';
