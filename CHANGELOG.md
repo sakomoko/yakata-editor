@@ -7,6 +7,13 @@
 
 ### Added
 
+- AI/CLIアクセス機能（開発サーバー連携）
+  - Viteプラグインによる REST API（`GET/POST/PUT/DELETE /api/projects`）でプロジェクトデータの読み書き
+  - ファイルベースストレージ（`data/` ディレクトリにJSON保存、atomic write対応）
+  - ブラウザ↔ファイル自動同期（開発モード時、localStorage保存と同時にサーバーへfire-and-forget同期）
+  - CLIヘルパー `npx tsx src/cli/describe.ts` — 間取り構造の人間/AI可読な出力（部屋一覧・壁オブジェクト・隣接関係・インテリア）
+  - CLIヘルパー `npx tsx src/cli/validate.ts` — プロジェクトJSONのバリデーション（壁オブジェクト範囲チェック・部屋重なり検出・pairedWith参照整合性）
+  - Claude Code用スキルファイル `/describe-floor-plan`、`/edit-floor-plan`
 - ショートカットキー一覧ダイアログ
   - ツールバー右端の「?」ボタン、または `?` キーでカテゴリ別ショートカット一覧を表示
   - ツールバーのヘルプテキストを「?」ボタンに置き換え、ボタンはみ出し問題を解消

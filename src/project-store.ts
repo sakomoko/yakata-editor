@@ -54,6 +54,7 @@ export function saveProjectIndex(index: ProjectMeta[]): void {
   } catch {
     // storage full or unavailable
   }
+  syncIndexToServer(index);
 }
 
 // --- Project Data ---
@@ -96,6 +97,72 @@ export function loadProjectData(id: string): LoadProjectResult | null {
   }
 }
 
+// --- Dev-mode server sync ---
+
+function syncToServer(id: string, data: ProjectData): void {
+  if (!import.meta.env.DEV) return;
+  fetch(`/api/projects/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }).catch(() => {
+    // fire-and-forget
+  });
+}
+
+function syncIndexToServer(index: ProjectMeta[]): void {
+  if (!import.meta.env.DEV) return;
+  fetch('/api/projects', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(index),
+  }).catch(() => {
+    // fire-and-forget
+  });
+}
+
+/** 起動時にlocalStorageの全プロジェクトをサーバーへ送る */
+export function syncAllToServer(): void {
+  if (!import.meta.env.DEV) return;
+  const index = loadProjectIndex();
+  if (index.length === 0) return;
+  syncIndexToServer(index);
+  for (const meta of index) {
+    try {
+      const raw = localStorage.getItem(PROJECT_KEY_PREFIX + meta.id);
+      if (!raw) continue;
+      const data = JSON.parse(raw) as ProjectData;
+      syncToServer(meta.id, data);
+    } catch {
+      // skip
+    }
+  }
+}
+
+export async function syncFromServer(): Promise<void> {
+  if (!import.meta.env.DEV) return;
+  try {
+    const res = await fetch('/api/projects');
+    if (!res.ok) return;
+    const serverIndex = (await res.json()) as ProjectMeta[];
+    const localIndex = loadProjectIndex();
+    const localIds = new Set(localIndex.map((m) => m.id));
+
+    for (const serverMeta of serverIndex) {
+      if (!localIds.has(serverMeta.id)) {
+        const dataRes = await fetch(`/api/projects/${serverMeta.id}`);
+        if (!dataRes.ok) continue;
+        const { data } = (await dataRes.json()) as { meta: ProjectMeta; data: ProjectData };
+        localIndex.push(serverMeta);
+        saveProjectData(serverMeta.id, data);
+      }
+    }
+    saveProjectIndex(localIndex);
+  } catch {
+    // server not available
+  }
+}
+
 /** プロジェクトデータのみ保存（updatedAt は更新しない） */
 export function saveProjectData(id: string, data: ProjectData): void {
   try {
@@ -103,6 +170,7 @@ export function saveProjectData(id: string, data: ProjectData): void {
   } catch {
     // storage full or unavailable
   }
+  syncToServer(id, data);
 }
 
 /** updatedAt を現在時刻に更新して index を保存 */

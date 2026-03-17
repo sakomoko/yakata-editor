@@ -39,15 +39,11 @@ const shortcuts: { category: string; items: { keys: string; description: string 
   },
   {
     category: 'モード',
-    items: [
-      { keys: 'P', description: 'ペイントモード切替' },
-    ],
+    items: [{ keys: 'P', description: 'ペイントモード切替' }],
   },
   {
     category: 'ヘルプ',
-    items: [
-      { keys: '?', description: 'ショートカットキー一覧を表示' },
-    ],
+    items: [{ keys: '?', description: 'ショートカットキー一覧を表示' }],
   },
 ];
 
