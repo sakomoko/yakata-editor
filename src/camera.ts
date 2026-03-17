@@ -40,10 +40,7 @@ export function createSecurityCamera(
 }
 
 /** カメラアイコンのピクセル中心座標を計算 */
-export function cameraCenter(
-  room: Room,
-  cam: SecurityCamera,
-): { cx: number; cy: number } {
+export function cameraCenter(room: Room, cam: SecurityCamera): { cx: number; cy: number } {
   return {
     cx: (room.x + cam.x + cam.w / 2) * GRID,
     cy: (room.y + cam.y + cam.h / 2) * GRID,
@@ -186,12 +183,7 @@ export function drawCameraHandles(
   drawDiamond(ctx, handles.fovAngleRight.x, handles.fovAngleRight.y, size);
 }
 
-function drawDiamond(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  size: number,
-): void {
+function drawDiamond(ctx: CanvasRenderingContext2D, x: number, y: number, size: number): void {
   const hs = size / 2;
   ctx.beginPath();
   ctx.moveTo(x, y - hs);

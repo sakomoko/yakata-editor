@@ -212,12 +212,7 @@ export function computeGroupBoundingBox(rooms: Room[]): {
 }
 
 /** グループBBの4隅ハンドルをピクセル座標で返す */
-export function getGroupHandles(bb: {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}): GroupHandle[] {
+export function getGroupHandles(bb: { x: number; y: number; w: number; h: number }): GroupHandle[] {
   const x = bb.x * GRID,
     y = bb.y * GRID,
     w = bb.w * GRID,

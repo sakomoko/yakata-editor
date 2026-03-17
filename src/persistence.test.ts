@@ -324,18 +324,14 @@ describe('ensureInteriorObjectIds', () => {
   });
 
   it('カメラのfovAngleがクランプされる', () => {
-    const raw = [
-      { type: 'camera', x: 0, y: 0, w: 1, h: 1, fovAngle: 999 },
-    ];
+    const raw = [{ type: 'camera', x: 0, y: 0, w: 1, h: 1, fovAngle: 999 }];
     const result = ensureInteriorObjectIds(raw);
     const cam = result[0] as SecurityCamera;
     expect(cam.fovAngle).toBeCloseTo(Math.PI / 2);
   });
 
   it('カメラのfovRangeがクランプされる', () => {
-    const raw = [
-      { type: 'camera', x: 0, y: 0, w: 1, h: 1, fovRange: 100 },
-    ];
+    const raw = [{ type: 'camera', x: 0, y: 0, w: 1, h: 1, fovRange: 100 }];
     const result = ensureInteriorObjectIds(raw);
     const cam = result[0] as SecurityCamera;
     expect(cam.fovRange).toBe(20);

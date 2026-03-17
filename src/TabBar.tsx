@@ -85,10 +85,20 @@ export default function TabBar({
           </div>
         ))}
       </div>
-      <button style={addButtonStyle} onClick={onTabAdd} title="新規プロジェクト" aria-label="新規プロジェクト">
+      <button
+        style={addButtonStyle}
+        onClick={onTabAdd}
+        title="新規プロジェクト"
+        aria-label="新規プロジェクト"
+      >
         +
       </button>
-      <button style={listButtonStyle} onClick={onOpenProjectList} title="プロジェクト一覧" aria-label="プロジェクト一覧">
+      <button
+        style={listButtonStyle}
+        onClick={onOpenProjectList}
+        title="プロジェクト一覧"
+        aria-label="プロジェクト一覧"
+      >
         ☰
       </button>
     </div>
