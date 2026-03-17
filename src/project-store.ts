@@ -146,18 +146,26 @@ async function syncFromServer(): Promise<void> {
     const localIndex = loadProjectIndex();
     const localIds = new Set(localIndex.map((m) => m.id));
 
-    for (const serverMeta of serverIndex) {
-      if (!localIds.has(serverMeta.id)) {
-        const dataRes = await fetch(`/api/projects/${serverMeta.id}`);
-        if (!dataRes.ok) continue;
-        const { data } = (await dataRes.json()) as { meta: ProjectMeta; data: ProjectData };
-        localIndex.push(serverMeta);
-        // localStorageのみに保存（サーバーへの再送を避ける）
+    const newMetas = serverIndex.filter((m) => !localIds.has(m.id));
+    const results = await Promise.all(
+      newMetas.map(async (meta) => {
         try {
-          localStorage.setItem(PROJECT_KEY_PREFIX + serverMeta.id, JSON.stringify(data));
+          const dataRes = await fetch(`/api/projects/${meta.id}`);
+          if (!dataRes.ok) return null;
+          const { data } = (await dataRes.json()) as { meta: ProjectMeta; data: ProjectData };
+          return { meta, data };
         } catch {
-          // storage full
+          return null;
         }
+      }),
+    );
+    for (const result of results) {
+      if (!result) continue;
+      localIndex.push(result.meta);
+      try {
+        localStorage.setItem(PROJECT_KEY_PREFIX + result.meta.id, JSON.stringify(result.data));
+      } catch {
+        // storage full
       }
     }
     // indexもlocalStorageのみに保存

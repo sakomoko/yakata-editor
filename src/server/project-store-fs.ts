@@ -44,7 +44,7 @@ interface ViewportRaw {
   panY?: unknown;
 }
 
-function parseViewport(raw: unknown): { zoom: number; panX: number; panY: number } {
+export function parseViewport(raw: unknown): { zoom: number; panX: number; panY: number } {
   const fallback = { zoom: 1, panX: 0, panY: 0 };
   if (!raw || typeof raw !== 'object') return fallback;
   const vp = raw as ViewportRaw;

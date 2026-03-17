@@ -3,7 +3,6 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import * as path from 'node:path';
 import type { ProjectMeta } from '../types.ts';
 import { parseStorageData } from '../persistence.ts';
-import { clampZoom } from '../viewport.ts';
 import {
   setDataDir,
   loadProjectIndex,
@@ -12,6 +11,7 @@ import {
   saveProjectData,
   deleteProject,
   createNewProject,
+  parseViewport,
 } from './project-store-fs.ts';
 
 const MAX_BODY_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -136,16 +136,11 @@ export function yakataApiPlugin(): Plugin {
                 freeTexts: obj.freeTexts,
                 freeStrokes: obj.freeStrokes,
               });
-              const vp = obj.viewport as { zoom?: number; panX?: number; panY?: number } | undefined;
               const data = {
                 rooms: validated.rooms,
                 freeTexts: validated.freeTexts,
                 freeStrokes: validated.freeStrokes,
-                viewport: {
-                  zoom: typeof vp?.zoom === 'number' ? clampZoom(vp.zoom) : 1,
-                  panX: typeof vp?.panX === 'number' ? vp.panX : 0,
-                  panY: typeof vp?.panY === 'number' ? vp.panY : 0,
-                },
+                viewport: parseViewport(obj.viewport),
                 history: Array.isArray(obj.history)
                   ? (obj.history as unknown[]).filter((h): h is string => typeof h === 'string')
                   : [],
