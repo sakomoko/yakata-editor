@@ -85,6 +85,7 @@ main.ts
   │   ├─ TabBar.tsx, ProjectListModal.tsx
   │   ├─ RoomDialog.tsx, MarkerDialog.tsx, FreeTextDialog.tsx
   │   ├─ ContextMenu.tsx → context-menu.ts
+  │   ├─ ShortcutHelpDialog.tsx → platform.ts
   │   └─ persistence.ts
   └─ style.css
 ```
