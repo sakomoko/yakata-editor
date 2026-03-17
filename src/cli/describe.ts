@@ -15,8 +15,20 @@ interface ProjectFile {
 }
 
 function loadProject(filePath: string): ProjectFile {
-  const raw = fs.readFileSync(filePath, 'utf-8');
-  const parsed: unknown = JSON.parse(raw);
+  let raw: string;
+  try {
+    raw = fs.readFileSync(filePath, 'utf-8');
+  } catch {
+    console.error(`ファイルを読み込めません: ${filePath}`);
+    process.exit(1);
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    console.error(`JSONの解析に失敗しました: ${filePath}`);
+    process.exit(1);
+  }
   const data = parseStorageData(parsed);
   return { rooms: data.rooms, freeTexts: data.freeTexts, freeStrokes: data.freeStrokes };
 }

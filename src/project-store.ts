@@ -124,14 +124,29 @@ function syncIndexToServer(index: ProjectMeta[]): void {
 /** 起動時にlocalStorageの全プロジェクトをサーバーへ送り、サーバー側の新規プロジェクトも取得する */
 export async function syncWithServer(): Promise<void> {
   if (!import.meta.env.DEV) return;
-  // localStorage → サーバー
+  // localStorage → サーバー（PUT完了を待ってからGETする）
   const index = loadProjectIndex();
   if (index.length > 0) {
-    syncIndexToServer(index);
+    const puts: Promise<unknown>[] = [
+      fetch('/api/projects', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(index),
+      }),
+    ];
     for (const meta of index) {
       const result = loadProjectData(meta.id);
-      if (result) syncToServer(meta.id, result.data);
+      if (result) {
+        puts.push(
+          fetch(`/api/projects/${meta.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(result.data),
+          }),
+        );
+      }
     }
+    await Promise.allSettled(puts);
   }
   // サーバー → localStorage
   await syncFromServer();

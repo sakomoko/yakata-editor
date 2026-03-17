@@ -35,8 +35,17 @@ function writeAtomic(filePath: string, content: string): void {
   const dir = path.dirname(filePath);
   ensureDir(dir);
   const tmp = filePath + '.tmp.' + crypto.randomUUID();
-  fs.writeFileSync(tmp, content, 'utf-8');
-  fs.renameSync(tmp, filePath);
+  try {
+    fs.writeFileSync(tmp, content, 'utf-8');
+    fs.renameSync(tmp, filePath);
+  } catch (e) {
+    try {
+      fs.unlinkSync(tmp);
+    } catch {
+      // ignore cleanup failure
+    }
+    throw e;
+  }
 }
 
 interface ViewportRaw {
