@@ -4,8 +4,9 @@ import DialogContent from '@mui/material/DialogContent';
 import IconButton from '@mui/material/IconButton';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { modKey as mod } from './platform.ts';
+import { modKeyCombo as mc } from './platform.ts';
 
+// NOTE: editor/keyboard.ts の実装と手動で同期が必要
 const shortcuts: { category: string; items: { keys: string; description: string }[] }[] = [
   {
     category: '基本操作',
@@ -15,25 +16,25 @@ const shortcuts: { category: string; items: { keys: string; description: string 
       { keys: 'Shift+クリック', description: '複数選択' },
       { keys: 'ダブルクリック', description: '名前を編集' },
       { keys: 'Delete / Backspace', description: '削除' },
-      { keys: `${mod}+Z`, description: '元に戻す' },
+      { keys: mc('Z'), description: '元に戻す' },
     ],
   },
   {
     category: 'ビューポート',
     items: [
       { keys: 'ホイール', description: 'ズーム' },
-      { keys: `${mod}+= / ${mod}+-`, description: 'ズームイン / アウト' },
-      { keys: `${mod}+0`, description: 'ズームリセット' },
+      { keys: `${mc('=')} / ${mc('-')}`, description: 'ズームイン / アウト' },
+      { keys: mc('0'), description: 'ズームリセット' },
       { keys: 'Space+ドラッグ', description: 'パン（移動）' },
     ],
   },
   {
     category: 'レイヤー',
     items: [
-      { keys: `${mod}+]`, description: '一つ前面に移動' },
-      { keys: `${mod}+[`, description: '一つ背面に移動' },
-      { keys: `${mod}+Shift+]`, description: '最前面に移動' },
-      { keys: `${mod}+Shift+[`, description: '最背面に移動' },
+      { keys: mc(']'), description: '一つ前面に移動' },
+      { keys: mc('['), description: '一つ背面に移動' },
+      { keys: `${mc('Shift+]')}`, description: '最前面に移動' },
+      { keys: `${mc('Shift+[')}`, description: '最背面に移動' },
     ],
   },
   {

@@ -33,7 +33,7 @@ import type { ContextMenuItem } from './context-menu.ts';
 import TabBar from './TabBar.tsx';
 import ProjectListModal from './ProjectListModal.tsx';
 import ShortcutHelpDialog from './ShortcutHelpDialog.tsx';
-import { modKey } from './platform.ts';
+import { modKeyCombo } from './platform.ts';
 
 const darkTheme = createTheme({
   palette: {
@@ -558,7 +558,7 @@ export default function App() {
           sx={toolbarButtonSx}
           onClick={() => editorRef.current?.undo()}
         >
-          戻す ({modKey}+Z)
+          戻す ({modKeyCombo('Z')})
         </Button>
         <Divider orientation="vertical" flexItem sx={{ borderColor: '#555', mx: 0.5 }} />
         <Button
