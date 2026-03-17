@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import * as path from 'node:path';
 import type { ProjectMeta } from '../types.ts';
 import { parseStorageData } from '../persistence.ts';
+import { clampZoom } from '../viewport.ts';
 import {
   setDataDir,
   loadProjectIndex,
@@ -141,7 +142,7 @@ export function yakataApiPlugin(): Plugin {
                 freeTexts: validated.freeTexts,
                 freeStrokes: validated.freeStrokes,
                 viewport: {
-                  zoom: typeof vp?.zoom === 'number' ? vp.zoom : 1,
+                  zoom: typeof vp?.zoom === 'number' ? clampZoom(vp.zoom) : 1,
                   panX: typeof vp?.panX === 'number' ? vp.panX : 0,
                   panY: typeof vp?.panY === 'number' ? vp.panY : 0,
                 },

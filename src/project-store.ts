@@ -137,7 +137,7 @@ export async function syncWithServer(): Promise<void> {
   await syncFromServer();
 }
 
-export async function syncFromServer(): Promise<void> {
+async function syncFromServer(): Promise<void> {
   if (!import.meta.env.DEV) return;
   try {
     const res = await fetch('/api/projects');

@@ -261,7 +261,10 @@ export default function App() {
 
     // Migration & initial load
     migrateIfNeeded();
-    syncWithServer();
+    syncWithServer().then(() => {
+      // サーバー側の新規プロジェクトがlocalStorageに追加された後、stateを更新
+      setProjectIndex(loadProjectIndex());
+    });
     let index = loadProjectIndex();
     setProjectIndex(index);
 
