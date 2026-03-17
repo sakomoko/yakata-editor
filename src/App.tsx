@@ -32,6 +32,8 @@ import ContextMenu from './ContextMenu.tsx';
 import type { ContextMenuItem } from './context-menu.ts';
 import TabBar from './TabBar.tsx';
 import ProjectListModal from './ProjectListModal.tsx';
+import ShortcutHelpDialog from './ShortcutHelpDialog.tsx';
+import { modKeyCombo } from './platform.ts';
 
 const darkTheme = createTheme({
   palette: {
@@ -105,6 +107,7 @@ export default function App() {
   const [tabState, setTabState] = useState<TabState>({ openTabs: [], activeTabId: '' });
   const tabStateRef = useRef<TabState>({ openTabs: [], activeTabId: '' });
   const [projectListOpen, setProjectListOpen] = useState(false);
+  const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
 
   const handleRoomEdit = useCallback(
     (data: RoomEditData): Promise<{ label: string; fontSize?: number } | null> => {
@@ -235,6 +238,20 @@ export default function App() {
     },
     [saveCurrentProject, loadProjectIntoEditor],
   );
+
+  // ? key to toggle shortcut help dialog
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.isComposing) return;
+      const tag = (document.activeElement as HTMLElement)?.tagName;
+      if (e.key === '?' && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') {
+        e.preventDefault();
+        setShortcutHelpOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -541,7 +558,7 @@ export default function App() {
           sx={toolbarButtonSx}
           onClick={() => editorRef.current?.undo()}
         >
-          戻す (⌘Z)
+          戻す ({modKeyCombo('Z')})
         </Button>
         <Divider orientation="vertical" flexItem sx={{ borderColor: '#555', mx: 0.5 }} />
         <Button
@@ -622,12 +639,23 @@ export default function App() {
             </select>
           </>
         )}
-        <Typography
-          variant="caption"
-          sx={{ color: '#ddd', ml: 'auto', whiteSpace: 'nowrap', fontSize: 13 }}
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={() => setShortcutHelpOpen(true)}
+          sx={{
+            ml: 'auto',
+            minWidth: 32,
+            px: 1,
+            fontSize: 14,
+            color: '#ccc',
+            borderColor: '#555',
+            '&:hover': { borderColor: '#888', bgcolor: 'rgba(255,255,255,0.08)' },
+          }}
+          title="ショートカットキー一覧 (?)"
         >
-          ドラッグ→部屋作成　クリック→選択　Shift+クリック→複数選択　ダブルクリック→名前　Delete→削除　ホイール→ズーム　Space+ドラッグ→移動　⌘0→リセット
-        </Typography>
+          ?
+        </Button>
       </Box>
 
       {/* Status bar */}
@@ -696,6 +724,9 @@ export default function App() {
         onDelete={handleDeleteProject}
         onClose={() => setProjectListOpen(false)}
       />
+
+      {/* Shortcut help dialog */}
+      <ShortcutHelpDialog open={shortcutHelpOpen} onClose={() => setShortcutHelpOpen(false)} />
     </ThemeProvider>
   );
   /* eslint-enable no-irregular-whitespace */
