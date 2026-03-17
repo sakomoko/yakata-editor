@@ -2,6 +2,11 @@ import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
 import {
@@ -110,6 +115,9 @@ export default function App() {
   const tabStateRef = useRef<TabState>({ openTabs: [], activeTabId: '' });
   const [projectListOpen, setProjectListOpen] = useState(false);
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const deleteTargetIdRef = useRef<string | null>(null);
+  const [deleteTargetName, setDeleteTargetName] = useState('');
 
   const handleRoomEdit = useCallback(
     (data: RoomEditData): Promise<{ label: string; fontSize?: number } | null> => {
@@ -411,12 +419,18 @@ export default function App() {
     (id: string) => {
       const index = loadProjectIndex();
       if (index.length <= 1) return;
+      deleteTargetIdRef.current = id;
+      setDeleteTargetName(index.find((m) => m.id === id)?.name ?? '');
+      setDeleteConfirmOpen(true);
+    },
+    [],
+  );
 
-      if (!confirm('このプロジェクトを削除しますか？')) return;
-
+  const executeDeleteProject = useCallback(
+    (id: string) => {
       deleteProject(id);
-      const newIndex = index.filter((m) => m.id !== id);
-      setProjectIndex(newIndex);
+      const index = loadProjectIndex();
+      setProjectIndex(index);
 
       const ts = tabStateRef.current;
       if (ts.openTabs.includes(id)) {
@@ -431,6 +445,21 @@ export default function App() {
     },
     [removeTabAndSwitch, updateTabState, openProjectInNewTab],
   );
+
+  const handleDeleteConfirmClose = useCallback(
+    (confirmed: boolean) => {
+      setDeleteConfirmOpen(false);
+      if (confirmed && deleteTargetIdRef.current) {
+        executeDeleteProject(deleteTargetIdRef.current);
+      }
+    },
+    [executeDeleteProject],
+  );
+
+  const handleDeleteConfirmExited = useCallback(() => {
+    deleteTargetIdRef.current = null;
+    setDeleteTargetName('');
+  }, []);
 
   const handleDuplicateProject = useCallback(
     (id: string) => {
@@ -757,6 +786,26 @@ export default function App() {
 
       {/* Shortcut help dialog */}
       <ShortcutHelpDialog open={shortcutHelpOpen} onClose={() => setShortcutHelpOpen(false)} />
+
+      {/* Delete confirmation dialog */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={() => handleDeleteConfirmClose(false)}
+        TransitionProps={{ onExited: handleDeleteConfirmExited }}
+      >
+        <DialogTitle>プロジェクトの削除</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            プロジェクト「{deleteTargetName}」を削除しますか？この操作は取り消せません。
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => handleDeleteConfirmClose(false)} autoFocus>キャンセル</Button>
+          <Button onClick={() => handleDeleteConfirmClose(true)} color="error">
+            削除
+          </Button>
+        </DialogActions>
+      </Dialog>
     </ThemeProvider>
   );
   /* eslint-enable no-irregular-whitespace */
