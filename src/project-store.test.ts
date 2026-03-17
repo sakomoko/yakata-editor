@@ -15,6 +15,7 @@ import {
   touchProjectUpdatedAt,
 } from './project-store.ts';
 import type { ProjectData, ProjectMeta } from './types.ts';
+import { MIN_ZOOM } from './viewport.ts';
 
 // Mock localStorage
 const storage = new Map<string, string>();
@@ -384,8 +385,7 @@ describe('deduplicateName edge cases', () => {
     expect(deduplicateName('A', ['A', 'A (2)', 'A (3)'])).toBe('A (4)');
   });
 
-  it('handles gap in numbering', () => {
-    // (2) exists but (3) does not
+  it('returns next sequential suffix', () => {
     expect(deduplicateName('A', ['A', 'A (2)'])).toBe('A (3)');
   });
 
@@ -523,12 +523,15 @@ describe('rename boundary values', () => {
 
 describe('loadProjectData with warning', () => {
   it('returns warning when data format is unrecognized', () => {
-    // parseStorageData returns warning when rooms is not an array
-    storage.set(
-      'yakata_project_warn1',
-      JSON.stringify({ rooms: 'not-an-array', freeTexts: [] }),
-    );
-    const result = loadProjectData('warn1');
+    // Save valid data via public API, then corrupt it in storage
+    const { meta } = createNewProject('warn-test');
+    saveProjectData(meta.id, emptyProjectData());
+
+    // Overwrite stored data with invalid format (rooms is not an array)
+    const storageKey = `yakata_project_${meta.id}`;
+    storage.set(storageKey, JSON.stringify({ rooms: 'not-an-array', freeTexts: [] }));
+
+    const result = loadProjectData(meta.id);
     expect(result).not.toBeNull();
     expect(result!.warning).toBeDefined();
     expect(result!.warning).toContain('データ形式を認識できませんでした');
@@ -614,7 +617,7 @@ describe('deleteProject edge cases', () => {
 
 describe('loadProjectData viewport edge cases', () => {
   it('falls back to default when viewport panX is null (e.g. serialized from non-finite value)', () => {
-    // JSON.stringify(Infinity) produces null, so this tests the typeof !== 'number' branch
+    // JSON.stringify(Infinity) produces null — panX becomes null which fails Number.isFinite check
     storage.set(
       'yakata_project_vp1',
       JSON.stringify({
@@ -646,6 +649,6 @@ describe('loadProjectData viewport edge cases', () => {
       }),
     );
     const result = loadProjectData('vp3');
-    expect(result!.data.viewport.zoom).toBe(0.25); // MIN_ZOOM
+    expect(result!.data.viewport.zoom).toBe(MIN_ZOOM);
   });
 });
