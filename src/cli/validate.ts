@@ -141,8 +141,16 @@ function main(): void {
     }
     filePath = path.join(DATA_DIR, 'projects', `${index[0].id}.json`);
   } else {
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const isFile = arg.endsWith('.json') || arg.includes('/') || arg.includes('\\');
-    filePath = isFile ? path.resolve(arg) : path.join(DATA_DIR, 'projects', `${arg}.json`);
+    if (isFile) {
+      filePath = path.resolve(arg);
+    } else if (UUID_RE.test(arg)) {
+      filePath = path.join(DATA_DIR, 'projects', `${arg}.json`);
+    } else {
+      console.error(`無効なプロジェクトID形式です: ${arg}`);
+      process.exit(1);
+    }
   }
 
   if (!fs.existsSync(filePath)) {

@@ -261,8 +261,14 @@ export default function App() {
 
     // Migration & initial load
     migrateIfNeeded();
+    const preSyncCount = loadProjectIndex().length;
     syncWithServer()
-      .then(() => setProjectIndex(loadProjectIndex()))
+      .then(() => {
+        const postSyncIndex = loadProjectIndex();
+        if (postSyncIndex.length !== preSyncCount) {
+          setProjectIndex(postSyncIndex);
+        }
+      })
       .catch(() => {
         // dev server not available
       });

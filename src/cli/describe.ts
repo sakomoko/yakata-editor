@@ -179,13 +179,17 @@ function main(): void {
   }
 
   // Determine if it's a file path or project ID
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const isFilePath = arg.endsWith('.json') || arg.includes('/') || arg.includes('\\');
   let filePath: string;
 
   if (isFilePath) {
     filePath = path.resolve(arg);
-  } else {
+  } else if (UUID_RE.test(arg)) {
     filePath = path.join(DATA_DIR, 'projects', `${arg}.json`);
+  } else {
+    console.error(`無効なプロジェクトID形式です: ${arg}`);
+    process.exit(1);
   }
 
   if (!fs.existsSync(filePath)) {

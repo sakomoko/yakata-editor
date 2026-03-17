@@ -125,6 +125,12 @@ export function yakataApiPlugin(): Plugin {
             }
 
             if (method === 'PUT' && projectId) {
+              const index = loadProjectIndex();
+              const meta = index.find((m) => m.id === projectId);
+              if (!meta) {
+                sendJson(res, 404, { error: 'Project not found' });
+                return;
+              }
               const body = await readBody(req);
               const parsed = JSON.parse(body) as unknown;
               const obj = parsed as Record<string, unknown>;
@@ -147,12 +153,8 @@ export function yakataApiPlugin(): Plugin {
                   : [],
               };
               saveProjectData(projectId, data);
-              const index = loadProjectIndex();
-              const meta = index.find((m) => m.id === projectId);
-              if (meta) {
-                meta.updatedAt = Date.now();
-                saveProjectIndex(index);
-              }
+              meta.updatedAt = Date.now();
+              saveProjectIndex(index);
               sendJson(res, 200, { ok: true });
               return;
             }
