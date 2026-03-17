@@ -122,9 +122,9 @@ function describeProject(project: ProjectFile): string {
   if (freeStrokes.length > 0) {
     lines.push('');
     lines.push(`## フリーストローク (${freeStrokes.length}本)`);
-    for (const fs of freeStrokes) {
+    for (const stroke of freeStrokes) {
       lines.push(
-        `- ${fs.color} (lineWidth: ${fs.lineWidth}, opacity: ${fs.opacity}) ${fs.points.length}点`,
+        `- ${stroke.color} (lineWidth: ${stroke.lineWidth}, opacity: ${stroke.opacity}) ${stroke.points.length}点`,
       );
     }
   }

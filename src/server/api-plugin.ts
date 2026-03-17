@@ -1,6 +1,8 @@
 import type { Plugin, ViteDevServer } from 'vite';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import * as path from 'node:path';
+import type { ProjectMeta } from '../types.ts';
+import { parseStorageData } from '../persistence.ts';
 import {
   setDataDir,
   loadProjectIndex,
@@ -11,10 +13,22 @@ import {
   createNewProject,
 } from './project-store-fs.ts';
 
+const MAX_BODY_SIZE = 10 * 1024 * 1024; // 10 MB
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
-    req.on('data', (chunk: Buffer) => chunks.push(chunk));
+    let size = 0;
+    req.on('data', (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > MAX_BODY_SIZE) {
+        req.destroy();
+        reject(new Error('Body too large'));
+        return;
+      }
+      chunks.push(chunk);
+    });
     req.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
     req.on('error', reject);
   });
@@ -23,6 +37,12 @@ function readBody(req: IncomingMessage): Promise<string> {
 function sendJson(res: ServerResponse, status: number, data: unknown): void {
   res.writeHead(status, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(data));
+}
+
+function isValidProjectMeta(item: unknown): item is ProjectMeta {
+  if (!item || typeof item !== 'object') return false;
+  const obj = item as Record<string, unknown>;
+  return typeof obj.id === 'string' && typeof obj.name === 'string';
 }
 
 export function yakataApiPlugin(): Plugin {
@@ -48,6 +68,11 @@ export function yakataApiPlugin(): Plugin {
             // segments: ['api', 'projects'] or ['api', 'projects', ':id']
             const projectId = segments.length >= 3 ? segments[2] : null;
 
+            if (projectId && !UUID_RE.test(projectId)) {
+              sendJson(res, 400, { error: 'Invalid project ID format' });
+              return;
+            }
+
             if (method === 'GET' && !projectId) {
               const index = loadProjectIndex();
               sendJson(res, 200, index);
@@ -57,12 +82,12 @@ export function yakataApiPlugin(): Plugin {
             if (method === 'PUT' && !projectId) {
               const body = await readBody(req);
               const parsed = JSON.parse(body) as unknown;
-              if (Array.isArray(parsed)) {
-                saveProjectIndex(parsed);
-                sendJson(res, 200, { ok: true });
+              if (!Array.isArray(parsed) || !parsed.every(isValidProjectMeta)) {
+                sendJson(res, 400, { error: 'Expected array of ProjectMeta' });
                 return;
               }
-              sendJson(res, 400, { error: 'Expected array of ProjectMeta' });
+              saveProjectIndex(parsed);
+              sendJson(res, 200, { ok: true });
               return;
             }
 
@@ -93,7 +118,31 @@ export function yakataApiPlugin(): Plugin {
 
             if (method === 'PUT' && projectId) {
               const body = await readBody(req);
-              const data = JSON.parse(body);
+              const parsed = JSON.parse(body) as unknown;
+              if (!parsed || typeof parsed !== 'object' || !Array.isArray((parsed as Record<string, unknown>).rooms)) {
+                sendJson(res, 400, { error: 'Invalid project data: rooms array required' });
+                return;
+              }
+              const obj = parsed as Record<string, unknown>;
+              const validated = parseStorageData({
+                rooms: obj.rooms,
+                freeTexts: obj.freeTexts,
+                freeStrokes: obj.freeStrokes,
+              });
+              const vp = obj.viewport as { zoom?: number; panX?: number; panY?: number } | undefined;
+              const data = {
+                rooms: validated.rooms,
+                freeTexts: validated.freeTexts,
+                freeStrokes: validated.freeStrokes,
+                viewport: {
+                  zoom: typeof vp?.zoom === 'number' ? vp.zoom : 1,
+                  panX: typeof vp?.panX === 'number' ? vp.panX : 0,
+                  panY: typeof vp?.panY === 'number' ? vp.panY : 0,
+                },
+                history: Array.isArray(obj.history)
+                  ? (obj.history as unknown[]).filter((h): h is string => typeof h === 'string')
+                  : [],
+              };
               saveProjectData(projectId, data);
               const index = loadProjectIndex();
               const meta = index.find((m) => m.id === projectId);

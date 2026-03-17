@@ -154,10 +154,20 @@ export async function syncFromServer(): Promise<void> {
         if (!dataRes.ok) continue;
         const { data } = (await dataRes.json()) as { meta: ProjectMeta; data: ProjectData };
         localIndex.push(serverMeta);
-        saveProjectData(serverMeta.id, data);
+        // localStorageのみに保存（サーバーへの再送を避ける）
+        try {
+          localStorage.setItem(PROJECT_KEY_PREFIX + serverMeta.id, JSON.stringify(data));
+        } catch {
+          // storage full
+        }
       }
     }
-    saveProjectIndex(localIndex);
+    // indexもlocalStorageのみに保存
+    try {
+      localStorage.setItem(INDEX_KEY, JSON.stringify(localIndex));
+    } catch {
+      // storage full
+    }
   } catch {
     // server not available
   }
