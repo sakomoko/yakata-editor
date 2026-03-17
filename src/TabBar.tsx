@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import ContextMenu from './ContextMenu.tsx';
 import type { ContextMenuItem } from './context-menu.ts';
 
@@ -33,10 +33,10 @@ export default function TabBar({
     }
   }, [editingId]);
 
-  const handleDoubleClick = (id: string, name: string) => {
+  const handleDoubleClick = useCallback((id: string, name: string) => {
     setEditingId(id);
     setEditValue(name);
-  };
+  }, []);
 
   const commitRename = () => {
     if (editingId && editValue.trim()) {
@@ -72,7 +72,7 @@ export default function TabBar({
       });
     }
     return items;
-  }, [ctxMenu, tabs, onTabDuplicate, onTabClose]);
+  }, [ctxMenu, tabs, onTabDuplicate, onTabClose, handleDoubleClick]);
 
   return (
     <div style={barStyle}>

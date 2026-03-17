@@ -8,6 +8,7 @@ import {
   loadTabState,
   saveTabState,
   createNewProject,
+  duplicateProject,
   migrateIfNeeded,
   deleteProject,
   touchProjectUpdatedAt,
@@ -203,6 +204,77 @@ describe('touchProjectUpdatedAt', () => {
     touchProjectUpdatedAt(meta.id);
     const after = loadProjectIndex()[0].updatedAt;
     expect(after).toBeGreaterThanOrEqual(before);
+  });
+});
+
+describe('duplicateProject', () => {
+  it('returns null for non-existent source id', () => {
+    expect(duplicateProject('non-existent-id')).toBeNull();
+  });
+
+  it('duplicates project data matching the original', () => {
+    const { meta } = createNewProject('Original');
+    const data: ProjectData = {
+      rooms: [{ id: 'r1', x: 0, y: 0, w: 5, h: 3, label: 'Room' }],
+      freeTexts: [],
+      freeStrokes: [],
+      viewport: { zoom: 1.5, panX: 10, panY: 20 },
+      history: ['snapshot1'],
+    };
+    saveProjectData(meta.id, data);
+
+    const result = duplicateProject(meta.id);
+    expect(result).not.toBeNull();
+    expect(result!.data.rooms).toHaveLength(1);
+    expect(result!.data.rooms[0].label).toBe('Room');
+    expect(result!.data.viewport).toEqual({ zoom: 1.5, panX: 10, panY: 20 });
+  });
+
+  it('names the copy with のコピー suffix', () => {
+    const { meta } = createNewProject('My Project');
+    saveProjectData(meta.id, {
+      rooms: [],
+      freeTexts: [],
+      freeStrokes: [],
+      viewport: { zoom: 1, panX: 0, panY: 0 },
+      history: [],
+    });
+
+    const result = duplicateProject(meta.id);
+    expect(result!.meta.name).toBe('My Project のコピー');
+  });
+
+  it('appends number when duplicate name already exists', () => {
+    const { meta: orig } = createNewProject('My Project');
+    saveProjectData(orig.id, {
+      rooms: [],
+      freeTexts: [],
+      freeStrokes: [],
+      viewport: { zoom: 1, panX: 0, panY: 0 },
+      history: [],
+    });
+
+    // First copy
+    const first = duplicateProject(orig.id);
+    expect(first!.meta.name).toBe('My Project のコピー');
+
+    // Second copy - name 'My Project のコピー' already exists
+    const second = duplicateProject(orig.id);
+    expect(second!.meta.name).toBe('My Project のコピー (2)');
+  });
+
+  it('clears history in the duplicated project', () => {
+    const { meta } = createNewProject('With History');
+    saveProjectData(meta.id, {
+      rooms: [],
+      freeTexts: [],
+      freeStrokes: [],
+      viewport: { zoom: 1, panX: 0, panY: 0 },
+      history: ['snap1', 'snap2', 'snap3'],
+    });
+
+    const result = duplicateProject(meta.id);
+    expect(result!.data.history).toEqual([]);
   });
 });
 

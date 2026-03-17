@@ -210,8 +210,9 @@ export function duplicateProject(
   const baseName = name ?? (sourceMeta ? `${sourceMeta.name} のコピー` : '無題のプロジェクト');
   const projectName = deduplicateName(baseName, existingNames);
 
-  // Deep copy data, clear history for the new project
-  const clonedData: ProjectData = JSON.parse(JSON.stringify({ ...result.data, history: [] }));
+  // Deep copy data, then clear history for the new project
+  const clonedData: ProjectData = JSON.parse(JSON.stringify(result.data));
+  clonedData.history = [];
 
   return registerProject(projectName, clonedData);
 }
