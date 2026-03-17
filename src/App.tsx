@@ -117,7 +117,7 @@ export default function App() {
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const deleteTargetIdRef = useRef<string | null>(null);
-  const deleteTargetNameRef = useRef<string>('');
+  const [deleteTargetName, setDeleteTargetName] = useState('');
 
   const handleRoomEdit = useCallback(
     (data: RoomEditData): Promise<{ label: string; fontSize?: number } | null> => {
@@ -420,7 +420,7 @@ export default function App() {
       const index = loadProjectIndex();
       if (index.length <= 1) return;
       deleteTargetIdRef.current = id;
-      deleteTargetNameRef.current = index.find((m) => m.id === id)?.name ?? '';
+      setDeleteTargetName(index.find((m) => m.id === id)?.name ?? '');
       setDeleteConfirmOpen(true);
     },
     [],
@@ -458,7 +458,7 @@ export default function App() {
 
   const handleDeleteConfirmExited = useCallback(() => {
     deleteTargetIdRef.current = null;
-    deleteTargetNameRef.current = '';
+    setDeleteTargetName('');
   }, []);
 
   const handleDuplicateProject = useCallback(
@@ -796,8 +796,7 @@ export default function App() {
         <DialogTitle>プロジェクトの削除</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            プロジェクト「{deleteTargetNameRef.current}
-            」を削除しますか？この操作は取り消せません。
+            プロジェクト「{deleteTargetName}」を削除しますか？この操作は取り消せません。
           </DialogContentText>
         </DialogContent>
         <DialogActions>
