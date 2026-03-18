@@ -137,27 +137,26 @@ export default function TabBar({
       </Tabs>
 
       {/* 閉じるボタン: Tabの外に配置してネストしたインタラクティブ要素を回避 */}
-      {tabs.length > 1 &&
-        tabs.map((tab) =>
-          tab.isActive ? (
-            <IconButton
-              key={`close-${tab.id}`}
-              size="small"
-              onClick={() => onTabClose(tab.id)}
-              aria-label="タブを閉じる"
-              sx={{
-                ml: -1,
-                mr: 0.5,
-                width: 20,
-                height: 20,
-                color: '#888',
-                '&:hover': { color: '#fff' },
-              }}
-            >
-              <CloseIcon sx={{ fontSize: 14 }} />
-            </IconButton>
-          ) : null,
-        )}
+      {tabs.length > 1 && (() => {
+        const active = tabs.find((t) => t.isActive);
+        return active ? (
+          <IconButton
+            size="small"
+            onClick={() => onTabClose(active.id)}
+            aria-label="タブを閉じる"
+            sx={{
+              ml: -1,
+              mr: 0.5,
+              width: 20,
+              height: 20,
+              color: '#888',
+              '&:hover': { color: '#fff' },
+            }}
+          >
+            <CloseIcon sx={{ fontSize: 14 }} />
+          </IconButton>
+        ) : null;
+      })()}
 
       {/* リネーム用Popover */}
       <Popover
