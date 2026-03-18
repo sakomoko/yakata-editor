@@ -282,11 +282,11 @@ export default function App() {
       .then(() => {
         // 件数だけでなくメタデータ（name, updatedAt等）も更新されうるので常に反映
         setProjectIndex(loadProjectIndex());
-        // 同期完了後、アクティブプロジェクトを無条件にエディタへ再読み込み
-        // ※ syncWithServer は起動時に1回のみ呼ばれる前提。
-        //    ポーリング等で繰り返し呼ぶ場合はコミット前の編集が消失するため要改修。
+        // 同期完了後、ユーザーがまだ編集していなければエディタに再読み込み。
+        // Undoスタックが空 = 未編集とみなす。編集済みの場合はユーザーの変更を優先する。
         const activeId = tabStateRef.current.activeTabId;
-        if (activeId) {
+        const editor = editorRef.current;
+        if (activeId && editor && editor.getState().history.length === 0) {
           loadProjectIntoEditor(activeId);
         }
       })

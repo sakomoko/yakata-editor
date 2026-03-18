@@ -132,7 +132,7 @@ export async function syncWithServer(): Promise<void> {
     if (!localMeta) {
       mergedIndex.push(serverMeta);
     } else {
-      // updatedAt が新しいほうを採用
+      // updatedAt が新しいほうを採用（同値の場合はローカル優先: >=）
       mergedIndex.push(
         (localMeta.updatedAt ?? 0) >= (serverMeta.updatedAt ?? 0) ? localMeta : serverMeta,
       );
@@ -153,7 +153,7 @@ export async function syncWithServer(): Promise<void> {
   ];
   for (const meta of index) {
     const serverMeta = serverMap.get(meta.id);
-    // サーバーに存在し、ローカルのupdatedAtがサーバー以下ならスキップ
+    // サーバーに存在し、ローカルのupdatedAtがサーバー以下ならスキップ（同値はスキップ: <=）
     if (serverMeta && (meta.updatedAt ?? 0) <= (serverMeta.updatedAt ?? 0)) continue;
 
     const result = loadProjectData(meta.id);
@@ -200,7 +200,19 @@ async function syncFromServer(): Promise<void> {
         try {
           const dataRes = await fetch(`/api/projects/${meta.id}`);
           if (!dataRes.ok) return null;
-          const { data } = (await dataRes.json()) as { meta: ProjectMeta; data: ProjectData };
+          const json = (await dataRes.json()) as { meta: ProjectMeta; data: unknown };
+          // サーバーから取得したデータを parseStorageData でバリデーション
+          const storageData = parseStorageData(json.data);
+          const obj = json.data as Record<string, unknown>;
+          const data: ProjectData = {
+            rooms: storageData.rooms,
+            freeTexts: storageData.freeTexts,
+            freeStrokes: storageData.freeStrokes,
+            viewport: parseViewport((obj && typeof obj === 'object') ? obj.viewport : undefined),
+            history: Array.isArray(obj?.history)
+              ? (obj.history as unknown[]).filter((h): h is string => typeof h === 'string')
+              : [],
+          };
           return { meta, data, isNew: !localMap.has(meta.id) };
         } catch {
           return null;

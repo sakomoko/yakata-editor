@@ -783,6 +783,62 @@ describe('syncWithServer', () => {
     expect(putProjectCalls).toHaveLength(1);
   });
 
+  it('fetches and updates localStorage when server has newer version of existing project', async () => {
+    // Setup local project with updatedAt = 1000 (stale)
+    const meta: ProjectMeta = { id: 'p3', name: '古い名前', createdAt: 1000, updatedAt: 1000 };
+    saveProjectIndex([meta]);
+    saveProjectData('p3', {
+      rooms: [],
+      freeTexts: [],
+      freeStrokes: [],
+      viewport: { zoom: 1, panX: 0, panY: 0 },
+      history: [],
+    });
+
+    fetchMock.mockClear();
+
+    // Server has newer version with updated name and data
+    const serverMeta: ProjectMeta = { id: 'p3', name: '新しい名前', createdAt: 1000, updatedAt: 2000 };
+    const serverData: ProjectData = {
+      rooms: [{ id: 'r1', label: 'サーバー部屋', x: 0, y: 0, w: 3, h: 3, wallObjects: [], interiorObjects: [] }],
+      freeTexts: [],
+      freeStrokes: [],
+      viewport: { zoom: 1, panX: 0, panY: 0 },
+      history: [],
+    };
+
+    fetchMock.mockImplementation((url: string, opts?: RequestInit) => {
+      if (typeof url === 'string' && url === '/api/projects' && (!opts || opts.method !== 'PUT')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([serverMeta]),
+        });
+      }
+      if (typeof url === 'string' && url === '/api/projects/p3' && (!opts || opts.method !== 'PUT')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ meta: serverMeta, data: serverData }),
+        });
+      }
+      return Promise.resolve({ ok: true });
+    });
+
+    await syncWithServer();
+
+    // localStorage should have the updated project data
+    const result = loadProjectData('p3');
+    expect(result).not.toBeNull();
+    expect(result!.data.rooms).toHaveLength(1);
+    expect(result!.data.rooms[0].label).toBe('サーバー部屋');
+
+    // Index should have the updated metadata
+    const index = loadProjectIndex();
+    const updatedMeta = index.find((m) => m.id === 'p3');
+    expect(updatedMeta).toBeDefined();
+    expect(updatedMeta!.name).toBe('新しい名前');
+    expect(updatedMeta!.updatedAt).toBe(2000);
+  });
+
   it('syncs new local projects not on server', async () => {
     // Setup local project that doesn't exist on server
     const meta: ProjectMeta = { id: 'new-id', name: '新規', createdAt: 1000, updatedAt: 1000 };
