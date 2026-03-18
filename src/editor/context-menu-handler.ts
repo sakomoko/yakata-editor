@@ -16,6 +16,7 @@ import {
   findWallObjectById,
 } from '../lookup.ts';
 import { hitRoom, isInsideRoom } from '../room.ts';
+import { rectToVertices } from '../polygon.ts';
 import { selectSingle, getSingleSelected } from '../selection.ts';
 import {
   createWallWindow,
@@ -450,6 +451,32 @@ function buildRoomMenu(ec: EditorContext, contextRoom: Room, m: MouseCoord): Con
       action: () => {
         commitChange(ec, () => {
           unlinkRooms(state.rooms, state.selection);
+        });
+      },
+    });
+  }
+
+  // 四角形変換メニュー
+  items.push({ separator: true });
+  if (contextRoom.vertices) {
+    items.push({
+      label: '矩形に戻す',
+      action: () => {
+        const room = findRoomById(state.rooms, roomId);
+        if (!room) return;
+        commitChange(ec, () => {
+          delete room.vertices;
+        });
+      },
+    });
+  } else {
+    items.push({
+      label: '四角形に変換',
+      action: () => {
+        const room = findRoomById(state.rooms, roomId);
+        if (!room) return;
+        commitChange(ec, () => {
+          room.vertices = rectToVertices(room);
         });
       },
     });

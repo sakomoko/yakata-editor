@@ -47,11 +47,12 @@ Canvas 再描画 + App.tsx → project-store.ts → localStorage 保存
   - **editor/wheel.ts** — `onWheel()` ホイールズーム・パン処理
   - **editor/dblclick.ts** — `onDblClick()` ダブルクリックイベント処理
   - **editor/utils.ts** — `labelDisplayWidth()`, `createMousePos()` ユーティリティ
-- **types.ts** — 全型定義（`Room`, `FreeText`, `FreeStroke`, `WallObject`, `RoomInteriorObject`, `Project`, `EditorState`, `DragState`, `MouseCoord`, `Handle`, `GroupHandle`, `GroupScaleOriginal`, `CornerDirection`, `ProjectMeta`, `ProjectData`, `TabState`）
+- **types.ts** — 全型定義（`Room`, `FreeText`, `FreeStroke`, `WallObject`, `RoomInteriorObject`, `Project`, `EditorState`, `DragState`, `MouseCoord`, `Handle`, `GroupHandle`, `GroupScaleOriginal`, `GridPoint`, `CornerDirection`, `ProjectMeta`, `ProjectData`, `TabState`）
 
 ### 機能モジュール
 
-- **room.ts** — 部屋の生成（`createRoom`）、Canvas描画（`drawRoom`）、ヒット判定（`hitRoom`, `hitHandle`）、リサイズハンドル計算（`getHandles`）、矩形包含判定（`findRoomsInArea`）、ドラッグ矩形の正規化（`normalizeArea`）、範囲選択プレビュー描画（`drawAreaSelectPreview`）、グループBB計算（`computeGroupBoundingBox`）・ハンドル（`getGroupHandles`, `hitGroupHandle`）・アンカー計算（`getAnchorForDir`）・スケーリング（`computeGroupScale`, `applyGroupScale`）・BB描画（`drawGroupBoundingBox`）
+- **polygon.ts** — 四角形（非直角）部屋のユーティリティ。点の包含判定（`pointInQuad`）、重心計算（`quadCentroid`）、AABB更新（`updateRoomBBFromVertices`）、辺の端点取得（`quadEdgeEndpoints`）、辺の長さ計算（`quadEdgeLength`）、頂点ハンドル計算（`getVertexHandles`）、頂点ハンドルのヒット判定（`hitVertexHandle`）。25テスト追加
+- **room.ts** — 部屋の生成（`createRoom`）、Canvas描画（`drawRoom`）、ヒット判定（`hitRoom`, `hitHandle`）、リサイズハンドル計算（`getHandles`）、矩形包含判定（`findRoomsInArea`）、ドラッグ矩形の正規化（`normalizeArea`）、範囲選択プレビュー描画（`drawAreaSelectPreview`）、グループBB計算（`computeGroupBoundingBox`）・ハンドル（`getGroupHandles`, `hitGroupHandle`）・アンカー計算（`getAnchorForDir`）・スケーリング（`computeGroupScale`, `applyGroupScale`）・BB描画（`drawGroupBoundingBox`）。四角形部屋の描画・ヒット判定分岐あり（`vertices`設定時は`polygon.ts`の関数を使用）
 - **free-text.ts** — 自由配置テキスト（FreeText）の生成（`createFreeText`）、描画（`drawFreeText`, `drawFreeTextHandles`）、ヒット判定（`hitFreeText`, `hitFreeTextHandle`）、範囲検索（`findFreeTextsInArea`）、リサイズ計算（`computeFreeTextResize`）。部屋に紐付かず、グリッド座標で自由配置。front/backの2レイヤーで描画順を制御
 - **free-stroke.ts** — フリーペイントストローク（FreeStroke）の生成（`createFreeStroke`）、描画（`drawFreeStroke`, `drawFreeStrokeBounds`）、ヒット判定（`hitFreeStroke`, `hitFreeStrokeInList`）、バウンディングボックス計算（`getStrokeBounds`）、移動（`moveStroke`）、点列間引き（`simplifyPoints` — Douglas-Peuckerアルゴリズム）、直線制約（`constrainToLine` — 8方向スナップ）。ピクセル座標（ワールド座標系）で自由描画、常に最前面レイヤーに描画
 - **interior-object.ts** — 部屋内オブジェクト（階段・マーカー）の生成（`createStraightStairs`, `createFoldingStairs`, `createMarker`）、描画（`drawInteriorObjects`）、ヒット判定（`hitInteriorObject`, `hitInteriorObjectInRooms`）、ハンドルヒット判定（`hitInteriorObjectHandle`, `hitInteriorObjectHandleInRooms`）、クランプ処理（`clampInteriorObject`, `clampAllInteriorObjects`）、移動/リサイズ計算（`computeInteriorObjectMove`, `computeInteriorObjectResize`）。マーカーは死体（チョークアウトライン）・ピン（アイコン+ラベル）・テキスト（ラベルのみ）の3種類で、ラベルのフォントサイズはリサイズに追従。カメラの描画は `camera.ts` に委譲
@@ -85,9 +86,9 @@ main.ts
   ├─ App.tsx
   │   ├─ editor/index.ts (initEditor)
   │   │   ├─ editor/context.ts (EditorContext, EditorCallbacks, EditorAPI)
-  │   │   ├─ editor/render.ts → room.ts, wall-object.ts, camera.ts, free-text.ts, free-stroke.ts, grid.ts, lookup.ts
+  │   │   ├─ editor/render.ts → room.ts, polygon.ts, wall-object.ts, camera.ts, free-text.ts, free-stroke.ts, grid.ts, lookup.ts
   │   │   ├─ editor/project.ts → history.ts, selection.ts, room.ts, adjacency.ts, free-stroke.ts
-  │   │   ├─ editor/mouse-down.ts → room.ts, wall-object.ts, interior-object.ts, camera.ts, free-text.ts, free-stroke.ts, link.ts, lookup.ts
+  │   │   ├─ editor/mouse-down.ts → room.ts, polygon.ts, wall-object.ts, interior-object.ts, camera.ts, free-text.ts, free-stroke.ts, link.ts, lookup.ts
   │   │   ├─ editor/mouse-move.ts → room.ts, wall-object.ts, interior-object.ts, camera.ts, free-text.ts, free-stroke.ts, adjacency.ts, lookup.ts
   │   │   ├─ editor/mouse-up.ts → room.ts, wall-object.ts, free-text.ts, free-stroke.ts, adjacency.ts, lookup.ts
   │   │   ├─ editor/context-menu-handler.ts → room.ts, wall-object.ts, interior-object.ts, camera.ts, free-text.ts, free-stroke.ts, z-order.ts, link.ts, adjacency.ts, lookup.ts
@@ -133,7 +134,7 @@ cli/validate.ts → persistence.ts
 - `freeStrokes: FreeStroke[]` — フリーペイントストロークデータ
 - `selection: Set<string>` — 選択中の部屋/FreeText/FreeStrokeのID
 - `history: string[]` — Undoスナップショット（JSON文字列）
-- `drag: DragState` — ドラッグ操作の状態（discriminated union: `create | areaSelect | move | resize | groupResize | moveWallObject | resizeWallObject | moveInteriorObject | resizeInteriorObject | moveFreeText | resizeFreeText | rotateCameraAngle | adjustCameraFovAngle | adjustCameraFovRange | paint | moveStroke | pan | null`）
+- `drag: DragState` — ドラッグ操作の状態（discriminated union: `create | areaSelect | move | resize | groupResize | moveVertex | moveWallObject | resizeWallObject | moveInteriorObject | resizeInteriorObject | moveFreeText | resizeFreeText | rotateCameraAngle | adjustCameraFovAngle | adjustCameraFovRange | paint | moveStroke | pan | null`）
 - `mouse: MouseCoord` — 現在のマウス座標
 - `paintMode: boolean` — ペイントモードON/OFF
 - `paintColor: string` / `paintLineWidth: number` / `paintOpacity: number` — 現在の描画設定

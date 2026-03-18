@@ -1,5 +1,12 @@
 import type { Room, WallSide, WallObject, WallWindow, WallDoor, WallOpening } from './types.ts';
 import { GRID, WALL, WALL_SEL } from './grid.ts';
+import {
+  isPolygonRoom,
+  getEdgeEndpoints,
+  edgeLength,
+  pointToSegmentDistance,
+  projectPointOnSegment,
+} from './polygon.ts';
 
 const WINDOW_DRAW_OFFSET = 4;
 const WALL_OBJECT_HIT_TOLERANCE = 6;
@@ -31,6 +38,9 @@ export function createWallDoor(
 }
 
 export function wallSideLength(room: Room, side: WallSide): number {
+  if (isPolygonRoom(room)) {
+    return edgeLength(room, side);
+  }
   return side === 'n' || side === 's' ? room.w : room.h;
 }
 
@@ -40,6 +50,33 @@ export function clampWallObjects(room: Room): void {
     const len = wallSideLength(room, obj.side);
     obj.offset = Math.max(0, Math.min(obj.offset, len - obj.width));
   }
+}
+
+/** 辺上の壁オブジェクト位置をピクセル座標で返す（四角形対応） */
+export interface EdgePosition {
+  startPx: number;
+  startPy: number;
+  endPx: number;
+  endPy: number;
+  angle: number;
+}
+
+function wallObjectToEdgePosition(room: Room, obj: WallObject): EdgePosition {
+  const edge = getEdgeEndpoints(room, obj.side);
+  const edgeLenPx = edge.length * GRID;
+  const dx = edge.end.px - edge.start.px;
+  const dy = edge.end.py - edge.start.py;
+  const offPx = obj.offset * GRID;
+  const lenPx = obj.width * GRID;
+  const r0 = edgeLenPx > 0 ? offPx / edgeLenPx : 0;
+  const r1 = edgeLenPx > 0 ? (offPx + lenPx) / edgeLenPx : 0;
+  return {
+    startPx: edge.start.px + dx * r0,
+    startPy: edge.start.py + dy * r0,
+    endPx: edge.start.px + dx * r1,
+    endPy: edge.start.py + dy * r1,
+    angle: edge.angle,
+  };
 }
 
 export function wallObjectToPixelRect(
@@ -98,13 +135,33 @@ export function drawWallSegments(
   isSelected: boolean,
   zoom = 1,
 ): void {
+  ctx.strokeStyle = isSelected ? '#2196F3' : '#000';
+  ctx.lineWidth = (isSelected ? WALL_SEL : WALL) / zoom;
+
+  if (isPolygonRoom(room)) {
+    ctx.beginPath();
+    const sides: WallSide[] = ['n', 'e', 's', 'w'];
+    for (const side of sides) {
+      const edge = getEdgeEndpoints(room, side);
+      const segments = getWallSegments(room, side);
+      const edgeLenPx = edge.length * GRID;
+      const dx = edge.end.px - edge.start.px;
+      const dy = edge.end.py - edge.start.py;
+      for (const seg of segments) {
+        const r0 = edgeLenPx > 0 ? seg.start / edgeLenPx : 0;
+        const r1 = edgeLenPx > 0 ? seg.end / edgeLenPx : 0;
+        ctx.moveTo(edge.start.px + dx * r0, edge.start.py + dy * r0);
+        ctx.lineTo(edge.start.px + dx * r1, edge.start.py + dy * r1);
+      }
+    }
+    ctx.stroke();
+    return;
+  }
+
   const rx = room.x * GRID;
   const ry = room.y * GRID;
   const rw = room.w * GRID;
   const rh = room.h * GRID;
-
-  ctx.strokeStyle = isSelected ? '#2196F3' : '#000';
-  ctx.lineWidth = (isSelected ? WALL_SEL : WALL) / zoom;
 
   ctx.beginPath();
   for (const seg of getWallSegments(room, 'n')) {
@@ -181,6 +238,10 @@ interface DoorGeometry {
 }
 
 function getDoorGeometry(room: Room, obj: WallDoor): DoorGeometry {
+  if (isPolygonRoom(room)) {
+    return getPolygonDoorGeometry(room, obj);
+  }
+
   const rect = wallObjectToPixelRect(room, obj);
   const angles = DOOR_ANGLES[obj.side];
 
@@ -207,6 +268,46 @@ function getDoorGeometry(room: Room, obj: WallDoor): DoorGeometry {
     closedAngle: angles.closedAngle,
     openAngle: obj.swing === 'inward' ? angles.inward : angles.outward,
     anticlockwise: obj.swing === 'inward' ? angles.inwardCCW : angles.outwardCCW,
+  };
+}
+
+function getPolygonDoorGeometry(room: Room, obj: WallDoor): DoorGeometry {
+  const pos = wallObjectToEdgePosition(room, obj);
+  const edgeAngle = pos.angle;
+  const radius = Math.hypot(pos.endPx - pos.startPx, pos.endPy - pos.startPy);
+
+  // 辺の法線方向で inward/outward を決定
+  // 時計回り(CW)頂点の場合、右手法線（edgeAngle + π/2）が内側。
+  // 注: 頂点ドラッグでCCWに変化した場合は内外が逆転するが、
+  // 現状は自己交差・CCW防止のガードを将来課題としている。
+  const inwardAngle = edgeAngle + Math.PI / 2;
+  const outwardAngle = edgeAngle - Math.PI / 2;
+
+  if (obj.hinge === 'end') {
+    const closedAngle = edgeAngle + Math.PI; // 辺の逆方向
+    const openAngle = obj.swing === 'inward' ? inwardAngle : outwardAngle;
+    // CCW: closedAngle → openAngle の最短回転方向を決定
+    const ccw = normalizeAngle(openAngle - closedAngle) > Math.PI;
+    return {
+      hingeX: pos.endPx,
+      hingeY: pos.endPy,
+      radius,
+      closedAngle,
+      openAngle,
+      anticlockwise: ccw,
+    };
+  }
+
+  const closedAngle = edgeAngle; // 辺方向
+  const openAngle = obj.swing === 'inward' ? inwardAngle : outwardAngle;
+  const ccw = normalizeAngle(openAngle - closedAngle) > Math.PI;
+  return {
+    hingeX: pos.startPx,
+    hingeY: pos.startPy,
+    radius,
+    closedAngle,
+    openAngle,
+    anticlockwise: ccw,
   };
 }
 
@@ -283,6 +384,29 @@ export function drawOutwardDoorsOverlay(
   }
 }
 
+/** Draw a window on a polygon room's edge using perpendicular offset lines. */
+function drawPolygonWindow(
+  ctx: CanvasRenderingContext2D,
+  room: Room,
+  obj: WallObject,
+  color: string,
+  lineWidth: number,
+  drawOffset: number,
+): void {
+  const pos = wallObjectToEdgePosition(room, obj);
+  // 辺に垂直な方向のオフセット
+  const nx = Math.cos(pos.angle + Math.PI / 2) * drawOffset;
+  const ny = Math.sin(pos.angle + Math.PI / 2) * drawOffset;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.beginPath();
+  ctx.moveTo(pos.startPx + nx, pos.startPy + ny);
+  ctx.lineTo(pos.endPx + nx, pos.endPy + ny);
+  ctx.moveTo(pos.startPx - nx, pos.startPy - ny);
+  ctx.lineTo(pos.endPx - nx, pos.endPy - ny);
+  ctx.stroke();
+}
+
 /** Draw wall object symbols (windows and doors) on wall objects. */
 export function drawWallObjects(
   ctx: CanvasRenderingContext2D,
@@ -301,22 +425,26 @@ export function drawWallObjects(
 
     switch (obj.type) {
       case 'window': {
-        const rect = wallObjectToPixelRect(room, obj);
-        ctx.strokeStyle = style.color;
-        ctx.lineWidth = style.lineWidth;
-        ctx.beginPath();
-        if (rect.horizontal) {
-          ctx.moveTo(rect.x, rect.y - drawOffset);
-          ctx.lineTo(rect.x + rect.length, rect.y - drawOffset);
-          ctx.moveTo(rect.x, rect.y + drawOffset);
-          ctx.lineTo(rect.x + rect.length, rect.y + drawOffset);
+        if (isPolygonRoom(room)) {
+          drawPolygonWindow(ctx, room, obj, style.color, style.lineWidth, drawOffset);
         } else {
-          ctx.moveTo(rect.x - drawOffset, rect.y);
-          ctx.lineTo(rect.x - drawOffset, rect.y + rect.length);
-          ctx.moveTo(rect.x + drawOffset, rect.y);
-          ctx.lineTo(rect.x + drawOffset, rect.y + rect.length);
+          const rect = wallObjectToPixelRect(room, obj);
+          ctx.strokeStyle = style.color;
+          ctx.lineWidth = style.lineWidth;
+          ctx.beginPath();
+          if (rect.horizontal) {
+            ctx.moveTo(rect.x, rect.y - drawOffset);
+            ctx.lineTo(rect.x + rect.length, rect.y - drawOffset);
+            ctx.moveTo(rect.x, rect.y + drawOffset);
+            ctx.lineTo(rect.x + rect.length, rect.y + drawOffset);
+          } else {
+            ctx.moveTo(rect.x - drawOffset, rect.y);
+            ctx.lineTo(rect.x - drawOffset, rect.y + rect.length);
+            ctx.moveTo(rect.x + drawOffset, rect.y);
+            ctx.lineTo(rect.x + drawOffset, rect.y + rect.length);
+          }
+          ctx.stroke();
         }
-        ctx.stroke();
         break;
       }
       case 'door': {
@@ -350,16 +478,22 @@ function drawSingleWallObjectResizeHandle(
   obj: WallObject,
   zoom: number,
 ): void {
-  const rect = wallObjectToPixelRect(room, obj);
   const r = RESIZE_HANDLE_SIZE / 2 / zoom;
-
   const points: { x: number; y: number }[] = [];
-  if (rect.horizontal) {
-    points.push({ x: rect.x, y: rect.y });
-    points.push({ x: rect.x + rect.length, y: rect.y });
+
+  if (isPolygonRoom(room)) {
+    const pos = wallObjectToEdgePosition(room, obj);
+    points.push({ x: pos.startPx, y: pos.startPy });
+    points.push({ x: pos.endPx, y: pos.endPy });
   } else {
-    points.push({ x: rect.x, y: rect.y });
-    points.push({ x: rect.x, y: rect.y + rect.length });
+    const rect = wallObjectToPixelRect(room, obj);
+    if (rect.horizontal) {
+      points.push({ x: rect.x, y: rect.y });
+      points.push({ x: rect.x + rect.length, y: rect.y });
+    } else {
+      points.push({ x: rect.x, y: rect.y });
+      points.push({ x: rect.x, y: rect.y + rect.length });
+    }
   }
 
   ctx.fillStyle = '#FF9800';
@@ -444,17 +578,23 @@ export function hitWallObject(
   for (let i = room.wallObjects.length - 1; i >= 0; i--) {
     const obj = room.wallObjects[i];
     if (skipAutoGenerated && obj.type === 'opening' && obj.autoGenerated) continue;
-    const rect = wallObjectToPixelRect(room, obj);
 
-    // Wall-line hit (shared by all wall object types)
     let wallLineHit = false;
-    if (rect.horizontal) {
-      if (px >= rect.x && px <= rect.x + rect.length && Math.abs(py - rect.y) < tolerance) {
-        wallLineHit = true;
-      }
+
+    if (isPolygonRoom(room)) {
+      const pos = wallObjectToEdgePosition(room, obj);
+      const dist = pointToSegmentDistance(px, py, pos.startPx, pos.startPy, pos.endPx, pos.endPy);
+      if (dist < tolerance) wallLineHit = true;
     } else {
-      if (py >= rect.y && py <= rect.y + rect.length && Math.abs(px - rect.x) < tolerance) {
-        wallLineHit = true;
+      const rect = wallObjectToPixelRect(room, obj);
+      if (rect.horizontal) {
+        if (px >= rect.x && px <= rect.x + rect.length && Math.abs(py - rect.y) < tolerance) {
+          wallLineHit = true;
+        }
+      } else {
+        if (py >= rect.y && py <= rect.y + rect.length && Math.abs(px - rect.x) < tolerance) {
+          wallLineHit = true;
+        }
       }
     }
 
@@ -492,6 +632,15 @@ export function computeWallObjectPosition(
   objWidth: number,
 ): { side: WallSide; offset: number } {
   const { side } = nearestWallSide(room, px, py);
+
+  if (isPolygonRoom(room)) {
+    const edge = getEdgeEndpoints(room, side);
+    const t = projectPointOnSegment(px, py, edge.start.px, edge.start.py, edge.end.px, edge.end.py);
+    const sideLen = edge.length;
+    const offsetGrid = Math.round(t * sideLen - objWidth / 2);
+    return { side, offset: Math.max(0, Math.min(offsetGrid, sideLen - objWidth)) };
+  }
+
   const rx = room.x * GRID;
   const ry = room.y * GRID;
   const along = side === 'n' || side === 's' ? px - rx : py - ry;
@@ -515,24 +664,28 @@ export function hitWallObjectEdge(
   for (let i = room.wallObjects.length - 1; i >= 0; i--) {
     const obj = room.wallObjects[i];
     if (skipAutoGenerated && obj.type === 'opening' && obj.autoGenerated) continue;
-    const rect = wallObjectToPixelRect(room, obj);
 
-    if (rect.horizontal) {
-      // Check wall-line proximity first
-      if (Math.abs(py - rect.y) > wallTol) continue;
-      const startX = rect.x;
-      const endX = rect.x + rect.length;
-      // Start edge
-      if (Math.abs(px - startX) <= edgeTol) return { obj, edge: 'start' };
-      // End edge
-      if (Math.abs(px - endX) <= edgeTol) return { obj, edge: 'end' };
+    if (isPolygonRoom(room)) {
+      const pos = wallObjectToEdgePosition(room, obj);
+      const dist = pointToSegmentDistance(px, py, pos.startPx, pos.startPy, pos.endPx, pos.endPy);
+      if (dist > wallTol) continue;
+      if (Math.hypot(px - pos.startPx, py - pos.startPy) <= edgeTol) return { obj, edge: 'start' };
+      if (Math.hypot(px - pos.endPx, py - pos.endPy) <= edgeTol) return { obj, edge: 'end' };
     } else {
-      // Vertical wall
-      if (Math.abs(px - rect.x) > wallTol) continue;
-      const startY = rect.y;
-      const endY = rect.y + rect.length;
-      if (Math.abs(py - startY) <= edgeTol) return { obj, edge: 'start' };
-      if (Math.abs(py - endY) <= edgeTol) return { obj, edge: 'end' };
+      const rect = wallObjectToPixelRect(room, obj);
+      if (rect.horizontal) {
+        if (Math.abs(py - rect.y) > wallTol) continue;
+        const startX = rect.x;
+        const endX = rect.x + rect.length;
+        if (Math.abs(px - startX) <= edgeTol) return { obj, edge: 'start' };
+        if (Math.abs(px - endX) <= edgeTol) return { obj, edge: 'end' };
+      } else {
+        if (Math.abs(px - rect.x) > wallTol) continue;
+        const startY = rect.y;
+        const endY = rect.y + rect.length;
+        if (Math.abs(py - startY) <= edgeTol) return { obj, edge: 'start' };
+        if (Math.abs(py - endY) <= edgeTol) return { obj, edge: 'end' };
+      }
     }
   }
   return null;
@@ -582,12 +735,27 @@ export function computeWallObjectResize(
   origOffset: number,
   origWidth: number,
 ): { offset: number; width: number } {
-  const rx = room.x * GRID;
-  const ry = room.y * GRID;
-  const horizontal = obj.side === 'n' || obj.side === 's';
-  const along = horizontal ? px - rx : py - ry;
-  const snapped = Math.round(along / GRID);
   const sideLen = wallSideLength(room, obj.side);
+  let snapped: number;
+
+  if (isPolygonRoom(room)) {
+    const edgeInfo = getEdgeEndpoints(room, obj.side);
+    const t = projectPointOnSegment(
+      px,
+      py,
+      edgeInfo.start.px,
+      edgeInfo.start.py,
+      edgeInfo.end.px,
+      edgeInfo.end.py,
+    );
+    snapped = Math.round(t * sideLen);
+  } else {
+    const rx = room.x * GRID;
+    const ry = room.y * GRID;
+    const horizontal = obj.side === 'n' || obj.side === 's';
+    const along = horizontal ? px - rx : py - ry;
+    snapped = Math.round(along / GRID);
+  }
 
   let offset: number;
   let width: number;
@@ -618,6 +786,43 @@ export function nearestWallSide(
   px: number,
   py: number,
 ): { side: WallSide; offset: number } {
+  if (isPolygonRoom(room)) {
+    const sides: WallSide[] = ['n', 'e', 's', 'w'];
+    let bestSide: WallSide = 'n';
+    let bestDist = Infinity;
+    let bestT = 0;
+    let bestLen = 0;
+
+    for (const side of sides) {
+      const edge = getEdgeEndpoints(room, side);
+      const dist = pointToSegmentDistance(
+        px,
+        py,
+        edge.start.px,
+        edge.start.py,
+        edge.end.px,
+        edge.end.py,
+      );
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestSide = side;
+        bestT = projectPointOnSegment(
+          px,
+          py,
+          edge.start.px,
+          edge.start.py,
+          edge.end.px,
+          edge.end.py,
+        );
+        bestLen = edge.length;
+      }
+    }
+
+    const offsetGrid = Math.round(bestT * bestLen);
+    const maxOffset = bestLen - 1;
+    return { side: bestSide, offset: Math.max(0, Math.min(offsetGrid, maxOffset)) };
+  }
+
   const rx = room.x * GRID;
   const ry = room.y * GRID;
   const rw = room.w * GRID;

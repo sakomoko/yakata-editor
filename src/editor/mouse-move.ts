@@ -5,6 +5,7 @@ import {
   findRoomById,
   findWallObjectById,
 } from '../lookup.ts';
+import { updateBoundingBox, hitVertexHandle } from '../polygon.ts';
 import {
   hitHandle,
   hitRoom,
@@ -126,6 +127,19 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
       if (intHandleHover) {
         canvas.style.cursor = intHandleHover.dir + '-resize';
       } else {
+        // Vertex handle hover (polygon rooms)
+        if (state.selection.size === 1) {
+          const selId = state.selection.values().next().value;
+          const selRoom = selId ? findRoomById(state.rooms, selId) : null;
+          if (selRoom?.vertices) {
+            const vHit = hitVertexHandle(selRoom, m.px, m.py, viewport.zoom);
+            if (vHit) {
+              canvas.style.cursor = 'move';
+              updateStatus(ec);
+              return;
+            }
+          }
+        }
         const h = hitHandle(state.rooms, state.selection, m.px, m.py, viewport.zoom);
         if (h) {
           canvas.style.cursor = h.handle.dir + '-resize';
@@ -164,7 +178,24 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
       if (room) {
         room.x = orig.x + dx;
         room.y = orig.y + dy;
+        if (room.vertices && orig.vertices) {
+          for (let i = 0; i < 4; i++) {
+            room.vertices[i] = {
+              gx: orig.vertices[i].gx + dx,
+              gy: orig.vertices[i].gy + dy,
+            };
+          }
+        }
       }
+    }
+  } else if (state.drag.type === 'moveVertex') {
+    const drag = state.drag;
+    const room = findRoomById(state.rooms, drag.roomId);
+    if (room?.vertices) {
+      room.vertices[drag.vertexIndex] = { gx: m.gx, gy: m.gy };
+      updateBoundingBox(room);
+      clampWallObjects(room);
+      clampAllInteriorObjects(room);
     }
   } else if (state.drag.type === 'resize') {
     const o = state.drag.orig;
@@ -209,6 +240,17 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
       room.y = scaled.y;
       room.w = scaled.w;
       room.h = scaled.h;
+
+      // vertices: アンカー基準でスケーリング後、BBを頂点から再計算して整合性を保つ
+      if (orig.vertices && room.vertices) {
+        for (let i = 0; i < 4; i++) {
+          room.vertices[i] = {
+            gx: Math.round(anchor.gx + (orig.vertices[i].gx - anchor.gx) * scale),
+            gy: Math.round(anchor.gy + (orig.vertices[i].gy - anchor.gy) * scale),
+          };
+        }
+        updateBoundingBox(room);
+      }
 
       // fontSize: 未設定(undefined)の場合は部屋サイズから自動計算されるためスケール不要
       if (orig.fontSize !== undefined) {
