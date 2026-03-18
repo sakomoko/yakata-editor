@@ -9,6 +9,7 @@ import type {
 } from '../types.ts';
 import type { ContextMenuItem } from '../context-menu.ts';
 import type { ViewportState } from '../viewport.ts';
+import type { SnapIndicator } from '../snap.ts';
 
 export interface RoomEditData {
   label: string;
@@ -76,6 +77,7 @@ export interface EditorContext {
     isPanning: boolean;
     activeInteriorObjectId: string | undefined;
     activeFreeTextId: string | undefined;
+    snapIndicator: SnapIndicator | null;
   };
   render: () => void;
   commitChange: (fn: () => void) => void;

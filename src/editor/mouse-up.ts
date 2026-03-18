@@ -81,6 +81,8 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
       clampWallObjects(room);
       clampAllInteriorObjects(room);
     }
+    syncAllPairedOpenings(state.rooms);
+    flags.snapIndicator = null;
     state.drag = null;
     canvas.style.cursor = state.paintMode ? 'crosshair' : 'default';
     ec.render();

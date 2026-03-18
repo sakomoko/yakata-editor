@@ -6,6 +6,7 @@ import {
   findWallObjectById,
 } from '../lookup.ts';
 import { updateBoundingBox, hitVertexHandle, edgeResizeCursor } from '../polygon.ts';
+import { findVertexSnap } from '../snap.ts';
 import {
   hitHandle,
   hitRoom,
@@ -191,7 +192,16 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
     const drag = state.drag;
     const room = findRoomById(state.rooms, drag.roomId);
     if (room?.vertices) {
-      room.vertices[drag.vertexIndex] = { gx: m.gx, gy: m.gy };
+      const rawGx = m.px / GRID;
+      const rawGy = m.py / GRID;
+      const snap = findVertexSnap(state.rooms, drag.roomId, rawGx, rawGy, 0.5);
+      if (snap.type !== 'none') {
+        room.vertices[drag.vertexIndex] = { gx: snap.gx, gy: snap.gy };
+        ec.flags.snapIndicator = { px: snap.gx * GRID, py: snap.gy * GRID, type: snap.type };
+      } else {
+        room.vertices[drag.vertexIndex] = { gx: rawGx, gy: rawGy };
+        ec.flags.snapIndicator = null;
+      }
       updateBoundingBox(room);
       clampWallObjects(room);
       clampAllInteriorObjects(room);
