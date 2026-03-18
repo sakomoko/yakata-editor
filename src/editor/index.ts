@@ -58,6 +58,7 @@ export function initEditor(
     isPanning: false,
     activeInteriorObjectId: undefined,
     activeFreeTextId: undefined,
+    snapIndicator: null,
   };
 
   const mousePos = createMousePos(canvas, viewport);
@@ -169,6 +170,7 @@ export function initEditor(
       flags.isPanning = false;
       flags.activeInteriorObjectId = undefined;
       flags.activeFreeTextId = undefined;
+      flags.snapIndicator = null;
       viewport.zoom = data.viewport.zoom;
       viewport.panX = data.viewport.panX;
       viewport.panY = data.viewport.panY;

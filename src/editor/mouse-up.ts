@@ -81,6 +81,9 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
       clampWallObjects(room);
       clampAllInteriorObjects(room);
     }
+    // 頂点移動後は常に壁開口ペアの位置同期が必要
+    syncAllPairedOpenings(state.rooms);
+    flags.snapIndicator = null;
     state.drag = null;
     canvas.style.cursor = state.paintMode ? 'crosshair' : 'default';
     ec.render();

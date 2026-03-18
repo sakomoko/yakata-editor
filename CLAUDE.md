@@ -42,6 +42,7 @@ Canvas上でのマウス操作 → editor/ のイベントハンドラ → state
   - **editor/dblclick.ts** — `onDblClick()` ダブルクリックイベント処理
   - **editor/utils.ts** — `labelDisplayWidth()`, `createMousePos()` ユーティリティ
 - **lookup.ts** — ID検索ヘルパー (`findRoomById`, `findRoomIndexById`, `findFreeTextById`, `findFreeStrokeById`, `findWallObjectById`, `findInteriorObjectById`)
+- **snap.ts** — 頂点スナップ計算。他部屋の頂点・辺への近接スナップ(`findVertexSnap`)。`polygon.ts`の`getRoomVertices`/`projectPointOnSegment`を利用
 - **polygon.ts** — 四角形（非直角）部屋のユーティリティ。点の包含判定(`pointInQuad`)、重心計算(`quadCentroid`)、AABB更新(`updateRoomBBFromVertices`)、辺計算(`quadEdgeEndpoints`, `quadEdgeLength`)、頂点ハンドル(`getVertexHandles`, `hitVertexHandle`)
 - **room.ts** — 部屋の生成(`createRoom`)、描画(`drawRoom`)、ヒット判定(`hitRoom`, `hitHandle`)、リサイズハンドル計算(`getHandles`)
 - **wall-object.ts** — 壁オブジェクト(窓など)の生成・ヒット判定・ピクセル座標変換・壁セグメント分割

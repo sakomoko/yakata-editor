@@ -12,6 +12,7 @@ import { drawCameraFovOverlay, drawCameraHandles } from '../camera.ts';
 import { drawFreeText, drawFreeTextHandles } from '../free-text.ts';
 import { drawFreeStroke, drawFreeStrokeBounds } from '../free-stroke.ts';
 import { drawLinkGroupIndicators } from '../link.ts';
+import type { SnapIndicator } from '../snap.ts';
 import type { EditorContext } from './context.ts';
 
 export function render(ec: EditorContext): void {
@@ -131,8 +132,42 @@ export function render(ec: EditorContext): void {
     drawAreaSelectPreview(ctx, state.drag.start, state.drag.cur, viewport.zoom, state.rooms);
   }
 
+  if (flags.snapIndicator) {
+    drawSnapIndicator(ctx, flags.snapIndicator, viewport.zoom);
+  }
+
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   updateStatus(ec);
+}
+
+function drawSnapIndicator(
+  ctx: CanvasRenderingContext2D,
+  si: SnapIndicator,
+  zoom: number,
+): void {
+  ctx.lineWidth = 2 / zoom;
+  if (si.type === 'vertex') {
+    ctx.beginPath();
+    ctx.arc(si.px, si.py, 6 / zoom, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 140, 0, 0.7)';
+    ctx.fill();
+    ctx.strokeStyle = '#ff8c00';
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.arc(si.px, si.py, 4 / zoom, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0, 180, 80, 0.7)';
+    ctx.fill();
+    ctx.strokeStyle = '#00b450';
+    ctx.stroke();
+    const cr = 6 / zoom;
+    ctx.beginPath();
+    ctx.moveTo(si.px - cr, si.py);
+    ctx.lineTo(si.px + cr, si.py);
+    ctx.moveTo(si.px, si.py - cr);
+    ctx.lineTo(si.px, si.py + cr);
+    ctx.stroke();
+  }
 }
 
 export function updateStatus(ec: EditorContext): void {
