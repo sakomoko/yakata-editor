@@ -16,6 +16,7 @@ import { hitCameraHandleInRooms } from '../camera.ts';
 import { hitFreeText, hitFreeTextHandle } from '../free-text.ts';
 import { createFreeStroke, hitFreeStrokeInList, STROKE_HIT_TOLERANCE_PX } from '../free-stroke.ts';
 import { expandWithLinked } from '../link.ts';
+import { hitVertexHandle } from '../polygon.ts';
 import type { EditorContext } from './context.ts';
 
 export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
@@ -72,6 +73,26 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
     canvas.style.cursor = horiz ? 'ew-resize' : 'ns-resize';
     ec.render();
     return;
+  }
+
+  // Check vertex handle hit (polygon room) — before room resize handles
+  if (state.selection.size === 1) {
+    const selId = [...state.selection][0];
+    const selRoom = state.rooms.find((r) => r.id === selId);
+    if (selRoom?.vertices) {
+      const vHit = hitVertexHandle(selRoom, m.px, m.py, viewport.zoom);
+      if (vHit) {
+        pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
+        state.drag = {
+          type: 'moveVertex',
+          roomId: selRoom.id,
+          vertexIndex: vHit.vertexIndex,
+        };
+        canvas.style.cursor = 'move';
+        ec.render();
+        return;
+      }
+    }
   }
 
   // Check FreeText handle hit (resize) — only for active FreeText
@@ -178,6 +199,14 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
             w: room.w,
             h: room.h,
             fontSize: room.fontSize,
+            vertices: room.vertices
+              ? (room.vertices.map((v) => ({ gx: v.gx, gy: v.gy })) as [
+                  { gx: number; gy: number },
+                  { gx: number; gy: number },
+                  { gx: number; gy: number },
+                  { gx: number; gy: number },
+                ])
+              : undefined,
             wallObjects: room.wallObjects?.map((wo) => ({
               id: wo.id,
               offset: wo.offset,
@@ -312,10 +341,33 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
     }
     pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
     const expanded = expandWithLinked(state.rooms, state.selection);
-    const originals = new Map<string, { x: number; y: number }>();
+    const originals = new Map<
+      string,
+      {
+        x: number;
+        y: number;
+        vertices?: [
+          { gx: number; gy: number },
+          { gx: number; gy: number },
+          { gx: number; gy: number },
+          { gx: number; gy: number },
+        ];
+      }
+    >();
     for (const room of state.rooms) {
       if (expanded.has(room.id)) {
-        originals.set(room.id, { x: room.x, y: room.y });
+        originals.set(room.id, {
+          x: room.x,
+          y: room.y,
+          vertices: room.vertices
+            ? (room.vertices.map((v) => ({ gx: v.gx, gy: v.gy })) as [
+                { gx: number; gy: number },
+                { gx: number; gy: number },
+                { gx: number; gy: number },
+                { gx: number; gy: number },
+              ])
+            : undefined,
+        });
       }
     }
     state.drag = { type: 'move', originals, start: m };

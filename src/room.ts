@@ -3,6 +3,13 @@ import { GRID, HANDLE_SIZE, HANDLE_HIT } from './grid.ts';
 import { findRoomById } from './lookup.ts';
 import { drawWallSegments, drawWallObjects, drawWallObjectResizeHandles } from './wall-object.ts';
 import { drawInteriorObjects, drawInteriorObjectHandles } from './interior-object.ts';
+import {
+  isPolygonRoom,
+  getRoomVertices,
+  getQuadCentroid,
+  pointInQuad,
+  getVertexHandles,
+} from './polygon.ts';
 
 export function createRoom(x: number, y: number, w: number, h: number, label = ''): Room {
   return { id: crypto.randomUUID(), x, y, w, h, label };
@@ -41,6 +48,19 @@ export function drawRoom(
   activeWallObjectId?: string,
   activeInteriorObjectId?: string,
 ): void {
+  if (isPolygonRoom(room)) {
+    drawPolygonRoom(
+      ctx,
+      room,
+      isSelected,
+      showHandles,
+      zoom,
+      activeWallObjectId,
+      activeInteriorObjectId,
+    );
+    return;
+  }
+
   const x = room.x * GRID,
     y = room.y * GRID;
   const w = room.w * GRID,
@@ -75,6 +95,62 @@ export function drawRoom(
     // Wall object resize handles drawn AFTER room handles so they appear on top
     drawWallObjectResizeHandles(ctx, room, zoom);
     // Interior object resize handles (only for active object)
+    drawInteriorObjectHandles(ctx, room, zoom, activeInteriorObjectId);
+  }
+}
+
+function drawPolygonRoom(
+  ctx: CanvasRenderingContext2D,
+  room: Room,
+  isSelected: boolean,
+  showHandles: boolean,
+  zoom: number,
+  activeWallObjectId?: string,
+  activeInteriorObjectId?: string,
+): void {
+  const verts = getRoomVertices(room);
+
+  // 白塗り
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.moveTo(verts[0].gx * GRID, verts[0].gy * GRID);
+  for (let i = 1; i < 4; i++) {
+    ctx.lineTo(verts[i].gx * GRID, verts[i].gy * GRID);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // 壁描画
+  drawWallSegments(ctx, room, isSelected, zoom);
+
+  // ラベル（重心に配置）
+  if (room.label) {
+    const centroid = getQuadCentroid(verts);
+    const autoSize = calcAutoFontSize(room);
+    const fontSize = room.fontSize ?? autoSize;
+    ctx.fillStyle = '#222';
+    ctx.font = `${fontSize}px system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(room.label, centroid.gx * GRID, centroid.gy * GRID, room.w * GRID * 0.9);
+  }
+
+  // Interior objects (BBベースclamp)
+  drawInteriorObjects(ctx, room, isSelected, zoom, activeInteriorObjectId);
+
+  // Wall objects
+  drawWallObjects(ctx, room, isSelected, zoom, activeWallObjectId);
+
+  // 頂点ハンドル（選択時）
+  if (isSelected && showHandles) {
+    const r = 5 / zoom;
+    for (const handle of getVertexHandles(room)) {
+      ctx.fillStyle = '#2196F3';
+      ctx.beginPath();
+      ctx.arc(handle.px, handle.py, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    drawWallObjectResizeHandles(ctx, room, zoom);
     drawInteriorObjectHandles(ctx, room, zoom, activeInteriorObjectId);
   }
 }
@@ -164,6 +240,8 @@ export function hitHandle(
   const selId = [...selection][0];
   const room = findRoomById(rooms, selId);
   if (!room) return null;
+  // ポリゴン部屋は頂点ハンドルを使うため、BBリサイズハンドルは無効
+  if (isPolygonRoom(room)) return null;
   const tolerance = HANDLE_HIT / zoom;
   for (const h of getHandles(room)) {
     if (Math.abs(px - h.px) < tolerance && Math.abs(py - h.py) < tolerance) {
@@ -174,6 +252,13 @@ export function hitHandle(
 }
 
 export function isInsideRoom(r: Room, px: number, py: number): boolean {
+  if (r.vertices) {
+    // BB高速棄却
+    if (px < r.x * GRID || px > (r.x + r.w) * GRID || py < r.y * GRID || py > (r.y + r.h) * GRID) {
+      return false;
+    }
+    return pointInQuad(r.vertices, px / GRID, py / GRID);
+  }
   // prettier-ignore
   return (
     px >= r.x * GRID &&

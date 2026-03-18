@@ -76,6 +76,8 @@ export type CameraColorPreset = 'blue' | 'red' | 'green' | 'yellow';
 
 export type RoomInteriorObject = StraightStairs | FoldingStairs | Marker | SecurityCamera;
 
+export type GridPoint = { gx: number; gy: number };
+
 export interface Room {
   id: string;
   x: number;
@@ -88,6 +90,8 @@ export interface Room {
   linkGroup?: string;
   wallObjects?: WallObject[];
   interiorObjects?: RoomInteriorObject[];
+  /** 4頂点（時計回り: NW,NE,SE,SW）。未設定時は矩形として扱う */
+  vertices?: [GridPoint, GridPoint, GridPoint, GridPoint];
 }
 
 export interface FreeText {
@@ -152,6 +156,7 @@ export interface GroupScaleOriginal {
   w: number;
   h: number;
   fontSize?: number;
+  vertices?: [GridPoint, GridPoint, GridPoint, GridPoint];
   wallObjects?: Array<{ id: string; offset: number; width: number }>;
   interiorObjects?: Array<{
     id: string;
@@ -166,7 +171,14 @@ export interface GroupScaleOriginal {
 export type DragState =
   | { type: 'create'; start: MouseCoord; cur: MouseCoord }
   | { type: 'areaSelect'; start: MouseCoord; cur: MouseCoord }
-  | { type: 'move'; originals: Map<string, { x: number; y: number }>; start: MouseCoord }
+  | {
+      type: 'move';
+      originals: Map<
+        string,
+        { x: number; y: number; vertices?: [GridPoint, GridPoint, GridPoint, GridPoint] }
+      >;
+      start: MouseCoord;
+    }
   | {
       type: 'resize';
       dir: ResizeDirection;
@@ -245,6 +257,11 @@ export type DragState =
       origBB: { x: number; y: number; w: number; h: number };
       anchor: { gx: number; gy: number };
       originals: Map<string, GroupScaleOriginal>;
+    }
+  | {
+      type: 'moveVertex';
+      roomId: string;
+      vertexIndex: number;
     }
   | null;
 

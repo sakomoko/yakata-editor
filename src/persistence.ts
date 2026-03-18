@@ -1,5 +1,6 @@
 import type {
   Room,
+  GridPoint,
   FreeText,
   FreeStroke,
   WallObject,
@@ -16,6 +17,7 @@ import type {
   MarkerKind,
 } from './types.ts';
 import { CAMERA_COLOR_PRESETS } from './camera.ts';
+import { updateBoundingBox } from './polygon.ts';
 
 const VALID_SIDES = new Set(['n', 'e', 's', 'w']);
 const VALID_WALL_OBJECT_TYPES = new Set(['window', 'door', 'opening']);
@@ -302,6 +304,29 @@ function ensureIds(rooms: unknown[]): Room[] {
     }
     if (Array.isArray(room.interiorObjects) && room.interiorObjects.length > 0) {
       result.interiorObjects = ensureInteriorObjectIds(room.interiorObjects);
+    }
+    // vertices バリデーション
+    if (Array.isArray(room.vertices)) {
+      const verts = room.vertices as unknown[];
+      if (
+        verts.length === 4 &&
+        verts.every(
+          (v) =>
+            v &&
+            typeof v === 'object' &&
+            typeof (v as Record<string, unknown>).gx === 'number' &&
+            typeof (v as Record<string, unknown>).gy === 'number',
+        )
+      ) {
+        result.vertices = verts.map((v) => ({
+          gx: (v as Record<string, unknown>).gx as number,
+          gy: (v as Record<string, unknown>).gy as number,
+        })) as [GridPoint, GridPoint, GridPoint, GridPoint];
+        updateBoundingBox(result);
+      } else {
+        // 不正な vertices は削除（矩形にフォールバック）
+        delete result.vertices;
+      }
     }
     return result;
   });

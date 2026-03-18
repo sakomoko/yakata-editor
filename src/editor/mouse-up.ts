@@ -1,7 +1,8 @@
 import { findRoomById, findWallObjectById, findFreeStrokeById } from '../lookup.ts';
 import { selectSingle, clearSelection } from '../selection.ts';
 import { pushUndo, cancelLastUndo } from '../history.ts';
-import { hitWallObjectInRooms } from '../wall-object.ts';
+import { hitWallObjectInRooms, clampWallObjects } from '../wall-object.ts';
+import { clampAllInteriorObjects } from '../interior-object.ts';
 import { createRoom, findRoomsInArea, normalizeArea } from '../room.ts';
 import { findFreeTextsInArea } from '../free-text.ts';
 import { simplifyPoints } from '../free-stroke.ts';
@@ -65,6 +66,19 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
   }
 
   if (state.drag.type === 'moveStroke') {
+    state.drag = null;
+    canvas.style.cursor = state.paintMode ? 'crosshair' : 'default';
+    ec.render();
+    ec.callbacks.onAutoSave();
+    return;
+  }
+
+  if (state.drag.type === 'moveVertex') {
+    const room = findRoomById(state.rooms, state.drag.roomId);
+    if (room) {
+      clampWallObjects(room);
+      clampAllInteriorObjects(room);
+    }
     state.drag = null;
     canvas.style.cursor = state.paintMode ? 'crosshair' : 'default';
     ec.render();
