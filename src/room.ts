@@ -9,6 +9,7 @@ import {
   getQuadCentroid,
   pointInQuad,
   getVertexHandles,
+  edgeLength,
 } from './polygon.ts';
 
 export function createRoom(x: number, y: number, w: number, h: number, label = ''): Room {
@@ -16,9 +17,14 @@ export function createRoom(x: number, y: number, w: number, h: number, label = '
 }
 
 export function calcAutoFontSize(room: Room): number {
-  const w = room.w * GRID;
-  const h = room.h * GRID;
-  const base = Math.min(w, h) * 0.25;
+  let minSide: number;
+  if (isPolygonRoom(room)) {
+    const sides = (['n', 'e', 's', 'w'] as const).map((s) => edgeLength(room, s));
+    minSide = Math.min(...sides) * GRID;
+  } else {
+    minSide = Math.min(room.w, room.h) * GRID;
+  }
+  const base = minSide * 0.25;
   return Math.max(6, base / Math.max(1, room.label.length * 0.35));
 }
 

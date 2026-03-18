@@ -10,6 +10,7 @@ import type {
 } from './types.ts';
 import { GRID, HANDLE_SIZE, HANDLE_HIT } from './grid.ts';
 import { drawCameraIcon } from './camera.ts';
+import { isPolygonRoom, getRoomVertices, getQuadCentroid, pointInQuad } from './polygon.ts';
 
 const STAIRS_DEFAULT_W = 2;
 const STAIRS_DEFAULT_H = 3;
@@ -691,6 +692,32 @@ export function clampInteriorObject(room: Room, obj: RoomInteriorObject): void {
   // Re-clamp position after possible resize
   obj.x = Math.max(0, Math.min(obj.x, room.w - obj.w));
   obj.y = Math.max(0, Math.min(obj.y, room.h - obj.h));
+
+  // For polygon rooms, push toward centroid if center is outside the shape
+  if (isPolygonRoom(room)) {
+    const verts = getRoomVertices(room);
+    const centroid = getQuadCentroid(verts);
+    const centerGx = room.x + obj.x + obj.w / 2;
+    const centerGy = room.y + obj.y + obj.h / 2;
+    if (!pointInQuad(verts, centerGx, centerGy)) {
+      // Binary search toward centroid to find the closest valid position
+      let lo = 0,
+        hi = 1;
+      for (let i = 0; i < 16; i++) {
+        const mid = (lo + hi) / 2;
+        const mx = centerGx + (centroid.gx - centerGx) * mid;
+        const my = centerGy + (centroid.gy - centerGy) * mid;
+        if (pointInQuad(verts, mx, my)) {
+          hi = mid;
+        } else {
+          lo = mid;
+        }
+      }
+      const t = hi;
+      obj.x = centerGx + (centroid.gx - centerGx) * t - obj.w / 2 - room.x;
+      obj.y = centerGy + (centroid.gy - centerGy) * t - obj.h / 2 - room.y;
+    }
+  }
 }
 
 export function clampAllInteriorObjects(room: Room): void {
