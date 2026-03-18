@@ -15,6 +15,7 @@ export interface SnapIndicator {
   px: number;
   /** ワールドピクセル Y 座標 */
   py: number;
+  /** スナップの種別 */
   type: 'vertex' | 'edge';
 }
 
