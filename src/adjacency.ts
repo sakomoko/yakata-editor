@@ -37,7 +37,8 @@ export function findAdjacentRoomsOnWall(
 ): AdjacentWallInfo[] {
   const results: AdjacentWallInfo[] = [];
 
-  // 四角形部屋はBBベース隣接判定が不正確なため除外
+  // TODO(#51): polygon rooms need a proper edge-based adjacency algorithm.
+  // BB-based detection produces false positives, so skip for now.
   if (isPolygonRoom(sourceRoom)) return results;
 
   for (const other of rooms) {

@@ -274,7 +274,7 @@ describe('projectPointOnSegment', () => {
 });
 
 describe('edgeResizeCursor', () => {
-  it('矩形の水平辺(n/s) → ns-resize', () => {
+  it('矩形の水平辺(n/s) → ew-resize', () => {
     const room = makeRect(0, 0, 5, 3);
     expect(edgeResizeCursor(room, 'n')).toBe('ew-resize');
     expect(edgeResizeCursor(room, 's')).toBe('ew-resize');

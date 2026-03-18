@@ -156,8 +156,10 @@ export function pointToSegmentDistance(
   return Math.hypot(px - projX, py - projY);
 }
 
+export type ResizeCursor = 'ew-resize' | 'ns-resize' | 'nwse-resize' | 'nesw-resize';
+
 /** 辺の角度に基づいてリサイズカーソル方向を返す */
-export function edgeResizeCursor(room: Room, side: WallSide): string {
+export function edgeResizeCursor(room: Room, side: WallSide): ResizeCursor {
   const { angle } = getEdgeEndpoints(room, side);
   // 角度を [0, π) に正規化（反対方向は同じカーソル）
   const a = ((angle % Math.PI) + Math.PI) % Math.PI;

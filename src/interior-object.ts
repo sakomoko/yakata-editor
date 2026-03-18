@@ -716,6 +716,8 @@ export function clampInteriorObject(room: Room, obj: RoomInteriorObject): void {
         }
       }
       const t = hi;
+      // NOTE: center point is guaranteed inside, but corners of obj may still
+      // extend outside the polygon for large objects in narrow polygon rooms.
       obj.x = centerGx + (centroid.gx - centerGx) * t - obj.w / 2 - room.x;
       obj.y = centerGy + (centroid.gy - centerGy) * t - obj.h / 2 - room.y;
     }
