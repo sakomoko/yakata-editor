@@ -162,6 +162,14 @@ interface FreeStroke {
 
 グリッドスナップなし。描画時の `lineWidth` はズームレベルで割ることで、画面上の見た目の太さを一定に保つ。ヒット判定は各線分への最短距離で判定し、`lineWidth / 2` を許容距離に加算。
 
+## GridPoint
+
+グリッド座標の点を表す型。四角形の頂点など、グリッド座標での位置指定に使用。
+
+```typescript
+type GridPoint = { gx: number; gy: number };
+```
+
 ## Room
 
 部屋を表す基本データ構造。座標・サイズはすべてグリッド単位。
@@ -179,8 +187,11 @@ interface Room {
   linkGroup?: string;      // 連結グループID（同じ値の部屋が一体的に移動）
   wallObjects?: WallObject[]; // 壁に配置されたオブジェクト（窓・ドアなど）
   interiorObjects?: RoomInteriorObject[]; // 部屋内に配置されたオブジェクト（階段など）
+  vertices?: [GridPoint, GridPoint, GridPoint, GridPoint]; // 4頂点（時計回り: NW,NE,SE,SW）
 }
 ```
+
+`vertices` が設定されている場合、部屋は四角形（非直角可）として描画・ヒット判定される。未設定時は従来通り `x,y,w,h` の矩形として扱う。頂点は時計回り（NW→NE→SE→SW）の順序。四角形変換時は矩形の4隅から初期化され、各頂点を個別にドラッグして角度を変更できる。`x,y,w,h` は四角形のAABB（軸並行バウンディングボックス）として頂点変更時に自動更新される。
 
 ## Project
 
@@ -205,7 +216,7 @@ interface Project {
 type DragState =
   | { type: 'create'; start: MouseCoord; cur: MouseCoord }
   | { type: 'areaSelect'; start: MouseCoord; cur: MouseCoord }
-  | { type: 'move'; originals: Map<string, { x: number; y: number }>; start: MouseCoord }
+  | { type: 'move'; originals: Map<string, { x: number; y: number; vertices?: [GridPoint, GridPoint, GridPoint, GridPoint] }>; start: MouseCoord }
   | { type: 'resize'; dir: ResizeDirection; orig: { x: number; y: number; w: number; h: number }; targetId: string; start: MouseCoord }
   | { type: 'moveWallObject'; roomId: string; objectId: string }
   | { type: 'resizeWallObject'; roomId: string; objectId: string; edge: 'start' | 'end'; origOffset: number; origWidth: number }
@@ -219,6 +230,7 @@ type DragState =
   | { type: 'paint'; strokeId: string }
   | { type: 'moveStroke'; id: string; offsetPx: number; offsetPy: number }
   | { type: 'groupResize'; dir: CornerDirection; origBB: { x: number; y: number; w: number; h: number }; anchor: { gx: number; gy: number }; originals: Map<string, GroupScaleOriginal> }
+  | { type: 'moveVertex'; roomId: string; vertexIndex: number }
   | null;
 ```
 
@@ -241,6 +253,7 @@ type DragState =
 | `paint` | ペイントモードでドラッグ | 新規ストロークを描画（点列をリアルタイム追加、Shift押下で直線制約） |
 | `moveStroke` | 通常モードでストロークをドラッグ | ストローク全体をオフセット移動 |
 | `groupResize` | グループBBの4隅ハンドルをドラッグ（部屋2つ以上選択時） | アスペクト比維持で選択部屋を一括スケーリング |
+| `moveVertex` | 四角形部屋の頂点ハンドルをドラッグ | 頂点をグリッドスナップで移動、AABBを自動更新 |
 | `null` | ドラッグなし | 通常状態 |
 
 ## EditorState
@@ -310,6 +323,7 @@ interface GroupScaleOriginal {
   w: number;           // 元の幅（グリッド単位）
   h: number;           // 元の高さ（グリッド単位）
   fontSize?: number;   // 明示設定されたフォントサイズ
+  vertices?: [GridPoint, GridPoint, GridPoint, GridPoint]; // 四角形の元の頂点
   wallObjects?: Array<{ id: string; offset: number; width: number }>;
   interiorObjects?: Array<{ id: string; x: number; y: number; w: number; h: number; fovRange?: number }>;
 }
