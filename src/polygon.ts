@@ -1,7 +1,6 @@
 import type { Room, WallSide, GridPoint } from './types.ts';
 import { GRID } from './grid.ts';
 
-
 export interface VertexHandle {
   px: number;
   py: number;
@@ -99,7 +98,7 @@ export function hitVertexHandle(
   if (!room.vertices) return null;
   const tol = tolerance / zoom;
   for (const handle of getVertexHandles(room)) {
-    if (Math.abs(px - handle.px) < tol && Math.abs(py - handle.py) < tol) {
+    if (Math.hypot(px - handle.px, py - handle.py) < tol) {
       return handle;
     }
   }

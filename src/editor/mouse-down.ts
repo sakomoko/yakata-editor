@@ -346,7 +346,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
           x: room.x,
           y: room.y,
           vertices: room.vertices
-            ? ([...room.vertices.map((v) => ({ gx: v.gx, gy: v.gy }))] as Room['vertices'])
+            ? (room.vertices.map((v) => ({ gx: v.gx, gy: v.gy })) as Room['vertices'])
             : undefined,
         });
       }
