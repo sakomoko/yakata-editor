@@ -16,7 +16,7 @@ import { hitCameraHandleInRooms } from '../camera.ts';
 import { hitFreeText, hitFreeTextHandle } from '../free-text.ts';
 import { createFreeStroke, hitFreeStrokeInList, STROKE_HIT_TOLERANCE_PX } from '../free-stroke.ts';
 import { expandWithLinked } from '../link.ts';
-import { hitVertexHandle } from '../polygon.ts';
+import { hitVertexHandle, edgeResizeCursor } from '../polygon.ts';
 import type { EditorContext } from './context.ts';
 
 export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
@@ -61,7 +61,6 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
   if (edgeHit) {
     pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
     flags.activeInteriorObjectId = undefined;
-    const horiz = edgeHit.obj.side === 'n' || edgeHit.obj.side === 's';
     state.drag = {
       type: 'resizeWallObject',
       roomId: edgeHit.room.id,
@@ -70,7 +69,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
       origOffset: edgeHit.obj.offset,
       origWidth: edgeHit.obj.width,
     };
-    canvas.style.cursor = horiz ? 'ew-resize' : 'ns-resize';
+    canvas.style.cursor = edgeResizeCursor(edgeHit.room, edgeHit.obj.side);
     ec.render();
     return;
   }

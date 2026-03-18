@@ -14,6 +14,7 @@ import {
   computeInteriorObjectMove,
   computeInteriorObjectResize,
 } from './interior-object.ts';
+import { getRoomVertices, pointInQuad } from './polygon.ts';
 import { GRID } from './grid.ts';
 
 function makeRoom(overrides: Partial<Room> = {}): Room {
@@ -137,6 +138,56 @@ describe('clampInteriorObject', () => {
     expect(obj.h).toBe(3);
     expect(obj.x).toBe(0);
     expect(obj.y).toBe(0);
+  });
+});
+
+describe('clampInteriorObject (polygon room)', () => {
+  it('部屋外のオブジェクトを重心方向に押し戻す', () => {
+    // 菱形: (5,0)→(10,5)→(5,10)→(0,5)
+    const room: Room = {
+      id: 'poly-1',
+      x: 0,
+      y: 0,
+      w: 10,
+      h: 10,
+      label: '',
+      vertices: [
+        { gx: 5, gy: 0 },
+        { gx: 10, gy: 5 },
+        { gx: 5, gy: 10 },
+        { gx: 0, gy: 5 },
+      ],
+    };
+    // BB内だが菱形の外にある位置（左上コーナー付近）
+    const obj = createStraightStairs(0, 0, 1, 1);
+    clampInteriorObject(room, obj);
+    const centerGx = room.x + obj.x + obj.w / 2;
+    const centerGy = room.y + obj.y + obj.h / 2;
+    expect(pointInQuad(getRoomVertices(room), centerGx, centerGy)).toBe(true);
+  });
+
+  it('部屋内のオブジェクトはそのまま', () => {
+    const room: Room = {
+      id: 'poly-2',
+      x: 0,
+      y: 0,
+      w: 10,
+      h: 10,
+      label: '',
+      vertices: [
+        { gx: 5, gy: 0 },
+        { gx: 10, gy: 5 },
+        { gx: 5, gy: 10 },
+        { gx: 0, gy: 5 },
+      ],
+    };
+    // 菱形の中心付近
+    const obj = createStraightStairs(4, 4, 2, 2);
+    const origX = obj.x;
+    const origY = obj.y;
+    clampInteriorObject(room, obj);
+    expect(obj.x).toBe(origX);
+    expect(obj.y).toBe(origY);
   });
 });
 

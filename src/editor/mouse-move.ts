@@ -5,7 +5,7 @@ import {
   findRoomById,
   findWallObjectById,
 } from '../lookup.ts';
-import { updateBoundingBox, hitVertexHandle } from '../polygon.ts';
+import { updateBoundingBox, hitVertexHandle, edgeResizeCursor } from '../polygon.ts';
 import {
   hitHandle,
   hitRoom,
@@ -90,8 +90,7 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
     const selectedRooms = state.rooms.filter((r) => state.selection.has(r.id));
     const edgeHover = hitWallObjectEdgeInRooms(selectedRooms, m.px, m.py, viewport.zoom, true);
     if (edgeHover) {
-      const horiz = edgeHover.obj.side === 'n' || edgeHover.obj.side === 's';
-      canvas.style.cursor = horiz ? 'ew-resize' : 'ns-resize';
+      canvas.style.cursor = edgeResizeCursor(edgeHover.room, edgeHover.obj.side);
     } else {
       // FreeText handle hover
       if (flags.activeFreeTextId) {

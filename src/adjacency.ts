@@ -1,6 +1,7 @@
 import type { Room, WallSide, WallObject } from './types.ts';
 import { findRoomById } from './lookup.ts';
 import { createWallOpening } from './wall-object.ts';
+import { isPolygonRoom } from './polygon.ts';
 
 /** 壁面の対面を返す */
 export function getOppositeSide(side: WallSide): WallSide {
@@ -36,8 +37,14 @@ export function findAdjacentRoomsOnWall(
 ): AdjacentWallInfo[] {
   const results: AdjacentWallInfo[] = [];
 
+  // TODO(#51): polygon rooms need a proper edge-based adjacency algorithm.
+  // BB-based detection produces false positives, so skip for now.
+  if (isPolygonRoom(sourceRoom)) return results;
+
   for (const other of rooms) {
     if (other.id === sourceRoom.id) continue;
+    // 四角形部屋をターゲットからも除外
+    if (isPolygonRoom(other)) continue;
 
     const oppSide = getOppositeSide(side);
     let adjacent = false;

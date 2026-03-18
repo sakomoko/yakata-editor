@@ -136,6 +136,11 @@ export function edgeLength(room: Room, side: WallSide): number {
   return getEdgeEndpoints(room, side).length;
 }
 
+/** 4辺の最小長を返す（グリッド単位） */
+export function minEdgeLength(room: Room): number {
+  return Math.min(...(['n', 'e', 's', 'w'] as const).map((s) => edgeLength(room, s)));
+}
+
 /** 点から線分への最短距離を計算 */
 export function pointToSegmentDistance(
   px: number,
@@ -154,6 +159,20 @@ export function pointToSegmentDistance(
   const projX = x1 + t * dx;
   const projY = y1 + t * dy;
   return Math.hypot(px - projX, py - projY);
+}
+
+export type ResizeCursor = 'ew-resize' | 'ns-resize' | 'nwse-resize' | 'nesw-resize';
+
+/** 辺の角度に基づいてリサイズカーソル方向を返す */
+export function edgeResizeCursor(room: Room, side: WallSide): ResizeCursor {
+  const { angle } = getEdgeEndpoints(room, side);
+  // 角度を [0, π) に正規化（反対方向は同じカーソル）
+  const a = ((angle % Math.PI) + Math.PI) % Math.PI;
+  // 辺に沿った方向のカーソルを返す（壁オブジェクトは辺に沿ってリサイズするため）
+  if (a < Math.PI / 8 || a >= (7 * Math.PI) / 8) return 'ew-resize';
+  if (a < (3 * Math.PI) / 8) return 'nwse-resize';
+  if (a < (5 * Math.PI) / 8) return 'ns-resize';
+  return 'nesw-resize';
 }
 
 /** 点を線分に射影した際のパラメータ t (0〜1) を返す */

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   createRoom,
+  calcAutoFontSize,
   getHandles,
   hitRoom,
   hitHandle,
@@ -13,6 +14,7 @@ import {
   normalizeArea,
 } from './room.ts';
 import { GRID } from './grid.ts';
+import type { Room } from './types.ts';
 
 describe('createRoom', () => {
   it('should create a room with UUID', () => {
@@ -34,6 +36,51 @@ describe('createRoom', () => {
   it('should default label to empty string', () => {
     const room = createRoom(0, 0, 1, 1);
     expect(room.label).toBe('');
+  });
+});
+
+describe('calcAutoFontSize', () => {
+  it('矩形部屋: min(w,h)に基づくフォントサイズ', () => {
+    const room = createRoom(0, 0, 5, 3);
+    room.label = 'Room';
+    const size = calcAutoFontSize(room);
+    // minSide = 3 * GRID = 60, base = 60 * 0.25 = 15
+    expect(size).toBeGreaterThan(6);
+    expect(size).toBeLessThanOrEqual(15);
+  });
+
+  it('四角形部屋: 最小辺に基づくフォントサイズ', () => {
+    const room: Room = {
+      id: 'p1',
+      x: 0,
+      y: 0,
+      w: 10,
+      h: 10,
+      label: 'Poly',
+      vertices: [
+        { gx: 0, gy: 0 },
+        { gx: 2, gy: 0 },
+        { gx: 10, gy: 10 },
+        { gx: 0, gy: 10 },
+      ],
+    };
+    const size = calcAutoFontSize(room);
+    // 最短辺 = n辺(2グリッド), minSide = 2 * GRID = 40
+    // base = 40 * 0.25 = 10, label "Poly" = 4文字 → 10 / (4 * 0.35) = 7.14...
+    expect(size).toBeCloseTo(7.14, 1);
+
+    // BB計算（非polygon）なら minSide = min(10,10)*20 = 200 → 遥かに大きい値になる
+    const rectRoom = createRoom(0, 0, 10, 10);
+    rectRoom.label = 'Poly';
+    const rectSize = calcAutoFontSize(rectRoom);
+    expect(size).toBeLessThan(rectSize);
+  });
+
+  it('フォントサイズの最小値は6', () => {
+    const room = createRoom(0, 0, 1, 1);
+    room.label = 'VeryLongLabelThatShouldBeSmall';
+    const size = calcAutoFontSize(room);
+    expect(size).toBe(6);
   });
 });
 

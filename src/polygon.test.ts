@@ -13,6 +13,7 @@ import {
   edgeLength,
   pointToSegmentDistance,
   projectPointOnSegment,
+  edgeResizeCursor,
 } from './polygon.ts';
 import { GRID } from './grid.ts';
 
@@ -269,5 +270,48 @@ describe('projectPointOnSegment', () => {
   });
   it('終点はクランプ1', () => {
     expect(projectPointOnSegment(15, 0, 0, 0, 10, 0)).toBe(1);
+  });
+});
+
+describe('edgeResizeCursor', () => {
+  it('矩形の水平辺(n/s) → ew-resize', () => {
+    const room = makeRect(0, 0, 5, 3);
+    expect(edgeResizeCursor(room, 'n')).toBe('ew-resize');
+    expect(edgeResizeCursor(room, 's')).toBe('ew-resize');
+  });
+  it('矩形の垂直辺(e/w) → ns-resize', () => {
+    const room = makeRect(0, 0, 5, 3);
+    expect(edgeResizeCursor(room, 'e')).toBe('ns-resize');
+    expect(edgeResizeCursor(room, 'w')).toBe('ns-resize');
+  });
+  it('45度の斜め辺 → nwse-resize', () => {
+    // n辺: (0,0)→(5,5) = 45度
+    const room = makePolygon([
+      { gx: 0, gy: 0 },
+      { gx: 5, gy: 5 },
+      { gx: 0, gy: 10 },
+      { gx: -5, gy: 5 },
+    ]);
+    expect(edgeResizeCursor(room, 'n')).toBe('nwse-resize');
+  });
+  it('135度の斜め辺 → nesw-resize', () => {
+    // n辺: (5,0)→(0,5) = 135度
+    const room = makePolygon([
+      { gx: 5, gy: 0 },
+      { gx: 0, gy: 5 },
+      { gx: 5, gy: 10 },
+      { gx: 10, gy: 5 },
+    ]);
+    expect(edgeResizeCursor(room, 'n')).toBe('nesw-resize');
+  });
+  it('四角形の垂直辺 → ns-resize', () => {
+    // e辺: (5,0)→(5,5) = 垂直
+    const room = makePolygon([
+      { gx: 0, gy: 0 },
+      { gx: 5, gy: 0 },
+      { gx: 5, gy: 5 },
+      { gx: 0, gy: 5 },
+    ]);
+    expect(edgeResizeCursor(room, 'e')).toBe('ns-resize');
   });
 });
