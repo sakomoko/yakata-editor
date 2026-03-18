@@ -630,21 +630,23 @@ export function computeWallObjectPosition(
   px: number,
   py: number,
   objWidth: number,
+  snapToGrid = true,
 ): { side: WallSide; offset: number } {
   const { side } = nearestWallSide(room, px, py);
+  const snap = snapToGrid ? Math.round : (v: number) => v;
 
   if (isPolygonRoom(room)) {
     const edge = getEdgeEndpoints(room, side);
     const t = projectPointOnSegment(px, py, edge.start.px, edge.start.py, edge.end.px, edge.end.py);
     const sideLen = edge.length;
-    const offsetGrid = Math.round(t * sideLen - objWidth / 2);
+    const offsetGrid = snap(t * sideLen - objWidth / 2);
     return { side, offset: Math.max(0, Math.min(offsetGrid, sideLen - objWidth)) };
   }
 
   const rx = room.x * GRID;
   const ry = room.y * GRID;
   const along = side === 'n' || side === 's' ? px - rx : py - ry;
-  const offsetGrid = Math.round(along / GRID - objWidth / 2);
+  const offsetGrid = snap(along / GRID - objWidth / 2);
   const sideLen = side === 'n' || side === 's' ? room.w : room.h;
   return { side, offset: Math.max(0, Math.min(offsetGrid, sideLen - objWidth)) };
 }
@@ -734,8 +736,10 @@ export function computeWallObjectResize(
   py: number,
   origOffset: number,
   origWidth: number,
+  snapToGrid = true,
 ): { offset: number; width: number } {
   const sideLen = wallSideLength(room, obj.side);
+  const snap = snapToGrid ? Math.round : (v: number) => v;
   let snapped: number;
 
   if (isPolygonRoom(room)) {
@@ -748,13 +752,13 @@ export function computeWallObjectResize(
       edgeInfo.end.px,
       edgeInfo.end.py,
     );
-    snapped = Math.round(t * sideLen);
+    snapped = snap(t * sideLen);
   } else {
     const rx = room.x * GRID;
     const ry = room.y * GRID;
     const horizontal = obj.side === 'n' || obj.side === 's';
     const along = horizontal ? px - rx : py - ry;
-    snapped = Math.round(along / GRID);
+    snapped = snap(along / GRID);
   }
 
   let offset: number;

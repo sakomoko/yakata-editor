@@ -324,14 +324,14 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
   if (r) {
     if (shift) {
       toggleSelection(state.selection, r.id);
+      // Shift+トグルで選択が空になった場合は再選択してドラッグを開始可能にする
+      if (state.selection.size === 0) {
+        state.selection.add(r.id);
+      }
     } else {
       if (!state.selection.has(r.id)) {
         selectSingle(state.selection, r.id);
       }
-    }
-    if (state.selection.size === 0) {
-      ec.render();
-      return;
     }
     pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
     const expanded = expandWithLinked(state.rooms, state.selection);

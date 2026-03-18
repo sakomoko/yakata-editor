@@ -130,7 +130,8 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
     } else if (area.w > 0 && area.h > 0) {
       // 部屋作成: 包含する部屋がなければ新規作成にフォールバック
       pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
-      const room = createRoom(area.x, area.y, area.w, area.h);
+      const snap = e.shiftKey ? (v: number) => v : Math.round;
+      const room = createRoom(snap(area.x), snap(area.y), Math.max(1, snap(area.w)), Math.max(1, snap(area.h)));
       state.rooms.push(room);
       clearSelection(state.selection);
       state.selection.add(room.id);

@@ -173,16 +173,17 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
   } else if (state.drag.type === 'move') {
     const dx = m.gx - state.drag.start.gx;
     const dy = m.gy - state.drag.start.gy;
+    const snap = e.shiftKey ? (v: number) => v : Math.round;
     for (const [id, orig] of state.drag.originals) {
       const room = findRoomById(state.rooms, id);
       if (room) {
-        room.x = orig.x + dx;
-        room.y = orig.y + dy;
+        room.x = snap(orig.x + dx);
+        room.y = snap(orig.y + dy);
         if (room.vertices && orig.vertices) {
           for (let i = 0; i < 4; i++) {
             room.vertices[i] = {
-              gx: orig.vertices[i].gx + dx,
-              gy: orig.vertices[i].gy + dy,
+              gx: snap(orig.vertices[i].gx + dx),
+              gy: snap(orig.vertices[i].gy + dy),
             };
           }
         }
@@ -212,19 +213,20 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
     const targetId = state.drag.targetId;
     const target = findRoomById(state.rooms, targetId);
     if (target) {
+      const snap = e.shiftKey ? (v: number) => v : Math.round;
       if (d.includes('w')) {
-        target.x = Math.min(m.gx, o.x + o.w - 1);
-        target.w = Math.max(1, o.x + o.w - target.x);
+        target.x = snap(Math.min(m.gx, o.x + o.w - 1));
+        target.w = Math.max(1, snap(o.x + o.w) - target.x);
       }
       if (d.includes('e')) {
-        target.w = Math.max(1, m.gx - o.x);
+        target.w = Math.max(1, snap(m.gx - o.x));
       }
       if (d.includes('n')) {
-        target.y = Math.min(m.gy, o.y + o.h - 1);
-        target.h = Math.max(1, o.y + o.h - target.y);
+        target.y = snap(Math.min(m.gy, o.y + o.h - 1));
+        target.h = Math.max(1, snap(o.y + o.h) - target.y);
       }
       if (d.includes('s')) {
-        target.h = Math.max(1, m.gy - o.y);
+        target.h = Math.max(1, snap(m.gy - o.y));
       }
       clampWallObjects(target);
       clampAllInteriorObjects(target);
@@ -299,7 +301,7 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
     if (targetRoom) {
       const obj = findWallObjectById(targetRoom, drag.objectId);
       if (obj) {
-        const pos = computeWallObjectPosition(targetRoom, m.px, m.py, obj.width);
+        const pos = computeWallObjectPosition(targetRoom, m.px, m.py, obj.width, !e.shiftKey);
         obj.side = pos.side;
         obj.offset = pos.offset;
         // NOTE: 毎mousemoveで呼ぶためパフォーマンスコストがある。
@@ -321,6 +323,7 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
           m.py,
           drag.origOffset,
           drag.origWidth,
+          !e.shiftKey,
         );
         obj.offset = result.offset;
         obj.width = result.width;
@@ -392,18 +395,20 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
     const drag = state.drag;
     const ft = findFreeTextById(state.freeTexts, drag.freeTextId);
     if (ft) {
-      ft.gx = m.gx - drag.offsetGx;
-      ft.gy = m.gy - drag.offsetGy;
+      const snap = e.shiftKey ? (v: number) => v : Math.round;
+      ft.gx = snap(m.gx - drag.offsetGx);
+      ft.gy = snap(m.gy - drag.offsetGy);
     }
   } else if (state.drag.type === 'resizeFreeText') {
     const drag = state.drag;
     const ft = findFreeTextById(state.freeTexts, drag.freeTextId);
     if (ft) {
       const result = computeFreeTextResize(drag.dir, drag.orig, m.gx, m.gy);
-      ft.gx = result.gx;
-      ft.gy = result.gy;
-      ft.w = result.w;
-      ft.h = result.h;
+      const snap = e.shiftKey ? (v: number) => v : Math.round;
+      ft.gx = snap(result.gx);
+      ft.gy = snap(result.gy);
+      ft.w = Math.max(1, snap(result.w));
+      ft.h = Math.max(1, snap(result.h));
     }
   } else if (state.drag.type === 'paint') {
     const stroke = findFreeStrokeById(state.freeStrokes, state.drag.strokeId);
