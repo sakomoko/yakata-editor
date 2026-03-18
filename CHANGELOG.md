@@ -104,8 +104,14 @@
 
 ### Changed
 
+- ヘッダーのタイトルとタブバーをMUI AppBar/Toolbar/Tabsで1行に統合し、デッドスペースを削減
+- フッターのステータスバーとコマンドボタンを1行に統合（左にステータス、右にコマンド）
+- TabBarをMUI Tabs/Tabコンポーネントで再実装（タブの閉じるボタンはアクティブタブのみ表示に変更。HTML仕様上、button内にbuttonをネストできないため）
+- ツールバーボタンにMUI Iconsを追加（Add, Save, FolderOpen, Image, Undo, Brush, HelpOutline）
+- ステータス表示をmonospace/固定幅にし、座標表示のガタつきを解消
+- グローバルCSSリセット（`* { margin: 0; padding: 0 }`）を削除し、MUI CssBaselineに委譲
+- レイアウトを縦方向flexboxに変更し、ピクセル固定の高さ指定を排除
 - エディタ内部のストレージ直接呼び出し（`persistToStorage`/`persistViewport`）をコールバック（`onAutoSave`/`onViewportChange`）に分離し、App.tsxが保存先を制御する設計に変更
-- レイアウトをヘッダー→タブバー→キャンバス→ステータスバー→ツールバーの配置に変更
 - ツールバーの「新規」ボタンを「新規プロジェクト」に変更し、新規タブ追加として動作するように変更
 - `context-menu-handler.ts` のメニュー構築ロジックを5つのbuild関数に分割し、配置パターンの共通化・型改善を実施
 - `rooms.find((r) => r.id === ...)` 等のIDルックアップパターン46箇所を `lookup.ts` の共通ヘルパー5関数に集約

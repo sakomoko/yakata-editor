@@ -1,4 +1,12 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import Box from '@mui/material/Box';
+import MuiTab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
+import IconButton from '@mui/material/IconButton';
+import Popover from '@mui/material/Popover';
+import AddIcon from '@mui/icons-material/Add';
+import MenuIcon from '@mui/icons-material/Menu';
+import CloseIcon from '@mui/icons-material/Close';
 import ContextMenu from './ContextMenu.tsx';
 import type { ContextMenuItem } from './context-menu.ts';
 
@@ -25,6 +33,7 @@ export default function TabBar({
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
+  const [renameAnchorEl, setRenameAnchorEl] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     if (editingId && inputRef.current) {
@@ -33,9 +42,10 @@ export default function TabBar({
     }
   }, [editingId]);
 
-  const handleDoubleClick = useCallback((id: string, name: string) => {
+  const handleDoubleClick = useCallback((id: string, name: string, e: React.MouseEvent) => {
     setEditingId(id);
     setEditValue(name);
+    setRenameAnchorEl(e.currentTarget as HTMLElement);
   }, []);
 
   const commitRename = () => {
@@ -43,12 +53,15 @@ export default function TabBar({
       onTabRename(editingId, editValue.trim());
     }
     setEditingId(null);
+    setRenameAnchorEl(null);
   };
 
   const handleContextMenu = useCallback((e: React.MouseEvent, tabId: string) => {
     e.preventDefault();
     setCtxMenu({ x: e.clientX, y: e.clientY, tabId });
   }, []);
+
+  const activeId: string | false = tabs.find((t) => t.isActive)?.id ?? false;
 
   const ctxMenuItems: ContextMenuItem[] = useMemo(() => {
     if (!ctxMenu) return [];
@@ -61,7 +74,13 @@ export default function TabBar({
       },
       {
         label: '名前を変更',
-        action: () => handleDoubleClick(tabId, tabName),
+        action: () => {
+          setEditingId(tabId);
+          setEditValue(tabName);
+          // コンテキストメニュー経由の場合、対象タブのDOM要素をanchorに使う
+          const tabEl = document.querySelector(`[data-tab-id="${tabId}"]`);
+          setRenameAnchorEl(tabEl as HTMLElement | null);
+        },
       },
     ];
     if (tabs.length > 1) {
@@ -75,169 +94,128 @@ export default function TabBar({
   }, [ctxMenu, tabs, onTabDuplicate, onTabClose, handleDoubleClick]);
 
   return (
-    <div style={barStyle}>
-      <div className="tab-bar-tabs" style={tabsContainerStyle}>
+    <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center' }}>
+      <Tabs
+        value={activeId}
+        onChange={(_e, newValue: string) => onTabClick(newValue)}
+        variant="scrollable"
+        scrollButtons="auto"
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          '& .MuiTabs-indicator': { height: 3 },
+          '& .MuiTab-root': {
+            minHeight: 40,
+            textTransform: 'none',
+            fontSize: 13,
+            py: 0.5,
+          },
+        }}
+      >
         {tabs.map((tab) => (
-          <div
+          <MuiTab
             key={tab.id}
-            style={{
-              ...tabStyle,
-              ...(tab.isActive ? activeTabStyle : inactiveTabStyle),
-            }}
-            onClick={() => onTabClick(tab.id)}
-            onDoubleClick={() => handleDoubleClick(tab.id, tab.name)}
+            value={tab.id}
+            data-tab-id={tab.id}
+            onDoubleClick={(e) => handleDoubleClick(tab.id, tab.name, e)}
             onContextMenu={(e) => handleContextMenu(e, tab.id)}
-          >
-            {editingId === tab.id ? (
-              <input
-                ref={inputRef}
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onBlur={commitRename}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') commitRename();
-                  if (e.key === 'Escape') setEditingId(null);
-                  e.stopPropagation();
+            label={
+              <Box
+                component="span"
+                sx={{
+                  maxWidth: 120,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
                 }}
-                onClick={(e) => e.stopPropagation()}
-                style={inputStyle}
-              />
-            ) : (
-              <span style={tabLabelStyle}>{tab.name}</span>
-            )}
-            {tabs.length > 1 && (
-              <button
-                style={closeStyle}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onTabClose(tab.id);
-                }}
-                title="タブを閉じる"
               >
-                ×
-              </button>
-            )}
-          </div>
+                {tab.name}
+              </Box>
+            }
+          />
         ))}
-      </div>
-      <button
-        style={addButtonStyle}
+      </Tabs>
+
+      {/* 閉じるボタン: Tabの外に配置してネストしたインタラクティブ要素を回避 */}
+      {tabs.length > 1 && (() => {
+        const active = tabs.find((t) => t.isActive);
+        return active ? (
+          <IconButton
+            size="small"
+            onClick={() => onTabClose(active.id)}
+            aria-label="タブを閉じる"
+            sx={{
+              ml: -1,
+              mr: 0.5,
+              width: 20,
+              height: 20,
+              color: '#888',
+              '&:hover': { color: '#fff' },
+            }}
+          >
+            <CloseIcon sx={{ fontSize: 14 }} />
+          </IconButton>
+        ) : null;
+      })()}
+
+      {/* リネーム用Popover */}
+      <Popover
+        open={editingId !== null && renameAnchorEl !== null}
+        anchorEl={renameAnchorEl}
+        onClose={commitRename}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        disableAutoFocus={false}
+        slotProps={{ paper: { sx: { bgcolor: '#222', p: 0.5 } } }}
+      >
+        <input
+          ref={inputRef}
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={commitRename}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commitRename();
+            if (e.key === 'Escape') {
+              setEditingId(null);
+              setRenameAnchorEl(null);
+            }
+            e.stopPropagation();
+          }}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: '#222',
+            color: '#fff',
+            border: '1px solid #666',
+            fontSize: 12,
+            padding: '2px 4px',
+            width: 120,
+            outline: 'none',
+          }}
+        />
+      </Popover>
+
+      <IconButton
         onClick={onTabAdd}
         title="新規プロジェクト"
         aria-label="新規プロジェクト"
+        sx={{ color: '#aaa', '&:hover': { color: '#fff' } }}
       >
-        +
-      </button>
-      <button
-        style={listButtonStyle}
+        <AddIcon />
+      </IconButton>
+      <IconButton
         onClick={onOpenProjectList}
         title="プロジェクト一覧"
         aria-label="プロジェクト一覧"
+        sx={{ color: '#aaa', mr: 0.5, '&:hover': { color: '#fff' } }}
       >
-        ☰
-      </button>
+        <MenuIcon />
+      </IconButton>
+
       <ContextMenu
         open={ctxMenu !== null}
         anchorPosition={ctxMenu ? { top: ctxMenu.y, left: ctxMenu.x } : undefined}
         items={ctxMenuItems}
         onClose={() => setCtxMenu(null)}
       />
-    </div>
+    </Box>
   );
 }
-
-const barStyle: React.CSSProperties = {
-  height: 32,
-  backgroundColor: '#2a2a2a',
-  display: 'flex',
-  alignItems: 'flex-end',
-  paddingLeft: 4,
-  overflow: 'hidden',
-};
-
-const tabsContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  flex: 1,
-  alignItems: 'flex-end',
-  overflowX: 'auto',
-  overflowY: 'hidden',
-  scrollbarWidth: 'none',
-  gap: 2,
-};
-
-const tabStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '0 12px',
-  width: 160,
-  minWidth: 100,
-  height: 26,
-  cursor: 'pointer',
-  color: '#aaa',
-  fontSize: 12,
-  whiteSpace: 'nowrap',
-  userSelect: 'none',
-  flexShrink: 0,
-  borderRadius: '6px 6px 0 0',
-  transition: 'background-color 0.1s',
-};
-
-const activeTabStyle: React.CSSProperties = {
-  backgroundColor: '#555',
-  color: '#eee',
-  height: 28,
-};
-
-const inactiveTabStyle: React.CSSProperties = {
-  backgroundColor: '#383838',
-};
-
-const tabLabelStyle: React.CSSProperties = {
-  maxWidth: 120,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-};
-
-const closeStyle: React.CSSProperties = {
-  marginLeft: 6,
-  fontSize: 14,
-  lineHeight: '14px',
-  color: '#888',
-  cursor: 'pointer',
-  background: 'none',
-  border: 'none',
-  padding: 0,
-};
-
-const inputStyle: React.CSSProperties = {
-  background: '#222',
-  color: '#fff',
-  border: '1px solid #666',
-  fontSize: 12,
-  padding: '0 4px',
-  width: 100,
-  outline: 'none',
-};
-
-const addButtonStyle: React.CSSProperties = {
-  background: 'none',
-  border: 'none',
-  color: '#aaa',
-  fontSize: 18,
-  cursor: 'pointer',
-  padding: '0 8px',
-  height: 32,
-  lineHeight: '32px',
-};
-
-const listButtonStyle: React.CSSProperties = {
-  background: 'none',
-  border: 'none',
-  color: '#aaa',
-  fontSize: 14,
-  cursor: 'pointer',
-  padding: '0 8px',
-  height: 32,
-  lineHeight: '32px',
-};
