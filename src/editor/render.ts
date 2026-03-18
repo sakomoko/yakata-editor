@@ -152,7 +152,7 @@ export function updateStatus(ec: EditorContext): void {
       text += ` | ${sel.label || '(?)'} ${sel.w}x${sel.h}`;
     }
   } else if (state.selection.size > 1) {
-    text += ` | ${state.selection.size}`;
+    text += ` | ${state.selection.size} sel`;
   }
   callbacks.onStatusChange(text);
 }

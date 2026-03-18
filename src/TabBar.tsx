@@ -3,6 +3,7 @@ import Box from '@mui/material/Box';
 import MuiTab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import IconButton from '@mui/material/IconButton';
+import Popover from '@mui/material/Popover';
 import AddIcon from '@mui/icons-material/Add';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
@@ -32,6 +33,7 @@ export default function TabBar({
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
+  const [renameAnchorEl, setRenameAnchorEl] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     if (editingId && inputRef.current) {
@@ -40,9 +42,10 @@ export default function TabBar({
     }
   }, [editingId]);
 
-  const handleDoubleClick = useCallback((id: string, name: string) => {
+  const handleDoubleClick = useCallback((id: string, name: string, e: React.MouseEvent) => {
     setEditingId(id);
     setEditValue(name);
+    setRenameAnchorEl(e.currentTarget as HTMLElement);
   }, []);
 
   const commitRename = () => {
@@ -50,6 +53,7 @@ export default function TabBar({
       onTabRename(editingId, editValue.trim());
     }
     setEditingId(null);
+    setRenameAnchorEl(null);
   };
 
   const handleContextMenu = useCallback((e: React.MouseEvent, tabId: string) => {
@@ -70,7 +74,13 @@ export default function TabBar({
       },
       {
         label: '名前を変更',
-        action: () => handleDoubleClick(tabId, tabName),
+        action: () => {
+          setEditingId(tabId);
+          setEditValue(tabName);
+          // コンテキストメニュー経由の場合、対象タブのDOM要素をanchorに使う
+          const tabEl = document.querySelector(`[data-tab-id="${tabId}"]`);
+          setRenameAnchorEl(tabEl as HTMLElement | null);
+        },
       },
     ];
     if (tabs.length > 1) {
@@ -106,7 +116,8 @@ export default function TabBar({
           <MuiTab
             key={tab.id}
             value={tab.id}
-            onDoubleClick={() => handleDoubleClick(tab.id, tab.name)}
+            data-tab-id={tab.id}
+            onDoubleClick={(e) => handleDoubleClick(tab.id, tab.name, e)}
             onContextMenu={(e) => handleContextMenu(e, tab.id)}
             label={
               <Box
@@ -148,36 +159,40 @@ export default function TabBar({
           ) : null,
         )}
 
-      {/* リネーム用input: Tabの外にオーバーレイ表示 */}
-      {editingId && (
-        <Box
-          sx={{
-            position: 'absolute',
-            zIndex: 1,
+      {/* リネーム用Popover */}
+      <Popover
+        open={editingId !== null && renameAnchorEl !== null}
+        anchorEl={renameAnchorEl}
+        onClose={commitRename}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        disableAutoFocus={false}
+        slotProps={{ paper: { sx: { bgcolor: '#222', p: 0.5 } } }}
+      >
+        <input
+          ref={inputRef}
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={commitRename}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commitRename();
+            if (e.key === 'Escape') {
+              setEditingId(null);
+              setRenameAnchorEl(null);
+            }
+            e.stopPropagation();
           }}
-        >
-          <input
-            ref={inputRef}
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onBlur={commitRename}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') commitRename();
-              if (e.key === 'Escape') setEditingId(null);
-              e.stopPropagation();
-            }}
-            style={{
-              background: '#222',
-              color: '#fff',
-              border: '1px solid #666',
-              fontSize: 12,
-              padding: '2px 4px',
-              width: 120,
-              outline: 'none',
-            }}
-          />
-        </Box>
-      )}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: '#222',
+            color: '#fff',
+            border: '1px solid #666',
+            fontSize: 12,
+            padding: '2px 4px',
+            width: 120,
+            outline: 'none',
+          }}
+        />
+      </Popover>
 
       <IconButton
         onClick={onTabAdd}

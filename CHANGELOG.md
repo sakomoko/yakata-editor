@@ -106,7 +106,7 @@
 
 - ヘッダーのタイトルとタブバーをMUI AppBar/Toolbar/Tabsで1行に統合し、デッドスペースを削減
 - フッターのステータスバーとコマンドボタンを1行に統合（左にステータス、右にコマンド）
-- TabBarをMUI Tabs/Tabコンポーネントで再実装
+- TabBarをMUI Tabs/Tabコンポーネントで再実装（タブの閉じるボタンはアクティブタブのみ表示に変更。HTML仕様上、button内にbuttonをネストできないため）
 - ツールバーボタンにMUI Iconsを追加（Add, Save, FolderOpen, Image, Undo, Brush, HelpOutline）
 - ステータス表示をmonospace/固定幅にし、座標表示のガタつきを解消
 - グローバルCSSリセット（`* { margin: 0; padding: 0 }`）を削除し、MUI CssBaselineに委譲
