@@ -278,13 +278,10 @@ export default function App() {
 
     // Migration & initial load
     migrateIfNeeded();
-    const preSyncCount = loadProjectIndex().length;
     syncWithServer()
       .then(() => {
-        const postSyncIndex = loadProjectIndex();
-        if (postSyncIndex.length !== preSyncCount) {
-          setProjectIndex(postSyncIndex);
-        }
+        // 件数だけでなくメタデータ（name, updatedAt等）も更新されうるので常に反映
+        setProjectIndex(loadProjectIndex());
         // 同期完了後、アクティブプロジェクトを無条件にエディタへ再読み込み
         // ※ syncWithServer は起動時に1回のみ呼ばれる前提。
         //    ポーリング等で繰り返し呼ぶ場合はコミット前の編集が消失するため要改修。

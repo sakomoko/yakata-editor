@@ -181,7 +181,7 @@ async function syncFromServer(): Promise<void> {
   try {
     const res = await fetch('/api/projects');
     if (!res.ok) return;
-    const serverIndex = (await res.json()) as ProjectMeta[];
+    const serverIndex = ((await res.json()) as unknown[]).filter(isValidProjectMeta);
     const localIndex = loadProjectIndex();
     const localMap = new Map(localIndex.map((m) => [m.id, m]));
 
