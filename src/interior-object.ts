@@ -697,6 +697,8 @@ export function clampInteriorObject(room: Room, obj: RoomInteriorObject): void {
   if (isPolygonRoom(room)) {
     const verts = getRoomVertices(room);
     const centroid = getQuadCentroid(verts);
+    // Guard: if centroid itself is outside the quad (e.g. concave shape), skip clamp
+    if (!pointInQuad(verts, centroid.gx, centroid.gy)) return;
     const centerGx = room.x + obj.x + obj.w / 2;
     const centerGy = room.y + obj.y + obj.h / 2;
     if (!pointInQuad(verts, centerGx, centerGy)) {
