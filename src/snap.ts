@@ -1,8 +1,12 @@
 import type { Room } from './types.ts';
 import { getRoomVertices, projectPointOnSegment } from './polygon.ts';
 
+/** スナップ判定の閾値（グリッド単位） */
+export const SNAP_THRESHOLD = 0.5;
+
 export type SnapResult =
-  | { type: 'vertex' | 'edge'; gx: number; gy: number }
+  | { type: 'vertex'; gx: number; gy: number }
+  | { type: 'edge'; gx: number; gy: number }
   | { type: 'none' };
 
 export interface SnapIndicator {
@@ -23,17 +27,17 @@ export function findVertexSnap(
   threshold: number,
 ): SnapResult {
   // 対象部屋の頂点をキャッシュ
-  const targets: ReturnType<typeof getRoomVertices>[] = [];
+  const vertexGroups: ReturnType<typeof getRoomVertices>[] = [];
   for (const room of rooms) {
     if (room.id === excludeRoomId) continue;
-    targets.push(getRoomVertices(room));
+    vertexGroups.push(getRoomVertices(room));
   }
 
   // 1. 頂点スナップ
   let bestDist = Infinity;
   let bestVertex: { gx: number; gy: number } | null = null;
 
-  for (const verts of targets) {
+  for (const verts of vertexGroups) {
     for (const v of verts) {
       const dist = Math.hypot(v.gx - cursorGx, v.gy - cursorGy);
       if (dist < threshold && dist < bestDist) {
@@ -49,7 +53,7 @@ export function findVertexSnap(
   bestDist = Infinity;
   let bestEdge: { gx: number; gy: number } | null = null;
 
-  for (const verts of targets) {
+  for (const verts of vertexGroups) {
     for (let i = 0; i < verts.length; i++) {
       const j = (i + 1) % verts.length;
       const x1 = verts[i].gx,
