@@ -95,6 +95,13 @@ describe('findVertexSnap', () => {
     expect(result.type).toBe('none');
   });
 
+  it('threshold 未満の距離はスナップする', () => {
+    // room A の辺 y=0 から 0.499 離れた位置 → 辺スナップされるはず
+    const result = findVertexSnap(rooms, 'C', 2.5, -0.499, 0.5);
+    expect(result.type).toBe('edge');
+    expect(result).toMatchObject({ gx: 2.5, gy: 0 });
+  });
+
   it('複数部屋の頂点が近い場合、最も近いものにスナップ', () => {
     const closeRooms = [makeRoom('A', 0, 0, 5, 5), makeRoom('B', 5, 0, 5, 5)];
     // (5, 0) は両部屋が共有する頂点。(4.9, 0.1) は A の (5,0) に最も近い

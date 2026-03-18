@@ -9,8 +9,11 @@ export type SnapResult =
   | { type: 'edge'; gx: number; gy: number }
   | { type: 'none' };
 
+/** スナップインジケーターの描画情報。座標はワールドピクセル座標。 */
 export interface SnapIndicator {
+  /** ワールドピクセル X 座標 */
   px: number;
+  /** ワールドピクセル Y 座標 */
   py: number;
   type: 'vertex' | 'edge';
 }
