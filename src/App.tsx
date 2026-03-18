@@ -127,6 +127,8 @@ export default function App() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const deleteTargetIdRef = useRef<string | null>(null);
   const [deleteTargetName, setDeleteTargetName] = useState('');
+  // セッション開始後に一度でも編集があったかを追跡（同期後リロード判定用）
+  const didEditRef = useRef(false);
 
   const handleRoomEdit = useCallback(
     (data: RoomEditData): Promise<{ label: string; fontSize?: number } | null> => {
@@ -283,10 +285,9 @@ export default function App() {
         // 件数だけでなくメタデータ（name, updatedAt等）も更新されうるので常に反映
         setProjectIndex(loadProjectIndex());
         // 同期完了後、ユーザーがまだ編集していなければエディタに再読み込み。
-        // Undoスタックが空 = 未編集とみなす。編集済みの場合はユーザーの変更を優先する。
+        // didEditRef でセッション中の編集有無を追跡（Undo で history が空になるケースにも対応）。
         const activeId = tabStateRef.current.activeTabId;
-        const editor = editorRef.current;
-        if (activeId && editor && editor.getState().history.length === 0) {
+        if (activeId && !didEditRef.current) {
           loadProjectIntoEditor(activeId);
         }
       })
@@ -340,7 +341,10 @@ export default function App() {
         onFreeTextEdit: handleFreeTextEdit,
         onContextMenu: handleContextMenu,
         // editorRef は init 完了後にセットされるが、コールバックはユーザー操作時のみ呼ばれるので問題ない
-        onAutoSave: () => saveCurrentProject(),
+        onAutoSave: () => {
+          didEditRef.current = true;
+          saveCurrentProject();
+        },
         // onViewportChange はホイール等で高頻度に呼ばれるため、debounce で全データシリアライズの頻度を抑制
         onViewportChange: () => debouncedSaveCurrentProject(),
         onPaintModeChange: (mode: boolean) => setPaintMode(mode),
