@@ -66,7 +66,14 @@ describe('calcAutoFontSize', () => {
     };
     const size = calcAutoFontSize(room);
     // 最短辺 = n辺(2グリッド), minSide = 2 * GRID = 40
-    expect(size).toBeGreaterThanOrEqual(6);
+    // base = 40 * 0.25 = 10, label "Poly" = 4文字 → 10 / (4 * 0.35) = 7.14...
+    expect(size).toBeCloseTo(7.14, 1);
+
+    // BB計算（非polygon）なら minSide = min(10,10)*20 = 200 → 遥かに大きい値になる
+    const rectRoom = createRoom(0, 0, 10, 10);
+    rectRoom.label = 'Poly';
+    const rectSize = calcAutoFontSize(rectRoom);
+    expect(size).toBeLessThan(rectSize);
   });
 
   it('フォントサイズの最小値は6', () => {

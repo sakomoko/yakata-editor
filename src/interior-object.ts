@@ -695,6 +695,7 @@ export function clampInteriorObject(room: Room, obj: RoomInteriorObject): void {
 
   // For polygon rooms, push toward centroid if center is outside the shape
   if (isPolygonRoom(room)) {
+    // verts and center* are both in absolute grid coordinates
     const verts = getRoomVertices(room);
     const centroid = getQuadCentroid(verts);
     // Guard: if centroid itself is outside the quad (e.g. concave shape), skip clamp
@@ -702,7 +703,7 @@ export function clampInteriorObject(room: Room, obj: RoomInteriorObject): void {
     const centerGx = room.x + obj.x + obj.w / 2;
     const centerGy = room.y + obj.y + obj.h / 2;
     if (!pointInQuad(verts, centerGx, centerGy)) {
-      // Binary search toward centroid to find the closest valid position
+      // Invariant: t=0 (original position) is outside, t=1 (centroid) is inside (guaranteed by guard above)
       let lo = 0,
         hi = 1;
       for (let i = 0; i < 16; i++) {
