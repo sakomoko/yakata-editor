@@ -333,6 +333,22 @@ describe('computeWallObjectPosition', () => {
     expect(result.side).toBe('n');
     expect(result.offset).toBe(2);
   });
+
+  it('snapToGrid=falseで浮動小数点のオフセットを返す', () => {
+    const room = createRoom(0, 0, 10, 10);
+    // px=3.3*GRID → along=3.3*GRID, offsetGrid = 3.3 - 0.5 = 2.8 (丸めなし)
+    const result = computeWallObjectPosition(room, 3.3 * GRID, 0.5 * GRID, 1, false);
+    expect(result.side).toBe('n');
+    expect(result.offset).not.toBe(Math.round(result.offset)); // 非整数
+    expect(result.offset).toBeCloseTo(2.8, 5);
+  });
+
+  it('snapToGrid=trueでグリッドにスナップしたオフセットを返す', () => {
+    const room = createRoom(0, 0, 10, 10);
+    const result = computeWallObjectPosition(room, 3.3 * GRID, 0.5 * GRID, 1, true);
+    expect(result.side).toBe('n');
+    expect(result.offset).toBe(3); // Math.round(2.8) = 3
+  });
 });
 
 describe('createWallDoor', () => {
@@ -1058,5 +1074,25 @@ describe('computeWallObjectResize', () => {
     const result = computeWallObjectResize(room, win1, 'end', 6 * GRID, 0, 2, 1);
     expect(result.offset).toBe(win1.offset);
     expect(result.width).toBe(win1.width);
+  });
+
+  it('snapToGrid=falseで浮動小数点の幅を返す（endエッジ）', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 2, 1);
+    room.wallObjects = [win];
+    // Drag end edge to x = 4.7*GRID → snapped = 4.7, width = 4.7 - 2 = 2.7
+    const result = computeWallObjectResize(room, win, 'end', 4.7 * GRID, 0, 2, 1, false);
+    expect(result.offset).toBe(2);
+    expect(result.width).toBeCloseTo(2.7, 5);
+  });
+
+  it('snapToGrid=falseで浮動小数点の幅を返す（startエッジ）', () => {
+    const room = createRoom(0, 0, 10, 5);
+    const win = createWallWindow('n', 3, 2);
+    room.wallObjects = [win];
+    // Drag start edge to x = 1.3*GRID → snapped = 1.3, origEnd = 5, width = 5 - 1.3 = 3.7
+    const result = computeWallObjectResize(room, win, 'start', 1.3 * GRID, 0, 3, 2, false);
+    expect(result.offset).toBeCloseTo(1.3, 5);
+    expect(result.width).toBeCloseTo(3.7, 5);
   });
 });

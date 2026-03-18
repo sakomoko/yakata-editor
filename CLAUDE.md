@@ -69,7 +69,7 @@ Canvas上でのマウス操作 → editor/ のイベントハンドラ → state
 
 ### Key Design Decisions
 
-- 座標系は2種類: ピクセル座標(px, py)とグリッド座標(gx, gy)。マウス座標は常にグリッドにスナップ
+- 座標系は2種類: ピクセル座標(px, py)とグリッド座標(gx, gy)。マウス座標は通常グリッドにスナップ（Shift押下時はサブグリッド＝浮動小数点を許容）
 - DragStateはdiscriminated union (`create | move | resize | null`)
 - 部屋のヒット判定はz-order考慮(後に追加された部屋が優先)
 - キャンバスは無限（固定境界なし）。グリッドは可視範囲のみ描画
