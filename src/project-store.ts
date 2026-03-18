@@ -125,14 +125,12 @@ export async function syncWithServer(): Promise<void> {
   // 各プロジェクトについて、updatedAt が新しいほうの meta を採用してマージ
   const localMap = new Map(index.map((m) => [m.id, m]));
   const mergedIndex: ProjectMeta[] = [];
-  const serverOnlyIds = new Set<string>();
 
   // サーバー側のプロジェクトをベースに、ローカルのほうが新しければローカルを採用
   for (const serverMeta of serverIndex) {
     const localMeta = localMap.get(serverMeta.id);
     if (!localMeta) {
       mergedIndex.push(serverMeta);
-      serverOnlyIds.add(serverMeta.id);
     } else {
       // updatedAt が新しいほうを採用
       mergedIndex.push(
@@ -210,10 +208,10 @@ async function syncFromServer(): Promise<void> {
       if (result.isNew) {
         localIndex.push(result.meta);
       } else {
-        // 既存プロジェクトのメタデータ更新
-        const existing = localIndex.find((m) => m.id === result.meta.id);
-        if (existing) {
-          existing.updatedAt = result.meta.updatedAt;
+        // 既存プロジェクトのメタデータを全体上書き（name等の変更も反映）
+        const idx = localIndex.findIndex((m) => m.id === result.meta.id);
+        if (idx !== -1) {
+          localIndex[idx] = result.meta;
         }
       }
       try {

@@ -285,7 +285,7 @@ export default function App() {
         if (postSyncIndex.length !== preSyncCount) {
           setProjectIndex(postSyncIndex);
         }
-        // 同期でアクティブプロジェクトのデータが更新された場合、エディタに再読み込み
+        // 同期完了後、アクティブプロジェクトを無条件にエディタへ再読み込み
         const activeId = tabStateRef.current.activeTabId;
         if (activeId) {
           loadProjectIntoEditor(activeId);
