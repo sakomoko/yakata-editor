@@ -1,4 +1,4 @@
-import type { FreeText, GroupScaleOriginal } from '../types.ts';
+import type { FreeText, GroupScaleOriginal, Room } from '../types.ts';
 import { findFreeTextById } from '../lookup.ts';
 import { GRID } from '../grid.ts';
 import {
@@ -200,12 +200,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
             h: room.h,
             fontSize: room.fontSize,
             vertices: room.vertices
-              ? (room.vertices.map((v) => ({ gx: v.gx, gy: v.gy })) as [
-                  { gx: number; gy: number },
-                  { gx: number; gy: number },
-                  { gx: number; gy: number },
-                  { gx: number; gy: number },
-                ])
+              ? ([...room.vertices.map((v) => ({ gx: v.gx, gy: v.gy }))] as Room['vertices'])
               : undefined,
             wallObjects: room.wallObjects?.map((wo) => ({
               id: wo.id,
@@ -343,16 +338,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
     const expanded = expandWithLinked(state.rooms, state.selection);
     const originals = new Map<
       string,
-      {
-        x: number;
-        y: number;
-        vertices?: [
-          { gx: number; gy: number },
-          { gx: number; gy: number },
-          { gx: number; gy: number },
-          { gx: number; gy: number },
-        ];
-      }
+      { x: number; y: number; vertices?: Room['vertices'] }
     >();
     for (const room of state.rooms) {
       if (expanded.has(room.id)) {
@@ -360,12 +346,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
           x: room.x,
           y: room.y,
           vertices: room.vertices
-            ? (room.vertices.map((v) => ({ gx: v.gx, gy: v.gy })) as [
-                { gx: number; gy: number },
-                { gx: number; gy: number },
-                { gx: number; gy: number },
-                { gx: number; gy: number },
-              ])
+            ? ([...room.vertices.map((v) => ({ gx: v.gx, gy: v.gy }))] as Room['vertices'])
             : undefined,
         });
       }

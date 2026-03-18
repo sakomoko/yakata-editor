@@ -241,7 +241,7 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
       room.w = scaled.w;
       room.h = scaled.h;
 
-      // vertices: アンカー基準でスケーリング
+      // vertices: アンカー基準でスケーリング後、BBを頂点から再計算して整合性を保つ
       if (orig.vertices && room.vertices) {
         for (let i = 0; i < 4; i++) {
           room.vertices[i] = {
@@ -249,6 +249,7 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
             gy: Math.round(anchor.gy + (orig.vertices[i].gy - anchor.gy) * scale),
           };
         }
+        updateBoundingBox(room);
       }
 
       // fontSize: 未設定(undefined)の場合は部屋サイズから自動計算されるためスケール不要

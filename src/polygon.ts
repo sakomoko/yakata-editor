@@ -53,7 +53,11 @@ export function pointInQuad(
   return inside;
 }
 
-/** 重心を計算（グリッド座標） */
+/**
+ * 頂点座標の平均を返す（グリッド座標）。
+ * 注: 一般四角形の幾何学的重心（面積重心）とは異なるが、
+ * ラベル配置用の近似的な中心点として十分な精度を持つ。
+ */
 export function getQuadCentroid(vertices: [GridPoint, GridPoint, GridPoint, GridPoint]): {
   gx: number;
   gy: number;

@@ -90,7 +90,11 @@ export interface Room {
   linkGroup?: string;
   wallObjects?: WallObject[];
   interiorObjects?: RoomInteriorObject[];
-  /** 4頂点（時計回り: NW,NE,SE,SW）。未設定時は矩形として扱う */
+  /**
+   * 4頂点（初期配置時は時計回り: NW,NE,SE,SW）。未設定時は矩形として扱う。
+   * 頂点ドラッグ後はインデックスと方角の対応が崩れるが、辺のインデックス順序
+   * （0→1, 1→2, 2→3, 3→0 が n, e, s, w に対応）は維持される。
+   */
   vertices?: [GridPoint, GridPoint, GridPoint, GridPoint];
 }
 

@@ -128,11 +128,19 @@ function drawPolygonRoom(
     const centroid = getQuadCentroid(verts);
     const autoSize = calcAutoFontSize(room);
     const fontSize = room.fontSize ?? autoSize;
+    // 各辺の長さの最小値をラベル幅上限に使用（AABB幅だと斜め四角形でははみ出す）
+    const minEdge = Math.min(
+      Math.hypot(verts[1].gx - verts[0].gx, verts[1].gy - verts[0].gy),
+      Math.hypot(verts[2].gx - verts[1].gx, verts[2].gy - verts[1].gy),
+      Math.hypot(verts[3].gx - verts[2].gx, verts[3].gy - verts[2].gy),
+      Math.hypot(verts[0].gx - verts[3].gx, verts[0].gy - verts[3].gy),
+    );
+    const maxWidth = minEdge * GRID * 0.9;
     ctx.fillStyle = '#222';
     ctx.font = `${fontSize}px system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(room.label, centroid.gx * GRID, centroid.gy * GRID, room.w * GRID * 0.9);
+    ctx.fillText(room.label, centroid.gx * GRID, centroid.gy * GRID, maxWidth);
   }
 
   // Interior objects (BBベースclamp)

@@ -76,6 +76,8 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
   if (state.drag.type === 'moveVertex') {
     const room = findRoomById(state.rooms, state.drag.roomId);
     if (room) {
+      // mousemove でも毎フレーム clamp しているが、最後の mousemove と mouseup の間に
+      // 座標が変わる可能性があるため、確定時に再度 clamp して最終状態を保証する
       clampWallObjects(room);
       clampAllInteriorObjects(room);
     }
