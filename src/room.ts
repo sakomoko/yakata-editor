@@ -9,7 +9,7 @@ import {
   getQuadCentroid,
   pointInQuad,
   getVertexHandles,
-  edgeLength,
+  minEdgeLength,
 } from './polygon.ts';
 
 export function createRoom(x: number, y: number, w: number, h: number, label = ''): Room {
@@ -19,8 +19,7 @@ export function createRoom(x: number, y: number, w: number, h: number, label = '
 export function calcAutoFontSize(room: Room): number {
   let minSide: number;
   if (isPolygonRoom(room)) {
-    const sides = (['n', 'e', 's', 'w'] as const).map((s) => edgeLength(room, s));
-    minSide = Math.min(...sides) * GRID;
+    minSide = minEdgeLength(room) * GRID;
   } else {
     minSide = Math.min(room.w, room.h) * GRID;
   }
@@ -135,13 +134,7 @@ function drawPolygonRoom(
     const autoSize = calcAutoFontSize(room);
     const fontSize = room.fontSize ?? autoSize;
     // 各辺の長さの最小値をラベル幅上限に使用（AABB幅だと斜め四角形でははみ出す）
-    const minEdge = Math.min(
-      Math.hypot(verts[1].gx - verts[0].gx, verts[1].gy - verts[0].gy),
-      Math.hypot(verts[2].gx - verts[1].gx, verts[2].gy - verts[1].gy),
-      Math.hypot(verts[3].gx - verts[2].gx, verts[3].gy - verts[2].gy),
-      Math.hypot(verts[0].gx - verts[3].gx, verts[0].gy - verts[3].gy),
-    );
-    const maxWidth = minEdge * GRID * 0.9;
+    const maxWidth = minEdgeLength(room) * GRID * 0.9;
     ctx.fillStyle = '#222';
     ctx.font = `${fontSize}px system-ui, sans-serif`;
     ctx.textAlign = 'center';

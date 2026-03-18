@@ -136,6 +136,11 @@ export function edgeLength(room: Room, side: WallSide): number {
   return getEdgeEndpoints(room, side).length;
 }
 
+/** 4辺の最小長を返す（グリッド単位） */
+export function minEdgeLength(room: Room): number {
+  return Math.min(...(['n', 'e', 's', 'w'] as const).map((s) => edgeLength(room, s)));
+}
+
 /** 点から線分への最短距離を計算 */
 export function pointToSegmentDistance(
   px: number,
