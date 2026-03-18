@@ -18,6 +18,11 @@ export function createMousePos(
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
     const { px, py } = screenToWorld(sx, sy, viewport);
-    return { px, py, gx: Math.round(px / GRID), gy: Math.round(py / GRID) };
+    return {
+      px,
+      py,
+      gx: e.shiftKey ? px / GRID : Math.round(px / GRID),
+      gy: e.shiftKey ? py / GRID : Math.round(py / GRID),
+    };
   };
 }
