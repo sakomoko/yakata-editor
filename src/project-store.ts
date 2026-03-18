@@ -167,14 +167,12 @@ export async function syncWithServer(): Promise<void> {
       );
     }
   }
-  // mergedIndex をローカルにも保存（syncFromServer の GET 失敗時にもマージ結果が残る）
-  try {
-    localStorage.setItem(INDEX_KEY, JSON.stringify(mergedIndex));
-  } catch {
-    // storage full
-  }
   await Promise.allSettled(puts);
   // サーバー → localStorage（サーバー側の最新データを取り込む）
+  // ※ mergedIndex は syncFromServer の前に localStorage へ保存しない。
+  //    先に保存するとサーバー専用プロジェクトが syncFromServer で「既存」扱いになり
+  //    データ本体が取得されない。mergedIndex はサーバーに PUT 済みなので、
+  //    syncFromServer が正しくローカルへ反映する。
   await syncFromServer();
 }
 
