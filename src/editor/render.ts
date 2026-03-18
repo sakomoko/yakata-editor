@@ -135,7 +135,6 @@ export function render(ec: EditorContext): void {
   updateStatus(ec);
 }
 
-/* eslint-disable no-irregular-whitespace */
 export function updateStatus(ec: EditorContext): void {
   const { state, viewport, callbacks } = ec;
   const zoomPct = Math.round(viewport.zoom * 100);
@@ -143,18 +142,17 @@ export function updateStatus(ec: EditorContext): void {
   const gy = String(state.mouse.gy).padStart(5);
   const zoom = String(zoomPct).padStart(5);
   const rooms = String(state.rooms.length).padStart(3);
-  let text = `(${gx},${gy})  部屋:${rooms}　|${zoom}%`;
+  let text = `(${gx},${gy})  rooms:${rooms} |${zoom}%`;
   if (state.paintMode) {
-    text += '　|　ペイントモード';
+    text += ' | paint';
   }
   if (state.selection.size === 1) {
     const sel = getSingleSelected(state.rooms, state.selection);
     if (sel) {
-      text += `　|　${sel.label || '(名前なし)'}　${sel.w}×${sel.h}`;
+      text += ` | ${sel.label || '(?)'} ${sel.w}x${sel.h}`;
     }
   } else if (state.selection.size > 1) {
-    text += `　|　${state.selection.size}個選択中`;
+    text += ` | ${state.selection.size} selected`;
   }
   callbacks.onStatusChange(text);
 }
-/* eslint-enable no-irregular-whitespace */

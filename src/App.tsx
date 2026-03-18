@@ -751,7 +751,7 @@ export default function App() {
           }}
           title="ショートカットキー一覧 (?)"
         >
-          ?
+          ヘルプ
         </Button>
       </Box>
 

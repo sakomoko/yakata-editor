@@ -56,7 +56,7 @@ export default function TabBar({
     setCtxMenu({ x: e.clientX, y: e.clientY, tabId });
   }, []);
 
-  const activeId: string | false = tabs.find((t) => t.isActive)?.id ?? false;
+  const activeId = tabs.find((t) => t.isActive)?.id;
 
   const ctxMenuItems: ContextMenuItem[] = useMemo(() => {
     if (!ctxMenu) return [];
