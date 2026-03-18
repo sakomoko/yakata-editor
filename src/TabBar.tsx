@@ -5,6 +5,7 @@ import Tabs from '@mui/material/Tabs';
 import IconButton from '@mui/material/IconButton';
 import AddIcon from '@mui/icons-material/Add';
 import MenuIcon from '@mui/icons-material/Menu';
+import CloseIcon from '@mui/icons-material/Close';
 import ContextMenu from './ContextMenu.tsx';
 import type { ContextMenuItem } from './context-menu.ts';
 
@@ -56,7 +57,7 @@ export default function TabBar({
     setCtxMenu({ x: e.clientX, y: e.clientY, tabId });
   }, []);
 
-  const activeId = tabs.find((t) => t.isActive)?.id;
+  const activeId: string | false = tabs.find((t) => t.isActive)?.id ?? false;
 
   const ctxMenuItems: ContextMenuItem[] = useMemo(() => {
     if (!ctxMenu) return [];
@@ -101,7 +102,6 @@ export default function TabBar({
           },
         }}
       >
-        {/* onDoubleClick/onContextMenu: ButtonBase経由で動作。MUIバージョンアップ時に要確認 */}
         {tabs.map((tab) => (
           <MuiTab
             key={tab.id}
@@ -109,67 +109,75 @@ export default function TabBar({
             onDoubleClick={() => handleDoubleClick(tab.id, tab.name)}
             onContextMenu={(e) => handleContextMenu(e, tab.id)}
             label={
-              editingId === tab.id ? (
-                <input
-                  ref={inputRef}
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  onBlur={commitRename}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') commitRename();
-                    if (e.key === 'Escape') setEditingId(null);
-                    e.stopPropagation();
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    background: '#222',
-                    color: '#fff',
-                    border: '1px solid #666',
-                    fontSize: 12,
-                    padding: '2px 4px',
-                    width: 100,
-                    outline: 'none',
-                  }}
-                />
-              ) : (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Box
-                    component="span"
-                    sx={{
-                      maxWidth: 120,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {tab.name}
-                  </Box>
-                  {tabs.length > 1 && (
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onTabClose(tab.id);
-                      }}
-                      aria-label="タブを閉じる"
-                      sx={{
-                        fontSize: 14,
-                        width: 20,
-                        height: 20,
-                        color: '#888',
-                        ml: 0.5,
-                        '&:hover': { color: '#fff' },
-                      }}
-                    >
-                      ×
-                    </IconButton>
-                  )}
-                </Box>
-              )
+              <Box
+                component="span"
+                sx={{
+                  maxWidth: 120,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {tab.name}
+              </Box>
             }
           />
         ))}
       </Tabs>
+
+      {/* 閉じるボタン: Tabの外に配置してネストしたインタラクティブ要素を回避 */}
+      {tabs.length > 1 &&
+        tabs.map((tab) =>
+          tab.isActive ? (
+            <IconButton
+              key={`close-${tab.id}`}
+              size="small"
+              onClick={() => onTabClose(tab.id)}
+              aria-label="タブを閉じる"
+              sx={{
+                ml: -1,
+                mr: 0.5,
+                width: 20,
+                height: 20,
+                color: '#888',
+                '&:hover': { color: '#fff' },
+              }}
+            >
+              <CloseIcon sx={{ fontSize: 14 }} />
+            </IconButton>
+          ) : null,
+        )}
+
+      {/* リネーム用input: Tabの外にオーバーレイ表示 */}
+      {editingId && (
+        <Box
+          sx={{
+            position: 'absolute',
+            zIndex: 1,
+          }}
+        >
+          <input
+            ref={inputRef}
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitRename();
+              if (e.key === 'Escape') setEditingId(null);
+              e.stopPropagation();
+            }}
+            style={{
+              background: '#222',
+              color: '#fff',
+              border: '1px solid #666',
+              fontSize: 12,
+              padding: '2px 4px',
+              width: 120,
+              outline: 'none',
+            }}
+          />
+        </Box>
+      )}
 
       <IconButton
         onClick={onTabAdd}

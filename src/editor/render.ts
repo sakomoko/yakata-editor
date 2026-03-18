@@ -142,7 +142,7 @@ export function updateStatus(ec: EditorContext): void {
   const gy = String(state.mouse.gy).padStart(5);
   const zoom = String(zoomPct).padStart(5);
   const rooms = String(state.rooms.length).padStart(3);
-  let text = `(${gx},${gy})  rooms:${rooms} |${zoom}%`;
+  let text = `(${gx},${gy}) | ${rooms} rooms |${zoom}%`;
   if (state.paintMode) {
     text += ' | paint';
   }
@@ -152,7 +152,7 @@ export function updateStatus(ec: EditorContext): void {
       text += ` | ${sel.label || '(?)'} ${sel.w}x${sel.h}`;
     }
   } else if (state.selection.size > 1) {
-    text += ` | ${state.selection.size} selected`;
+    text += ` | ${state.selection.size}`;
   }
   callbacks.onStatusChange(text);
 }
