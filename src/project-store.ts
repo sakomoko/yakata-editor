@@ -122,33 +122,57 @@ export async function syncWithServer(): Promise<void> {
   const serverMap = new Map(serverIndex.map((m) => [m.id, m]));
 
   // localStorage → サーバー（updatedAtが新しいもののみ）
-  if (index.length > 0) {
-    const puts: Promise<unknown>[] = [
-      fetch('/api/projects', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(index),
-      }),
-    ];
-    for (const meta of index) {
-      const serverMeta = serverMap.get(meta.id);
-      // サーバーに存在し、ローカルのupdatedAtがサーバー以下ならスキップ
-      if (serverMeta && (meta.updatedAt ?? 0) <= (serverMeta.updatedAt ?? 0)) continue;
+  // 各プロジェクトについて、updatedAt が新しいほうの meta を採用してマージ
+  const localMap = new Map(index.map((m) => [m.id, m]));
+  const mergedIndex: ProjectMeta[] = [];
 
-      const result = loadProjectData(meta.id);
-      if (result) {
-        puts.push(
-          fetch(`/api/projects/${meta.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(result.data),
-          }),
-        );
-      }
+  // サーバー側のプロジェクトをベースに、ローカルのほうが新しければローカルを採用
+  for (const serverMeta of serverIndex) {
+    const localMeta = localMap.get(serverMeta.id);
+    if (!localMeta) {
+      mergedIndex.push(serverMeta);
+    } else {
+      // updatedAt が新しいほうを採用（同値の場合はローカル優先: >=）
+      mergedIndex.push(
+        (localMeta.updatedAt ?? 0) >= (serverMeta.updatedAt ?? 0) ? localMeta : serverMeta,
+      );
     }
-    await Promise.allSettled(puts);
   }
-  // サーバー → localStorage
+  // ローカルにしかないプロジェクトを追加
+  for (const localMeta of index) {
+    if (!serverMap.has(localMeta.id)) {
+      mergedIndex.push(localMeta);
+    }
+  }
+  const puts: Promise<unknown>[] = [
+    fetch('/api/projects', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(mergedIndex),
+    }),
+  ];
+  for (const meta of index) {
+    const serverMeta = serverMap.get(meta.id);
+    // サーバーに存在し、ローカルのupdatedAtがサーバー以下ならスキップ（同値はスキップ: <=）
+    if (serverMeta && (meta.updatedAt ?? 0) <= (serverMeta.updatedAt ?? 0)) continue;
+
+    const result = loadProjectData(meta.id);
+    if (result) {
+      puts.push(
+        fetch(`/api/projects/${meta.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(result.data),
+        }),
+      );
+    }
+  }
+  await Promise.allSettled(puts);
+  // サーバー → localStorage（サーバー側の最新データを取り込む）
+  // ※ mergedIndex は syncFromServer の前に localStorage へ保存しない。
+  //    先に保存するとサーバー専用プロジェクトが syncFromServer で「既存」扱いになり
+  //    データ本体が取得されない。mergedIndex はサーバーに PUT 済みなので、
+  //    syncFromServer が正しくローカルへ反映する。
   await syncFromServer();
 }
 
@@ -157,18 +181,39 @@ async function syncFromServer(): Promise<void> {
   try {
     const res = await fetch('/api/projects');
     if (!res.ok) return;
-    const serverIndex = (await res.json()) as ProjectMeta[];
+    const serverIndex = ((await res.json()) as unknown[]).filter(isValidProjectMeta);
     const localIndex = loadProjectIndex();
-    const localIds = new Set(localIndex.map((m) => m.id));
+    const localMap = new Map(localIndex.map((m) => [m.id, m]));
 
-    const newMetas = serverIndex.filter((m) => !localIds.has(m.id));
+    // サーバーにしかないプロジェクト（新規）
+    const newMetas = serverIndex.filter((m) => !localMap.has(m.id));
+    // サーバー側のほうが新しいプロジェクト（更新）
+    const updatedMetas = serverIndex.filter((m) => {
+      const local = localMap.get(m.id);
+      return local && (m.updatedAt ?? 0) > (local.updatedAt ?? 0);
+    });
+
+    // 新規 + 更新のデータを一括取得
+    const fetchTargets = [...newMetas, ...updatedMetas];
     const results = await Promise.all(
-      newMetas.map(async (meta) => {
+      fetchTargets.map(async (meta) => {
         try {
           const dataRes = await fetch(`/api/projects/${meta.id}`);
           if (!dataRes.ok) return null;
-          const { data } = (await dataRes.json()) as { meta: ProjectMeta; data: ProjectData };
-          return { meta, data };
+          const json = (await dataRes.json()) as { meta: ProjectMeta; data: unknown };
+          // サーバーから取得したデータを parseStorageData でバリデーション
+          const storageData = parseStorageData(json.data);
+          const obj = json.data as Record<string, unknown>;
+          const data: ProjectData = {
+            rooms: storageData.rooms,
+            freeTexts: storageData.freeTexts,
+            freeStrokes: storageData.freeStrokes,
+            viewport: parseViewport((obj && typeof obj === 'object') ? obj.viewport : undefined),
+            history: Array.isArray(obj?.history)
+              ? (obj.history as unknown[]).filter((h): h is string => typeof h === 'string')
+              : [],
+          };
+          return { meta, data, isNew: !localMap.has(meta.id) };
         } catch {
           return null;
         }
@@ -176,7 +221,15 @@ async function syncFromServer(): Promise<void> {
     );
     for (const result of results) {
       if (!result) continue;
-      localIndex.push(result.meta);
+      if (result.isNew) {
+        localIndex.push(result.meta);
+      } else {
+        // 既存プロジェクトのメタデータを全体上書き（name等の変更も反映）
+        const idx = localIndex.findIndex((m) => m.id === result.meta.id);
+        if (idx !== -1) {
+          localIndex[idx] = result.meta;
+        }
+      }
       try {
         localStorage.setItem(PROJECT_KEY_PREFIX + result.meta.id, JSON.stringify(result.data));
       } catch {
