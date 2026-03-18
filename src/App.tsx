@@ -286,6 +286,8 @@ export default function App() {
           setProjectIndex(postSyncIndex);
         }
         // 同期完了後、アクティブプロジェクトを無条件にエディタへ再読み込み
+        // ※ syncWithServer は起動時に1回のみ呼ばれる前提。
+        //    ポーリング等で繰り返し呼ぶ場合はコミット前の編集が消失するため要改修。
         const activeId = tabStateRef.current.activeTabId;
         if (activeId) {
           loadProjectIntoEditor(activeId);
