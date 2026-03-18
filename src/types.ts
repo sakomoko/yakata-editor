@@ -94,6 +94,8 @@ export interface Room {
    * 4頂点（初期配置時は時計回り: NW,NE,SE,SW）。未設定時は矩形として扱う。
    * 頂点ドラッグ後はインデックスと方角の対応が崩れるが、辺のインデックス順序
    * （0→1, 1→2, 2→3, 3→0 が n, e, s, w に対応）は維持される。
+   * 注意: 自己交差する四角形を作ると pointInQuad やドア描画が未定義動作になる。
+   * 自己交差防止ガードは将来課題。
    */
   vertices?: [GridPoint, GridPoint, GridPoint, GridPoint];
 }

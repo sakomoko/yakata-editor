@@ -1,7 +1,6 @@
 import type { Room, WallSide, GridPoint } from './types.ts';
 import { GRID } from './grid.ts';
 
-export type { GridPoint } from './types.ts';
 
 export interface VertexHandle {
   px: number;

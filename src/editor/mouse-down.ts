@@ -77,8 +77,8 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
 
   // Check vertex handle hit (polygon room) — before room resize handles
   if (state.selection.size === 1) {
-    const selId = [...state.selection][0];
-    const selRoom = findRoomById(state.rooms, selId);
+    const selId = state.selection.values().next().value;
+    const selRoom = selId ? findRoomById(state.rooms, selId) : null;
     if (selRoom?.vertices) {
       const vHit = hitVertexHandle(selRoom, m.px, m.py, viewport.zoom);
       if (vHit) {
