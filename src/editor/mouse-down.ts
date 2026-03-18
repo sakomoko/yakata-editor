@@ -1,5 +1,5 @@
 import type { FreeText, GroupScaleOriginal, Room } from '../types.ts';
-import { findFreeTextById } from '../lookup.ts';
+import { findFreeTextById, findRoomById } from '../lookup.ts';
 import { GRID } from '../grid.ts';
 import {
   hitHandle,
@@ -78,7 +78,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
   // Check vertex handle hit (polygon room) — before room resize handles
   if (state.selection.size === 1) {
     const selId = [...state.selection][0];
-    const selRoom = state.rooms.find((r) => r.id === selId);
+    const selRoom = findRoomById(state.rooms, selId);
     if (selRoom?.vertices) {
       const vHit = hitVertexHandle(selRoom, m.px, m.py, viewport.zoom);
       if (vHit) {
@@ -200,7 +200,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
             h: room.h,
             fontSize: room.fontSize,
             vertices: room.vertices
-              ? ([...room.vertices.map((v) => ({ gx: v.gx, gy: v.gy }))] as Room['vertices'])
+              ? (room.vertices.map((v) => ({ gx: v.gx, gy: v.gy })) as Room['vertices'])
               : undefined,
             wallObjects: room.wallObjects?.map((wo) => ({
               id: wo.id,

@@ -130,7 +130,7 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
         // Vertex handle hover (polygon rooms)
         if (state.selection.size === 1) {
           const selId = [...state.selection][0];
-          const selRoom = state.rooms.find((r) => r.id === selId);
+          const selRoom = findRoomById(state.rooms, selId);
           if (selRoom?.vertices) {
             const vHit = hitVertexHandle(selRoom, m.px, m.py, viewport.zoom);
             if (vHit) {

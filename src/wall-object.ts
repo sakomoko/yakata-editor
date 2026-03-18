@@ -277,7 +277,9 @@ function getPolygonDoorGeometry(room: Room, obj: WallDoor): DoorGeometry {
   const radius = Math.hypot(pos.endPx - pos.startPx, pos.endPy - pos.startPy);
 
   // 辺の法線方向で inward/outward を決定
-  // 時計回り頂点の場合、右手法線（edgeAngle + π/2）が内側
+  // 時計回り(CW)頂点の場合、右手法線（edgeAngle + π/2）が内側。
+  // 注: 頂点ドラッグでCCWに変化した場合は内外が逆転するが、
+  // 現状は自己交差・CCW防止のガードを将来課題としている。
   const inwardAngle = edgeAngle + Math.PI / 2;
   const outwardAngle = edgeAngle - Math.PI / 2;
 
