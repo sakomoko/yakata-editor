@@ -304,4 +304,14 @@ describe('edgeResizeCursor', () => {
     ]);
     expect(edgeResizeCursor(room, 'n')).toBe('nesw-resize');
   });
+  it('四角形の垂直辺 → ns-resize', () => {
+    // e辺: (5,0)→(5,5) = 垂直
+    const room = makePolygon([
+      { gx: 0, gy: 0 },
+      { gx: 5, gy: 0 },
+      { gx: 5, gy: 5 },
+      { gx: 0, gy: 5 },
+    ]);
+    expect(edgeResizeCursor(room, 'e')).toBe('ns-resize');
+  });
 });

@@ -706,6 +706,7 @@ export function clampInteriorObject(room: Room, obj: RoomInteriorObject): void {
       // Invariant: t=0 (original position) is outside, t=1 (centroid) is inside (guaranteed by guard above)
       let lo = 0,
         hi = 1;
+      // 16 iterations -> ~1.5e-5 grid unit precision (sufficient for display)
       for (let i = 0; i < 16; i++) {
         const mid = (lo + hi) / 2;
         const mx = centerGx + (centroid.gx - centerGx) * mid;
