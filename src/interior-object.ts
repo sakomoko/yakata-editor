@@ -781,6 +781,45 @@ export function computeInteriorObjectMove(
   };
 }
 
+export function computeInteriorObjectMoveUnclamped(
+  room: Room,
+  gx: number,
+  gy: number,
+  offsetX: number,
+  offsetY: number,
+): { x: number; y: number } {
+  return {
+    x: gx - room.x - offsetX,
+    y: gy - room.y - offsetY,
+  };
+}
+
+export function transferInteriorObject(
+  sourceRoom: Room,
+  targetRoom: Room,
+  obj: RoomInteriorObject,
+): void {
+  // Remove from source
+  if (sourceRoom.interiorObjects) {
+    sourceRoom.interiorObjects = sourceRoom.interiorObjects.filter((o) => o.id !== obj.id);
+  }
+
+  // Convert coordinates: source-relative → world → target-relative
+  const worldX = sourceRoom.x + obj.x;
+  const worldY = sourceRoom.y + obj.y;
+  obj.x = worldX - targetRoom.x;
+  obj.y = worldY - targetRoom.y;
+
+  // Add to target
+  if (!targetRoom.interiorObjects) {
+    targetRoom.interiorObjects = [];
+  }
+  targetRoom.interiorObjects.push(obj);
+
+  // Clamp within new room
+  clampInteriorObject(targetRoom, obj);
+}
+
 export function computeInteriorObjectResize(
   room: Room,
   dir: ResizeDirection,

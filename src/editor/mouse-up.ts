@@ -1,9 +1,18 @@
-import { findRoomById, findWallObjectById, findFreeStrokeById } from '../lookup.ts';
+import {
+  findRoomById,
+  findWallObjectById,
+  findFreeStrokeById,
+  findInteriorObjectById,
+} from '../lookup.ts';
 import { selectSingle, clearSelection } from '../selection.ts';
 import { pushUndo, cancelLastUndo } from '../history.ts';
 import { hitWallObjectInRooms, clampWallObjects } from '../wall-object.ts';
-import { clampAllInteriorObjects } from '../interior-object.ts';
-import { createRoom, findRoomsInArea, normalizeArea } from '../room.ts';
+import {
+  clampAllInteriorObjects,
+  clampInteriorObject,
+  transferInteriorObject,
+} from '../interior-object.ts';
+import { createRoom, hitRoom, findRoomsInArea, normalizeArea } from '../room.ts';
 import { findFreeTextsInArea } from '../free-text.ts';
 import { simplifyPoints } from '../free-stroke.ts';
 import { syncPairedOpening, syncAllPairedOpenings } from '../adjacency.ts';
@@ -91,8 +100,33 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
     return;
   }
 
+  if (state.drag.type === 'moveInteriorObject') {
+    const drag = state.drag;
+    const sourceRoom = findRoomById(state.rooms, drag.roomId);
+    if (sourceRoom) {
+      const obj = findInteriorObjectById(sourceRoom, drag.objectId);
+      if (obj) {
+        const m = ec.mousePos(e);
+        const dropRoom = hitRoom(state.rooms, m.px, m.py);
+        if (dropRoom && dropRoom.id !== sourceRoom.id) {
+          // Transfer to another room
+          transferInteriorObject(sourceRoom, dropRoom, obj);
+          selectSingle(state.selection, dropRoom.id);
+          flags.activeInteriorObjectId = obj.id;
+        } else {
+          // Same room or no room — clamp back
+          clampInteriorObject(sourceRoom, obj);
+        }
+      }
+    }
+    state.drag = null;
+    canvas.style.cursor = state.paintMode ? 'crosshair' : 'default';
+    ec.render();
+    ec.callbacks.onAutoSave();
+    return;
+  }
+
   if (
-    state.drag.type === 'moveInteriorObject' ||
     state.drag.type === 'resizeInteriorObject' ||
     state.drag.type === 'rotateCameraAngle' ||
     state.drag.type === 'adjustCameraFovAngle' ||

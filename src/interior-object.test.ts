@@ -12,7 +12,9 @@ import {
   clampInteriorObject,
   clampAllInteriorObjects,
   computeInteriorObjectMove,
+  computeInteriorObjectMoveUnclamped,
   computeInteriorObjectResize,
+  transferInteriorObject,
 } from './interior-object.ts';
 import { getRoomVertices, pointInQuad } from './polygon.ts';
 import { GRID } from './grid.ts';
@@ -418,5 +420,105 @@ describe('createMarker', () => {
     const marker = createMarker(0, 0, 2, 1, 'e', 'text', '証拠品A');
     expect(marker.markerKind).toBe('text');
     expect(marker.label).toBe('証拠品A');
+  });
+});
+
+describe('computeInteriorObjectMoveUnclamped', () => {
+  it('クランプせずに生の相対座標を返す', () => {
+    const room = makeRoom({ x: 5, y: 5, w: 10, h: 10 });
+    const result = computeInteriorObjectMoveUnclamped(room, 8, 9, 1, 1);
+    expect(result.x).toBe(2); // 8 - 5 - 1
+    expect(result.y).toBe(3); // 9 - 5 - 1
+  });
+
+  it('部屋の範囲外でもクランプされない', () => {
+    const room = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const result = computeInteriorObjectMoveUnclamped(room, -3, -3, 0, 0);
+    expect(result.x).toBe(-3);
+    expect(result.y).toBe(-3);
+  });
+
+  it('部屋の右下を超えてもクランプされない', () => {
+    const room = makeRoom({ x: 0, y: 0, w: 5, h: 5 });
+    const result = computeInteriorObjectMoveUnclamped(room, 10, 10, 0, 0);
+    expect(result.x).toBe(10);
+    expect(result.y).toBe(10);
+  });
+});
+
+describe('transferInteriorObject', () => {
+  it('オブジェクトをソースから除去してターゲットに追加する', () => {
+    const source = makeRoom({ id: 'src', x: 0, y: 0, w: 10, h: 10 });
+    const target = makeRoom({ id: 'tgt', x: 20, y: 20, w: 10, h: 10 });
+    const obj = createStraightStairs(2, 3, 2, 3);
+    source.interiorObjects = [obj];
+    target.interiorObjects = [];
+
+    transferInteriorObject(source, target, obj);
+
+    expect(source.interiorObjects).toHaveLength(0);
+    expect(target.interiorObjects).toHaveLength(1);
+    expect(target.interiorObjects[0].id).toBe(obj.id);
+  });
+
+  it('座標をソース相対→ターゲット相対に変換する', () => {
+    const source = makeRoom({ id: 'src', x: 5, y: 5, w: 10, h: 10 });
+    const target = makeRoom({ id: 'tgt', x: 10, y: 10, w: 10, h: 10 });
+    const obj = createStraightStairs(3, 3, 2, 3);
+    source.interiorObjects = [obj];
+    target.interiorObjects = [];
+
+    // world = (5+3, 5+3) = (8, 8) → target relative = (8-10, 8-10) = (-2, -2)
+    // After clamp: (0, 0)
+    transferInteriorObject(source, target, obj);
+
+    expect(obj.x).toBe(0);
+    expect(obj.y).toBe(0);
+  });
+
+  it('ターゲット部屋の範囲外になる場合、クランプされる', () => {
+    const source = makeRoom({ id: 'src', x: 0, y: 0, w: 10, h: 10 });
+    const target = makeRoom({ id: 'tgt', x: 5, y: 5, w: 10, h: 10 });
+    const obj = createMarker(3, 3, 2, 1);
+    source.interiorObjects = [obj];
+    target.interiorObjects = [];
+
+    // world = (0+3, 0+3) = (3, 3) → target relative = (3-5, 3-5) = (-2, -2)
+    // After clamp: (0, 0)
+    transferInteriorObject(source, target, obj);
+
+    expect(obj.x).toBe(0);
+    expect(obj.y).toBe(0);
+  });
+
+  it('ターゲットにinteriorObjectsがない場合でも動作する', () => {
+    const source = makeRoom({ id: 'src', x: 0, y: 0, w: 10, h: 10 });
+    const target = makeRoom({ id: 'tgt', x: 0, y: 0, w: 10, h: 10 });
+    const obj = createStraightStairs(1, 1, 2, 3);
+    source.interiorObjects = [obj];
+    // target.interiorObjects is undefined
+
+    transferInteriorObject(source, target, obj);
+
+    expect(source.interiorObjects).toHaveLength(0);
+    expect(target.interiorObjects).toHaveLength(1);
+    expect(obj.x).toBe(1);
+    expect(obj.y).toBe(1);
+  });
+
+  it('転送後にターゲット部屋内にクランプされる', () => {
+    const source = makeRoom({ id: 'src', x: 0, y: 0, w: 20, h: 20 });
+    const target = makeRoom({ id: 'tgt', x: 15, y: 15, w: 5, h: 5 });
+    const obj = createStraightStairs(8, 8, 2, 3);
+    source.interiorObjects = [obj];
+
+    // world = (0+8, 0+8) = (8, 8) → target relative = (8-15, 8-15) = (-7, -7)
+    // After clamp: (0, 0), size stays 2x3 (fits in 5x5)
+    transferInteriorObject(source, target, obj);
+
+    expect(obj.x).toBeGreaterThanOrEqual(0);
+    expect(obj.y).toBeGreaterThanOrEqual(0);
+    expect(obj.x + obj.w).toBeLessThanOrEqual(target.w);
+    expect(obj.y + obj.h).toBeLessThanOrEqual(target.h);
   });
 });
