@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { withFontSizePreview, deleteSelectedEntities, deleteRoom } from './project.ts';
 import { createRoom } from '../room.ts';
+import { createFreeText } from '../free-text.ts';
+import { createFreeStroke } from '../free-stroke.ts';
 import type { EditorContext } from './context.ts';
 import type { ViewportState } from '../viewport.ts';
 
@@ -176,6 +178,25 @@ describe('deleteSelectedEntities', () => {
 
     expect(ec.state.rooms).toHaveLength(1);
     expect(ec.state.rooms[0].id).toBe(room2.id);
+  });
+
+  it('選択されたFreeText・FreeStrokeも削除する', () => {
+    const ec = createMockEc();
+    const ft1 = createFreeText(1, 1, 'text1');
+    const ft2 = createFreeText(2, 2, 'text2');
+    const fs1 = createFreeStroke([{ px: 0, py: 0 }], '#000', 2, 1);
+    const fs2 = createFreeStroke([{ px: 10, py: 10 }], '#f00', 2, 1);
+    ec.state.freeTexts = [ft1, ft2];
+    ec.state.freeStrokes = [fs1, fs2];
+    ec.state.selection.add(ft1.id);
+    ec.state.selection.add(fs1.id);
+
+    deleteSelectedEntities(ec);
+
+    expect(ec.state.freeTexts).toHaveLength(1);
+    expect(ec.state.freeTexts[0].id).toBe(ft2.id);
+    expect(ec.state.freeStrokes).toHaveLength(1);
+    expect(ec.state.freeStrokes[0].id).toBe(fs2.id);
   });
 });
 

@@ -30,6 +30,11 @@ export function deleteSelectedEntities(ec: EditorContext): void {
   });
 }
 
+/**
+ * 指定IDの部屋のみを削除する。他の選択状態は保持する。
+ * コンテキストメニューからの単一部屋削除に使用。
+ * 複数選択の一括削除には deleteSelectedEntities を使うこと。
+ */
 export function deleteRoom(ec: EditorContext, roomId: string): void {
   if (!findRoomById(ec.state.rooms, roomId)) return;
   const { state } = ec;
