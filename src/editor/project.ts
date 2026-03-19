@@ -160,7 +160,7 @@ export async function withFontSizePreview<R>(
     ec.render();
   });
   setCurrentFontSize(originalFontSize);
-  if (result) {
+  if (result !== null) {
     commitChange(ec, () => applyResult(result));
   } else {
     ec.render();
