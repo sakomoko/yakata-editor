@@ -195,6 +195,7 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
     if (room?.vertices) {
       const rawGx = m.px / GRID;
       const rawGy = m.py / GRID;
+      // SNAP_SCREEN_PX (画面px) をグリッド単位に変換。ズームに依存しないスナップ感度を実現。
       const threshold = SNAP_SCREEN_PX / (GRID * viewport.zoom);
       const snap = findVertexSnap(state.rooms, drag.roomId, rawGx, rawGy, threshold);
       if (snap.type !== 'none') {
