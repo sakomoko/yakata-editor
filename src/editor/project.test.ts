@@ -236,4 +236,16 @@ describe('deleteRoom', () => {
     expect(ec.state.rooms).toHaveLength(1);
     expect(ec.state.selection.has(room2.id)).toBe(true);
   });
+
+  it('削除対象の部屋が選択されている場合、選択から除外される', () => {
+    const ec = createMockEc();
+    const room = createRoom(0, 0, 5, 5, 'Room');
+    ec.state.rooms = [room];
+    ec.state.selection.add(room.id);
+
+    deleteRoom(ec, room.id);
+
+    expect(ec.state.rooms).toHaveLength(0);
+    expect(ec.state.selection.has(room.id)).toBe(false);
+  });
 });

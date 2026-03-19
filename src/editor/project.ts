@@ -34,6 +34,9 @@ export function deleteSelectedEntities(ec: EditorContext): void {
  * 指定IDの部屋のみを削除する。他の選択状態は保持する。
  * コンテキストメニューからの単一部屋削除に使用。
  * 複数選択の一括削除には deleteSelectedEntities を使うこと。
+ *
+ * Note: ドラッグ状態のリセットは不要。コンテキストメニューはドラッグ中に表示されないため。
+ * Note: pushUndoはselectionを保存しないため、Undo後は選択状態が復元されない（既存仕様と同様）。
  */
 export function deleteRoom(ec: EditorContext, roomId: string): void {
   if (!findRoomById(ec.state.rooms, roomId)) return;
