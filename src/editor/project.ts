@@ -6,6 +6,7 @@ import { exportPng, saveAsJson } from '../persistence.ts';
 import { getStrokeBounds } from '../free-stroke.ts';
 import { computeRoomsBoundingBox, calcAutoFontSize } from '../room.ts';
 import { syncAllPairedOpenings } from '../adjacency.ts';
+import { findRoomById } from '../lookup.ts';
 import type { EditorContext } from './context.ts';
 
 export function commitChange(ec: EditorContext, fn: () => void): void {
@@ -142,16 +143,53 @@ export function exportAsPng(ec: EditorContext): void {
   }
 }
 
-export async function applyRoomEdit(ec: EditorContext, room: Room): Promise<void> {
-  const result = await ec.callbacks.onRoomEdit({
-    label: room.label || '',
-    fontSize: room.fontSize,
-    autoFontSize: Math.round(calcAutoFontSize(room)),
+/**
+ * フォントサイズスライダーのリアルタイムプレビュー共通ヘルパー。
+ * スライダー操作中はCanvasに即時反映し、OK/キャンセル時に元の値を復元してからcommit/renderする。
+ */
+export async function withFontSizePreview<R>(
+  ec: EditorContext,
+  getCurrentFontSize: () => number | undefined,
+  setCurrentFontSize: (fs: number | undefined) => void,
+  showDialog: (onPreview: (fontSize: number | undefined) => void) => Promise<R | null>,
+  applyResult: (result: R) => void,
+): Promise<void> {
+  const originalFontSize = getCurrentFontSize();
+  const result = await showDialog((fontSize) => {
+    setCurrentFontSize(fontSize);
+    ec.render();
   });
+  setCurrentFontSize(originalFontSize);
   if (result) {
-    commitChange(ec, () => {
-      room.label = result.label;
-      room.fontSize = result.fontSize;
-    });
+    commitChange(ec, () => applyResult(result));
+  } else {
+    ec.render();
   }
+}
+
+export async function applyRoomEdit(ec: EditorContext, room: Room): Promise<void> {
+  const roomId = room.id;
+  const findRoom = () => findRoomById(ec.state.rooms, roomId);
+  await withFontSizePreview(
+    ec,
+    () => findRoom()?.fontSize,
+    (fs) => {
+      const r = findRoom();
+      if (r) r.fontSize = fs;
+    },
+    (onPreview) =>
+      ec.callbacks.onRoomEdit({
+        label: room.label || '',
+        fontSize: room.fontSize,
+        autoFontSize: Math.round(calcAutoFontSize(room)),
+        onFontSizePreview: onPreview,
+      }),
+    (result) => {
+      const r = findRoom();
+      if (r) {
+        r.label = result.label;
+        r.fontSize = result.fontSize;
+      }
+    },
+  );
 }

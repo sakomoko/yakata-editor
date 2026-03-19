@@ -14,6 +14,7 @@ export interface LabelFontSizeData {
   label: string;
   fontSize: number | undefined;
   autoFontSize: number;
+  onFontSizePreview?: (fontSize: number | undefined) => void;
 }
 
 interface Props {
@@ -49,11 +50,14 @@ export default function LabelFontSizeDialog({
   const handleReset = () => {
     setFontSize(dataAutoFontSize);
     setIsCustom(false);
+    data.onFontSizePreview?.(undefined);
   };
 
   const handleSliderChange = (_: Event, value: number | number[]) => {
-    setFontSize(value as number);
+    const newSize = value as number;
+    setFontSize(newSize);
     setIsCustom(true);
+    data.onFontSizePreview?.(newSize);
   };
 
   const handleOk = () => {

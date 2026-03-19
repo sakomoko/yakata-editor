@@ -15,6 +15,7 @@ export interface LabelFontSizeEditData {
   label: string;
   fontSize: number | undefined;
   autoFontSize: number;
+  onFontSizePreview?: (fontSize: number | undefined) => void;
 }
 
 export type RoomEditData = LabelFontSizeEditData;

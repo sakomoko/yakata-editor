@@ -26,7 +26,9 @@ export default function FreeTextDialog({ open, data, onClose }: Props) {
   }, [data]);
 
   const handleSliderChange = (_: Event, value: number | number[]) => {
-    setFontSize(value as number);
+    const newSize = value as number;
+    setFontSize(newSize);
+    data.onFontSizePreview?.(newSize);
   };
 
   const handleOk = () => {
