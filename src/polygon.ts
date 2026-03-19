@@ -161,6 +161,45 @@ export function pointToSegmentDistance(
   return Math.hypot(px - projX, py - projY);
 }
 
+/**
+ * 3頂点から内角を計算して度数で返す（0°〜360°）。
+ * 画面座標系（Y軸下向き）かつ時計回り頂点順を前提とする。
+ */
+export function calculateInteriorAngle(
+  prev: GridPoint,
+  current: GridPoint,
+  next: GridPoint,
+): number {
+  const v1x = prev.gx - current.gx;
+  const v1y = prev.gy - current.gy;
+  const v2x = next.gx - current.gx;
+  const v2y = next.gy - current.gy;
+
+  // ゼロ長ベクトル（頂点が重なっている場合）は計算不能
+  if (Math.hypot(v1x, v1y) < 1e-9 || Math.hypot(v2x, v2y) < 1e-9) return 0;
+
+  const dot = v1x * v2x + v1y * v2y;
+  const cross = v1x * v2y - v1y * v2x;
+
+  let angle = Math.atan2(Math.abs(cross), dot) * (180 / Math.PI);
+
+  // 画面座標系（Y軸下向き）かつ時計回り頂点順では、cross > 0 が凹（内角 > 180°）
+  if (cross > 0) {
+    angle = 360 - angle;
+  }
+
+  return angle;
+}
+
+/** 角度を表示用文字列にフォーマット（整数に近い場合は整数、それ以外は小数1桁） */
+export function formatAngle(degrees: number): string {
+  const rounded = Math.round(degrees * 10) / 10;
+  if (Math.abs(rounded - Math.round(rounded)) < 0.05) {
+    return `${Math.round(rounded)}°`;
+  }
+  return `${rounded.toFixed(1)}°`;
+}
+
 export type ResizeCursor = 'ew-resize' | 'ns-resize' | 'nwse-resize' | 'nesw-resize';
 
 /** 辺の角度に基づいてリサイズカーソル方向を返す */

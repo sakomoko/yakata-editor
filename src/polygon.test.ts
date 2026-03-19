@@ -14,6 +14,8 @@ import {
   pointToSegmentDistance,
   projectPointOnSegment,
   edgeResizeCursor,
+  calculateInteriorAngle,
+  formatAngle,
 } from './polygon.ts';
 import { GRID } from './grid.ts';
 
@@ -270,6 +272,87 @@ describe('projectPointOnSegment', () => {
   });
   it('終点はクランプ1', () => {
     expect(projectPointOnSegment(15, 0, 0, 0, 10, 0)).toBe(1);
+  });
+});
+
+describe('calculateInteriorAngle', () => {
+  it('直角（90°）', () => {
+    const angle = calculateInteriorAngle({ gx: 0, gy: 0 }, { gx: 5, gy: 0 }, { gx: 5, gy: 5 });
+    expect(angle).toBeCloseTo(90, 5);
+  });
+
+  it('正方形の全頂点が90°', () => {
+    const verts = [
+      { gx: 0, gy: 0 },
+      { gx: 5, gy: 0 },
+      { gx: 5, gy: 5 },
+      { gx: 0, gy: 5 },
+    ];
+    for (let i = 0; i < 4; i++) {
+      const prev = verts[(i + 3) % 4];
+      const curr = verts[i];
+      const next = verts[(i + 1) % 4];
+      expect(calculateInteriorAngle(prev, curr, next)).toBeCloseTo(90, 5);
+    }
+  });
+
+  it('鋭角（45°）', () => {
+    // CW頂点順: (1,1) → (0,0) → (1,0) で45°
+    const angle = calculateInteriorAngle({ gx: 1, gy: 1 }, { gx: 0, gy: 0 }, { gx: 1, gy: 0 });
+    expect(angle).toBeCloseTo(45, 5);
+  });
+
+  it('鈍角（135°）', () => {
+    // (-1,0) → (0,0) → (1,1) で135°
+    const angle = calculateInteriorAngle({ gx: -1, gy: 0 }, { gx: 0, gy: 0 }, { gx: 1, gy: 1 });
+    expect(angle).toBeCloseTo(135, 5);
+  });
+
+  it('180°（一直線）', () => {
+    const angle = calculateInteriorAngle({ gx: -1, gy: 0 }, { gx: 0, gy: 0 }, { gx: 1, gy: 0 });
+    expect(angle).toBeCloseTo(180, 5);
+  });
+
+  it('凹角（270°）', () => {
+    // 凹四角形の凹頂点: cross > 0 のパスを検証
+    // 矢じり型: (0,0)→(4,0)→(2,1)→(4,2) のうち頂点(2,1)は凹
+    // prev=(4,0), current=(2,1), next=(0,0) — CW順
+    // ただし内角 > 180° となる配置が必要
+    // CW順の凹四角形: (0,0)→(2,0)→(1,1)→(2,2) の頂点(1,1)
+    const angle = calculateInteriorAngle({ gx: 2, gy: 0 }, { gx: 1, gy: 1 }, { gx: 2, gy: 2 });
+    // (2,0)→(1,1)→(2,2) で、CW順だとこの頂点は凹で内角270°
+    expect(angle).toBeCloseTo(270, 5);
+  });
+
+  it('ゼロ長ベクトルは0を返す', () => {
+    const angle = calculateInteriorAngle({ gx: 5, gy: 5 }, { gx: 5, gy: 5 }, { gx: 10, gy: 0 });
+    expect(angle).toBe(0);
+  });
+
+  it('四角形の内角の合計が360°', () => {
+    // 不規則な四角形
+    const verts = [
+      { gx: 0, gy: 0 },
+      { gx: 6, gy: 1 },
+      { gx: 5, gy: 5 },
+      { gx: 1, gy: 4 },
+    ];
+    let sum = 0;
+    for (let i = 0; i < 4; i++) {
+      sum += calculateInteriorAngle(verts[(i + 3) % 4], verts[i], verts[(i + 1) % 4]);
+    }
+    expect(sum).toBeCloseTo(360, 5);
+  });
+});
+
+describe('formatAngle', () => {
+  it('整数に近い角度は整数表示', () => {
+    expect(formatAngle(90)).toBe('90°');
+    expect(formatAngle(89.98)).toBe('90°');
+  });
+  it('小数を含む角度は小数1桁', () => {
+    expect(formatAngle(91.3)).toBe('91.3°');
+    expect(formatAngle(45.7)).toBe('45.7°');
   });
 });
 
