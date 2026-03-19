@@ -30,7 +30,12 @@ export async function editMarkerViaDialog(
     () => findMarker()?.fontSize,
     (fs) => {
       const m = findMarker();
-      if (m) m.fontSize = fs;
+      if (!m) return;
+      if (fs !== undefined) {
+        m.fontSize = fs;
+      } else {
+        delete m.fontSize;
+      }
     },
     (onPreview) =>
       ec.callbacks.onMarkerEdit({

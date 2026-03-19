@@ -161,7 +161,7 @@ export async function withFontSizePreview<R>(
       ec.render();
     });
     setCurrentFontSize(originalFontSize);
-    if (result !== null) {
+    if (result !== null && result !== undefined) {
       commitChange(ec, () => applyResult(result));
     } else {
       ec.render();
@@ -181,7 +181,12 @@ export async function applyRoomEdit(ec: EditorContext, room: Room): Promise<void
     () => findRoom()?.fontSize,
     (fs) => {
       const r = findRoom();
-      if (r) r.fontSize = fs;
+      if (!r) return;
+      if (fs !== undefined) {
+        r.fontSize = fs;
+      } else {
+        delete r.fontSize;
+      }
     },
     (onPreview) =>
       ec.callbacks.onRoomEdit({

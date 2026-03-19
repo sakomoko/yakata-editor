@@ -82,7 +82,7 @@ function buildFreeTextMenu(ec: EditorContext, ftHit: FreeText): ContextMenuItem[
             .onFreeTextEdit({
               label: ft.label,
               fontSize: ft.fontSize,
-              onFontSizePreview: onPreview as (fontSize: number) => void,
+              onFontSizePreview: onPreview,
             })
             .then((r) => (r && r.label ? r : null)),
         (result) => {
