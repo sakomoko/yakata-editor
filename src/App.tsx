@@ -96,7 +96,9 @@ export default function App() {
   const roomEditResolveRef = useRef<
     ((v: { label: string; fontSize?: number } | null) => void) | null
   >(null);
-  const markerEditResolveRef = useRef<((v: { label: string } | null) => void) | null>(null);
+  const markerEditResolveRef = useRef<
+    ((v: { label: string; fontSize?: number } | null) => void) | null
+  >(null);
   const freeTextEditResolveRef = useRef<
     ((v: { label: string; fontSize: number } | null) => void) | null
   >(null);
@@ -148,7 +150,7 @@ export default function App() {
   }, []);
 
   const handleMarkerEdit = useCallback(
-    (data: MarkerEditData): Promise<{ label: string } | null> => {
+    (data: MarkerEditData): Promise<{ label: string; fontSize?: number } | null> => {
       setMarkerDialogData(data);
       setMarkerDialogOpen(true);
       return new Promise((resolve) => {
@@ -158,11 +160,14 @@ export default function App() {
     [],
   );
 
-  const handleMarkerDialogClose = useCallback((result: { label: string } | null) => {
-    setMarkerDialogOpen(false);
-    markerEditResolveRef.current?.(result);
-    markerEditResolveRef.current = null;
-  }, []);
+  const handleMarkerDialogClose = useCallback(
+    (result: { label: string; fontSize?: number } | null) => {
+      setMarkerDialogOpen(false);
+      markerEditResolveRef.current?.(result);
+      markerEditResolveRef.current = null;
+    },
+    [],
+  );
 
   const handleFreeTextEdit = useCallback(
     (data: FreeTextEditData): Promise<{ label: string; fontSize: number } | null> => {

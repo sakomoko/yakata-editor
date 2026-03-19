@@ -46,6 +46,7 @@ Canvas 再描画 + App.tsx → project-store.ts → localStorage 保存
   - **editor/keyboard.ts** — `onKeyDown()`, `onKeyUp()` キーボードイベント処理
   - **editor/wheel.ts** — `onWheel()` ホイールズーム・パン処理
   - **editor/dblclick.ts** — `onDblClick()` ダブルクリックイベント処理
+  - **editor/marker-edit.ts** — `editMarkerViaDialog()` マーカー編集ダイアログの共通処理（dblclick/context-menuから利用）
   - **editor/utils.ts** — `labelDisplayWidth()`, `createMousePos()` ユーティリティ
 - **types.ts** — 全型定義（`Room`, `FreeText`, `FreeStroke`, `WallObject`, `RoomInteriorObject`, `Project`, `EditorState`, `DragState`, `MouseCoord`, `Handle`, `GroupHandle`, `GroupScaleOriginal`, `GridPoint`, `CornerDirection`, `ProjectMeta`, `ProjectData`, `TabState`）
 
@@ -95,12 +96,12 @@ main.ts
   │   │   ├─ editor/context-menu-handler.ts → room.ts, wall-object.ts, interior-object.ts, camera.ts, free-text.ts, free-stroke.ts, z-order.ts, link.ts, adjacency.ts, lookup.ts
   │   │   ├─ editor/keyboard.ts → z-order.ts, link.ts, adjacency.ts, viewport.ts
   │   │   ├─ editor/wheel.ts → viewport.ts
-  │   │   ├─ editor/dblclick.ts → room.ts, interior-object.ts, free-text.ts
+  │   │   ├─ editor/dblclick.ts → room.ts, interior-object.ts, free-text.ts, editor/marker-edit.ts
   │   │   └─ editor/utils.ts → grid.ts, viewport.ts
   │   ├─ project-store.ts → persistence.ts (parseStorageData), viewport.ts
   │   ├─ TabBar.tsx → @mui/material (Tabs, Tab, IconButton), ContextMenu.tsx, context-menu.ts
   │   ├─ ProjectListModal.tsx
-  │   ├─ RoomDialog.tsx, MarkerDialog.tsx, FreeTextDialog.tsx
+  │   ├─ RoomDialog.tsx, MarkerDialog.tsx, FreeTextDialog.tsx → LabelFontSizeDialog.tsx
   │   ├─ ContextMenu.tsx → context-menu.ts
   │   ├─ ShortcutHelpDialog.tsx → platform.ts
   │   └─ persistence.ts

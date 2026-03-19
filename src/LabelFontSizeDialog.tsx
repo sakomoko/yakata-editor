@@ -7,30 +7,57 @@ import TextField from '@mui/material/TextField';
 import Slider from '@mui/material/Slider';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
-import type { FreeTextEditData } from './types.ts';
+import Box from '@mui/material/Box';
 import { FONT_SIZE_MIN, FONT_SIZE_MAX } from './interior-object.ts';
+
+export interface LabelFontSizeData {
+  label: string;
+  fontSize: number | undefined;
+  autoFontSize: number;
+}
 
 interface Props {
   open: boolean;
-  data: FreeTextEditData;
-  onClose: (result: { label: string; fontSize: number } | null) => void;
+  title: string;
+  textFieldLabel: string;
+  data: LabelFontSizeData;
+  onClose: (result: { label: string; fontSize?: number } | null) => void;
 }
 
-export default function FreeTextDialog({ open, data, onClose }: Props) {
+export default function LabelFontSizeDialog({
+  open,
+  title,
+  textFieldLabel,
+  data,
+  onClose,
+}: Props) {
   const [label, setLabel] = useState(data.label);
-  const [fontSize, setFontSize] = useState(data.fontSize);
+  const [fontSize, setFontSize] = useState<number>(data.fontSize ?? data.autoFontSize);
+  const [isCustom, setIsCustom] = useState(data.fontSize !== undefined);
 
+  const dataLabel = data.label;
+  const dataFontSize = data.fontSize;
+  const dataAutoFontSize = data.autoFontSize;
   useEffect(() => {
-    setLabel(data.label);
-    setFontSize(data.fontSize);
-  }, [data]);
+    if (open) {
+      setLabel(dataLabel);
+      setFontSize(dataFontSize ?? dataAutoFontSize);
+      setIsCustom(dataFontSize !== undefined);
+    }
+  }, [open, dataLabel, dataFontSize, dataAutoFontSize]);
+
+  const handleReset = () => {
+    setFontSize(dataAutoFontSize);
+    setIsCustom(false);
+  };
 
   const handleSliderChange = (_: Event, value: number | number[]) => {
     setFontSize(value as number);
+    setIsCustom(true);
   };
 
   const handleOk = () => {
-    onClose({ label, fontSize });
+    onClose({ label, fontSize: isCustom ? fontSize : undefined });
   };
 
   const handleCancel = () => {
@@ -43,12 +70,12 @@ export default function FreeTextDialog({ open, data, onClose }: Props) {
       onClose={handleCancel}
       PaperProps={{ sx: { bgcolor: '#2a2a2a', color: '#ccc', minWidth: 320 } }}
     >
-      <DialogTitle sx={{ fontSize: 14, color: '#eee', pb: 1 }}>テキストの設定</DialogTitle>
+      <DialogTitle sx={{ fontSize: 14, color: '#eee', pb: 1 }}>{title}</DialogTitle>
       <DialogContent>
         <TextField
           autoFocus
           fullWidth
-          label="テキスト"
+          label={textFieldLabel}
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           onKeyDown={(e) => {
@@ -74,9 +101,18 @@ export default function FreeTextDialog({ open, data, onClose }: Props) {
           valueLabelDisplay="auto"
           sx={{ mt: 1 }}
         />
-        <Typography variant="caption" sx={{ color: '#aaa', fontSize: 11 }}>
-          {fontSize}px
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="caption" sx={{ color: '#aaa', fontSize: 11 }}>
+            {isCustom ? `${fontSize}px` : `${dataAutoFontSize}px (自動)`}
+          </Typography>
+          <Button
+            size="small"
+            onClick={handleReset}
+            sx={{ fontSize: 10, color: '#aaa', minWidth: 0, px: 1 }}
+          >
+            リセット
+          </Button>
+        </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={handleCancel} sx={{ color: '#ccc' }}>

@@ -56,6 +56,7 @@ export interface Marker extends InteriorObjectBase {
   markerKind: MarkerKind;
   direction: CardinalDirection;
   label?: string;
+  fontSize?: number;
 }
 
 export interface SecurityCamera extends InteriorObjectBase {
