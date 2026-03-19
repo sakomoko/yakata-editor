@@ -10,6 +10,8 @@ import {
   pointInQuad,
   getVertexHandles,
   minEdgeLength,
+  calculateInteriorAngle,
+  formatAngle,
 } from './polygon.ts';
 
 export function createRoom(x: number, y: number, w: number, h: number, label = ''): Room {
@@ -128,9 +130,10 @@ function drawPolygonRoom(
   // 壁描画
   drawWallSegments(ctx, room, isSelected, zoom);
 
+  const centroid = getQuadCentroid(verts);
+
   // ラベル（重心に配置）
   if (room.label) {
-    const centroid = getQuadCentroid(verts);
     const autoSize = calcAutoFontSize(room);
     const fontSize = room.fontSize ?? autoSize;
     // 各辺の長さの最小値をラベル幅上限に使用（AABB幅だと斜め四角形でははみ出す）
@@ -157,6 +160,33 @@ function drawPolygonRoom(
       ctx.arc(handle.px, handle.py, r, 0, Math.PI * 2);
       ctx.fill();
     }
+
+    // 各頂点の内角を表示
+    const cx = centroid.gx * GRID;
+    const cy = centroid.gy * GRID;
+    const fontSize = 11 / zoom;
+    ctx.font = `${fontSize}px system-ui, sans-serif`;
+    ctx.fillStyle = '#E65100';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < 4; i++) {
+      const prev = verts[(i + 3) % 4];
+      const curr = verts[i];
+      const next = verts[(i + 1) % 4];
+      const angle = calculateInteriorAngle(prev, curr, next);
+      const vpx = curr.gx * GRID;
+      const vpy = curr.gy * GRID;
+      // 頂点から重心方向にオフセット
+      const dx = cx - vpx;
+      const dy = cy - vpy;
+      const dist = Math.hypot(dx, dy);
+      const offset = 16 / zoom;
+      if (dist < 1e-6) continue;
+      const tx = vpx + (dx / dist) * offset;
+      const ty = vpy + (dy / dist) * offset;
+      ctx.fillText(formatAngle(angle), tx, ty);
+    }
+
     drawWallObjectResizeHandles(ctx, room, zoom);
     drawInteriorObjectHandles(ctx, room, zoom, activeInteriorObjectId);
   }
