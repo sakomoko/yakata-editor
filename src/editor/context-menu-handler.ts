@@ -521,9 +521,7 @@ function buildRoomMenu(ec: EditorContext, contextRoom: Room, m: MouseCoord): Con
   items.push({ separator: true });
   items.push({
     label: '部屋を削除',
-    action: () => {
-      deleteRoom(ec, roomId);
-    },
+    action: () => deleteRoom(ec, roomId),
   });
 
   return items;
