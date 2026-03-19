@@ -109,4 +109,14 @@ describe('findVertexSnap', () => {
     expect(result.type).toBe('vertex');
     expect(result).toMatchObject({ gx: 5, gy: 0 });
   });
+
+  it('小さい threshold ではスナップしない距離でも、大きい threshold ならスナップする', () => {
+    // (5.3, 0.3) は room A の頂点 (5, 0) から約 0.42 の距離
+    const small = findVertexSnap(rooms, 'C', 5.3, 0.3, 0.25);
+    expect(small.type).toBe('none');
+
+    const large = findVertexSnap(rooms, 'C', 5.3, 0.3, 1.0);
+    expect(large.type).toBe('vertex');
+    expect(large).toMatchObject({ gx: 5, gy: 0 });
+  });
 });

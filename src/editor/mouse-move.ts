@@ -6,7 +6,7 @@ import {
   findWallObjectById,
 } from '../lookup.ts';
 import { updateBoundingBox, hitVertexHandle, edgeResizeCursor } from '../polygon.ts';
-import { findVertexSnap, SNAP_THRESHOLD } from '../snap.ts';
+import { findVertexSnap, SNAP_SCREEN_PX } from '../snap.ts';
 import {
   hitHandle,
   hitRoom,
@@ -195,7 +195,9 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
     if (room?.vertices) {
       const rawGx = m.px / GRID;
       const rawGy = m.py / GRID;
-      const snap = findVertexSnap(state.rooms, drag.roomId, rawGx, rawGy, SNAP_THRESHOLD);
+      // SNAP_SCREEN_PX (画面px) をグリッド単位に変換。ズームに依存しないスナップ感度を実現。
+      const threshold = SNAP_SCREEN_PX / (GRID * viewport.zoom);
+      const snap = findVertexSnap(state.rooms, drag.roomId, rawGx, rawGy, threshold);
       if (snap.type !== 'none') {
         room.vertices[drag.vertexIndex] = { gx: snap.gx, gy: snap.gy };
         ec.flags.snapIndicator = { px: snap.gx * GRID, py: snap.gy * GRID, type: snap.type };
