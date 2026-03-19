@@ -1,8 +1,8 @@
 import type { Room } from './types.ts';
 import { getRoomVertices, projectPointOnSegment } from './polygon.ts';
 
-/** スナップ判定の閾値（グリッド単位） */
-export const SNAP_THRESHOLD = 0.5;
+/** スナップ判定の閾値（画面ピクセル基準） */
+export const SNAP_SCREEN_PX = 10;
 
 export type SnapResult =
   | { type: 'vertex'; gx: number; gy: number }
