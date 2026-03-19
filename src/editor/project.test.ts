@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { withFontSizePreview } from './project.ts';
+import { withFontSizePreview, deleteSelectedEntities, deleteRoom } from './project.ts';
+import { createRoom } from '../room.ts';
 import type { EditorContext } from './context.ts';
 import type { ViewportState } from '../viewport.ts';
 
@@ -133,5 +134,85 @@ describe('withFontSizePreview', () => {
     expect(currentFontSize).toBe(14); // restored to original
     // render called once for preview(30) + once for catch recovery
     expect(ec.render).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('deleteSelectedEntities', () => {
+  it('選択された部屋を削除する', () => {
+    const ec = createMockEc();
+    const room1 = createRoom(0, 0, 5, 5, 'Room1');
+    const room2 = createRoom(5, 0, 5, 5, 'Room2');
+    ec.state.rooms = [room1, room2];
+    ec.state.selection.add(room1.id);
+
+    deleteSelectedEntities(ec);
+
+    expect(ec.state.rooms).toHaveLength(1);
+    expect(ec.state.rooms[0].id).toBe(room2.id);
+    expect(ec.state.selection.size).toBe(0);
+  });
+
+  it('選択が空の場合は何もしない', () => {
+    const ec = createMockEc();
+    const room = createRoom(0, 0, 5, 5, 'Room');
+    ec.state.rooms = [room];
+
+    deleteSelectedEntities(ec);
+
+    expect(ec.state.rooms).toHaveLength(1);
+    expect(ec.callbacks.onAutoSave).not.toHaveBeenCalled();
+  });
+
+  it('複数の選択エンティティを一度に削除する', () => {
+    const ec = createMockEc();
+    const room1 = createRoom(0, 0, 5, 5, 'Room1');
+    const room2 = createRoom(5, 0, 5, 5, 'Room2');
+    const room3 = createRoom(10, 0, 5, 5, 'Room3');
+    ec.state.rooms = [room1, room2, room3];
+    ec.state.selection.add(room1.id);
+    ec.state.selection.add(room3.id);
+
+    deleteSelectedEntities(ec);
+
+    expect(ec.state.rooms).toHaveLength(1);
+    expect(ec.state.rooms[0].id).toBe(room2.id);
+  });
+});
+
+describe('deleteRoom', () => {
+  it('指定IDの部屋を削除する', () => {
+    const ec = createMockEc();
+    const room1 = createRoom(0, 0, 5, 5, 'Room1');
+    const room2 = createRoom(5, 0, 5, 5, 'Room2');
+    ec.state.rooms = [room1, room2];
+
+    deleteRoom(ec, room1.id);
+
+    expect(ec.state.rooms).toHaveLength(1);
+    expect(ec.state.rooms[0].id).toBe(room2.id);
+  });
+
+  it('存在しないroomIdの場合は何もしない', () => {
+    const ec = createMockEc();
+    const room = createRoom(0, 0, 5, 5, 'Room');
+    ec.state.rooms = [room];
+
+    deleteRoom(ec, 'non-existent-id');
+
+    expect(ec.state.rooms).toHaveLength(1);
+    expect(ec.callbacks.onAutoSave).not.toHaveBeenCalled();
+  });
+
+  it('他の部屋の選択状態を変更しない', () => {
+    const ec = createMockEc();
+    const room1 = createRoom(0, 0, 5, 5, 'Room1');
+    const room2 = createRoom(5, 0, 5, 5, 'Room2');
+    ec.state.rooms = [room1, room2];
+    ec.state.selection.add(room2.id);
+
+    deleteRoom(ec, room1.id);
+
+    expect(ec.state.rooms).toHaveLength(1);
+    expect(ec.state.selection.has(room2.id)).toBe(true);
   });
 });

@@ -1,7 +1,7 @@
 import type { Room, FreeText, FreeStroke } from '../types.ts';
 import { GRID } from '../grid.ts';
 import { pushUndo, popUndo } from '../history.ts';
-import { clearSelection, selectSingle } from '../selection.ts';
+import { clearSelection } from '../selection.ts';
 import { cleanupSingletonGroups } from '../link.ts';
 import { exportPng, saveAsJson } from '../persistence.ts';
 import { getStrokeBounds } from '../free-stroke.ts';
@@ -31,8 +31,14 @@ export function deleteSelectedEntities(ec: EditorContext): void {
 }
 
 export function deleteRoom(ec: EditorContext, roomId: string): void {
-  selectSingle(ec.state.selection, roomId);
-  deleteSelectedEntities(ec);
+  if (!findRoomById(ec.state.rooms, roomId)) return;
+  const { state } = ec;
+  commitChange(ec, () => {
+    state.rooms = state.rooms.filter((r) => r.id !== roomId);
+    cleanupSingletonGroups(state.rooms);
+    syncAllPairedOpenings(state.rooms);
+    state.selection.delete(roomId);
+  });
 }
 
 export function undo(ec: EditorContext): void {
