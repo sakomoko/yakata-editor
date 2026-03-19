@@ -2,10 +2,8 @@ import { zoomAtCenter as zoomAtCenterFn } from '../viewport.ts';
 import { pushUndo, cancelLastUndo } from '../history.ts';
 import { clearSelection } from '../selection.ts';
 import { bringToFront, sendToBack, bringForward, sendBackward } from '../z-order.ts';
-import { cleanupSingletonGroups } from '../link.ts';
-import { syncAllPairedOpenings } from '../adjacency.ts';
 import type { EditorContext } from './context.ts';
-import { commitChange, undo } from './project.ts';
+import { commitChange, undo, deleteSelectedEntities } from './project.ts';
 
 export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
   if (e.isComposing) return;
@@ -116,15 +114,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     }
     if (state.selection.size > 0) {
       e.preventDefault();
-      commitChange(ec, () => {
-        // 選択中のFreeText・FreeStrokeも削除
-        state.freeTexts = state.freeTexts.filter((f) => !state.selection.has(f.id));
-        state.freeStrokes = state.freeStrokes.filter((s) => !state.selection.has(s.id));
-        state.rooms = state.rooms.filter((r) => !state.selection.has(r.id));
-        cleanupSingletonGroups(state.rooms);
-        syncAllPairedOpenings(state.rooms);
-        clearSelection(state.selection);
-      });
+      deleteSelectedEntities(ec);
     }
   }
   if ((e.metaKey || e.ctrlKey) && e.key === 'z') {

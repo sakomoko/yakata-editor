@@ -1,7 +1,8 @@
 import type { Room, FreeText, FreeStroke } from '../types.ts';
 import { GRID } from '../grid.ts';
 import { pushUndo, popUndo } from '../history.ts';
-import { clearSelection } from '../selection.ts';
+import { clearSelection, selectSingle } from '../selection.ts';
+import { cleanupSingletonGroups } from '../link.ts';
 import { exportPng, saveAsJson } from '../persistence.ts';
 import { getStrokeBounds } from '../free-stroke.ts';
 import { computeRoomsBoundingBox, calcAutoFontSize } from '../room.ts';
@@ -14,6 +15,24 @@ export function commitChange(ec: EditorContext, fn: () => void): void {
   fn();
   ec.render();
   ec.callbacks.onAutoSave();
+}
+
+export function deleteSelectedEntities(ec: EditorContext): void {
+  const { state } = ec;
+  if (state.selection.size === 0) return;
+  commitChange(ec, () => {
+    state.freeTexts = state.freeTexts.filter((f) => !state.selection.has(f.id));
+    state.freeStrokes = state.freeStrokes.filter((s) => !state.selection.has(s.id));
+    state.rooms = state.rooms.filter((r) => !state.selection.has(r.id));
+    cleanupSingletonGroups(state.rooms);
+    syncAllPairedOpenings(state.rooms);
+    clearSelection(state.selection);
+  });
+}
+
+export function deleteRoom(ec: EditorContext, roomId: string): void {
+  selectSingle(ec.state.selection, roomId);
+  deleteSelectedEntities(ec);
 }
 
 export function undo(ec: EditorContext): void {
