@@ -47,7 +47,7 @@ export default function LabelFontSizeDialog({
   }, [open, dataLabel, dataFontSize, dataAutoFontSize]);
 
   const handleReset = () => {
-    setFontSize(data.autoFontSize);
+    setFontSize(dataAutoFontSize);
     setIsCustom(false);
   };
 
@@ -103,7 +103,7 @@ export default function LabelFontSizeDialog({
         />
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="caption" sx={{ color: '#aaa', fontSize: 11 }}>
-            {isCustom ? `${fontSize}px` : `${data.autoFontSize}px (自動)`}
+            {isCustom ? `${fontSize}px` : `${dataAutoFontSize}px (自動)`}
           </Typography>
           <Button
             size="small"
