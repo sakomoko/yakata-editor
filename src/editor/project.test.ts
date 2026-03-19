@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { withFontSizePreview } from './project.ts';
+import { withFontSizePreview, deleteSelectedEntities, deleteRoom } from './project.ts';
+import { createRoom } from '../room.ts';
+import { createFreeText } from '../free-text.ts';
+import { createFreeStroke } from '../free-stroke.ts';
 import type { EditorContext } from './context.ts';
 import type { ViewportState } from '../viewport.ts';
 
@@ -133,5 +136,116 @@ describe('withFontSizePreview', () => {
     expect(currentFontSize).toBe(14); // restored to original
     // render called once for preview(30) + once for catch recovery
     expect(ec.render).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('deleteSelectedEntities', () => {
+  it('選択された部屋を削除する', () => {
+    const ec = createMockEc();
+    const room1 = createRoom(0, 0, 5, 5, 'Room1');
+    const room2 = createRoom(5, 0, 5, 5, 'Room2');
+    ec.state.rooms = [room1, room2];
+    ec.state.selection.add(room1.id);
+
+    deleteSelectedEntities(ec);
+
+    expect(ec.state.rooms).toHaveLength(1);
+    expect(ec.state.rooms[0].id).toBe(room2.id);
+    expect(ec.state.selection.size).toBe(0);
+  });
+
+  it('選択が空の場合は何もしない', () => {
+    const ec = createMockEc();
+    const room = createRoom(0, 0, 5, 5, 'Room');
+    ec.state.rooms = [room];
+
+    deleteSelectedEntities(ec);
+
+    expect(ec.state.rooms).toHaveLength(1);
+    expect(ec.callbacks.onAutoSave).not.toHaveBeenCalled();
+  });
+
+  it('複数の選択エンティティを一度に削除する', () => {
+    const ec = createMockEc();
+    const room1 = createRoom(0, 0, 5, 5, 'Room1');
+    const room2 = createRoom(5, 0, 5, 5, 'Room2');
+    const room3 = createRoom(10, 0, 5, 5, 'Room3');
+    ec.state.rooms = [room1, room2, room3];
+    ec.state.selection.add(room1.id);
+    ec.state.selection.add(room3.id);
+
+    deleteSelectedEntities(ec);
+
+    expect(ec.state.rooms).toHaveLength(1);
+    expect(ec.state.rooms[0].id).toBe(room2.id);
+  });
+
+  it('選択されたFreeText・FreeStrokeも削除する', () => {
+    const ec = createMockEc();
+    const ft1 = createFreeText(1, 1, 'text1');
+    const ft2 = createFreeText(2, 2, 'text2');
+    const fs1 = createFreeStroke([{ px: 0, py: 0 }], '#000', 2, 1);
+    const fs2 = createFreeStroke([{ px: 10, py: 10 }], '#f00', 2, 1);
+    ec.state.freeTexts = [ft1, ft2];
+    ec.state.freeStrokes = [fs1, fs2];
+    ec.state.selection.add(ft1.id);
+    ec.state.selection.add(fs1.id);
+
+    deleteSelectedEntities(ec);
+
+    expect(ec.state.freeTexts).toHaveLength(1);
+    expect(ec.state.freeTexts[0].id).toBe(ft2.id);
+    expect(ec.state.freeStrokes).toHaveLength(1);
+    expect(ec.state.freeStrokes[0].id).toBe(fs2.id);
+  });
+});
+
+describe('deleteRoom', () => {
+  it('指定IDの部屋を削除する', () => {
+    const ec = createMockEc();
+    const room1 = createRoom(0, 0, 5, 5, 'Room1');
+    const room2 = createRoom(5, 0, 5, 5, 'Room2');
+    ec.state.rooms = [room1, room2];
+
+    deleteRoom(ec, room1.id);
+
+    expect(ec.state.rooms).toHaveLength(1);
+    expect(ec.state.rooms[0].id).toBe(room2.id);
+  });
+
+  it('存在しないroomIdの場合は何もしない', () => {
+    const ec = createMockEc();
+    const room = createRoom(0, 0, 5, 5, 'Room');
+    ec.state.rooms = [room];
+
+    deleteRoom(ec, 'non-existent-id');
+
+    expect(ec.state.rooms).toHaveLength(1);
+    expect(ec.callbacks.onAutoSave).not.toHaveBeenCalled();
+  });
+
+  it('他の部屋の選択状態を変更しない', () => {
+    const ec = createMockEc();
+    const room1 = createRoom(0, 0, 5, 5, 'Room1');
+    const room2 = createRoom(5, 0, 5, 5, 'Room2');
+    ec.state.rooms = [room1, room2];
+    ec.state.selection.add(room2.id);
+
+    deleteRoom(ec, room1.id);
+
+    expect(ec.state.rooms).toHaveLength(1);
+    expect(ec.state.selection.has(room2.id)).toBe(true);
+  });
+
+  it('削除対象の部屋が選択されている場合、選択から除外される', () => {
+    const ec = createMockEc();
+    const room = createRoom(0, 0, 5, 5, 'Room');
+    ec.state.rooms = [room];
+    ec.state.selection.add(room.id);
+
+    deleteRoom(ec, room.id);
+
+    expect(ec.state.rooms).toHaveLength(0);
+    expect(ec.state.selection.has(room.id)).toBe(false);
   });
 });
