@@ -16,6 +16,7 @@ import {
   computeInteriorObjectResize,
   transferInteriorObject,
 } from './interior-object.ts';
+import { createSecurityCamera } from './camera.ts';
 import { getRoomVertices, pointInQuad } from './polygon.ts';
 import { GRID } from './grid.ts';
 
@@ -520,5 +521,27 @@ describe('transferInteriorObject', () => {
     expect(obj.y).toBeGreaterThanOrEqual(0);
     expect(obj.x + obj.w).toBeLessThanOrEqual(target.w);
     expect(obj.y + obj.h).toBeLessThanOrEqual(target.h);
+  });
+
+  it('カメラの視野プロパティが転送後も保持される', () => {
+    const source = makeRoom({ id: 'src', x: 0, y: 0, w: 10, h: 10 });
+    const target = makeRoom({ id: 'tgt', x: 5, y: 5, w: 10, h: 10 });
+    const camera = createSecurityCamera(3, 3);
+    camera.angle = Math.PI / 4;
+    camera.fovAngle = Math.PI / 3;
+    camera.fovRange = 8;
+    camera.fovColor = 'rgba(255,0,0,0.2)';
+    camera.fovStrokeColor = 'rgba(255,0,0,0.5)';
+    source.interiorObjects = [camera];
+    target.interiorObjects = [];
+
+    transferInteriorObject(source, target, camera);
+
+    expect(target.interiorObjects).toHaveLength(1);
+    expect(camera.angle).toBe(Math.PI / 4);
+    expect(camera.fovAngle).toBe(Math.PI / 3);
+    expect(camera.fovRange).toBe(8);
+    expect(camera.fovColor).toBe('rgba(255,0,0,0.2)');
+    expect(camera.fovStrokeColor).toBe('rgba(255,0,0,0.5)');
   });
 });

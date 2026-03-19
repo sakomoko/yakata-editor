@@ -103,6 +103,7 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
   if (state.drag.type === 'moveInteriorObject') {
     const drag = state.drag;
     const sourceRoom = findRoomById(state.rooms, drag.roomId);
+    let changed = false;
     if (sourceRoom) {
       const obj = findInteriorObjectById(sourceRoom, drag.objectId);
       if (obj) {
@@ -117,12 +118,13 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
           // Same room or no room — clamp back
           clampInteriorObject(sourceRoom, obj);
         }
+        changed = true;
       }
     }
     state.drag = null;
     canvas.style.cursor = state.paintMode ? 'crosshair' : 'default';
     ec.render();
-    ec.callbacks.onAutoSave();
+    if (changed) ec.callbacks.onAutoSave();
     return;
   }
 
