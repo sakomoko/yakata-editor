@@ -31,6 +31,10 @@ export async function editMarkerViaDialog(
   if (!obj || obj.type !== 'marker') return;
   commitChange(ec, () => {
     obj.label = result.label || undefined;
-    obj.fontSize = result.fontSize;
+    if (result.fontSize !== undefined) {
+      obj.fontSize = result.fontSize;
+    } else {
+      delete obj.fontSize;
+    }
   });
 }

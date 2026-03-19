@@ -8,6 +8,7 @@ import Slider from '@mui/material/Slider';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import type { FreeTextEditData } from './types.ts';
+import { FONT_SIZE_MIN, FONT_SIZE_MAX } from './interior-object.ts';
 
 interface Props {
   open: boolean;
@@ -67,8 +68,8 @@ export default function FreeTextDialog({ open, data, onClose }: Props) {
         <Slider
           value={fontSize}
           onChange={handleSliderChange}
-          min={4}
-          max={80}
+          min={FONT_SIZE_MIN}
+          max={FONT_SIZE_MAX}
           step={1}
           valueLabelDisplay="auto"
           sx={{ mt: 1 }}
