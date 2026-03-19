@@ -77,6 +77,7 @@ interface Marker extends InteriorObjectBase {
   markerKind: MarkerKind;
   direction: CardinalDirection;
   label?: string;
+  fontSize?: number;       // ラベルのフォントサイズ（未指定時はオブジェクトサイズから自動計算）
 }
 
 interface SecurityCamera extends InteriorObjectBase {
@@ -100,6 +101,7 @@ type RoomInteriorObject = StraightStairs | FoldingStairs | Marker | SecurityCame
 | `direction` | 方向（階段: 昇降方向、死体マーカー: 頭の向き） |
 | `markerKind` | マーカーの種類（`'body'`: 死体 / `'pin'`: ピンマーカー / `'text'`: テキストのみ）※マーカーのみ |
 | `label` | マーカーのラベルテキスト（任意）※マーカーのみ |
+| `fontSize` | マーカーのラベルフォントサイズ（4〜80px、未指定時はオブジェクトサイズから自動計算）※マーカーのみ |
 | `angle` | カメラの向き（ラジアン）※カメラのみ |
 | `fovAngle` | 視野の半角（ラジアン、5°〜90°）※カメラのみ |
 | `fovRange` | 視野の到達距離（グリッド単位、1〜20）※カメラのみ |

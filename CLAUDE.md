@@ -40,6 +40,7 @@ Canvas上でのマウス操作 → editor/ のイベントハンドラ → state
   - **editor/keyboard.ts** — `onKeyDown()`, `onKeyUp()` キーボードイベント処理
   - **editor/wheel.ts** — `onWheel()` ホイールズーム・パン処理
   - **editor/dblclick.ts** — `onDblClick()` ダブルクリックイベント処理
+  - **editor/marker-edit.ts** — `editMarkerViaDialog()` マーカー編集ダイアログの共通処理
   - **editor/utils.ts** — `labelDisplayWidth()`, `createMousePos()` ユーティリティ
 - **lookup.ts** — ID検索ヘルパー (`findRoomById`, `findRoomIndexById`, `findFreeTextById`, `findFreeStrokeById`, `findWallObjectById`, `findInteriorObjectById`)
 - **snap.ts** — 頂点スナップ計算。他部屋の頂点・辺への近接スナップ(`findVertexSnap`)。`polygon.ts`の`getRoomVertices`/`projectPointOnSegment`を利用
