@@ -20,6 +20,9 @@ const MARKER_DEFAULT_W = 2;
 const MARKER_DEFAULT_H = 1;
 const MIN_INTERIOR_SIZE = 1;
 
+export const FONT_SIZE_MIN = 4;
+export const FONT_SIZE_MAX = 80;
+
 export function createStraightStairs(
   x: number,
   y: number,
@@ -141,7 +144,7 @@ export function drawInteriorObjects(
         drawMarkerPin(ctx, rect, style);
       }
       if (obj.label) {
-        drawMarkerLabel(ctx, rect, obj.label, style, obj.markerKind);
+        drawMarkerLabel(ctx, rect, obj.label, style, obj.markerKind, obj.fontSize);
       }
     } else if (obj.type === 'camera') {
       drawCameraIcon(ctx, room, obj, isSelected, isActive, zoom);
@@ -533,12 +536,41 @@ function drawMarkerPin(
   ctx.stroke();
 }
 
+/** マーカーラベルの自動フォントサイズを計算する */
+export function computeMarkerAutoFontSize(
+  ctx: CanvasRenderingContext2D,
+  rect: { x: number; y: number; w: number; h: number },
+  label: string,
+  markerKind: MarkerKind,
+): number {
+  let textW: number;
+  let textH: number;
+
+  if (markerKind === 'pin') {
+    const iconW = rect.h * 0.7;
+    textW = rect.w - iconW;
+    textH = rect.h;
+  } else {
+    textW = rect.w;
+    textH = rect.h;
+  }
+
+  if (textW <= 0 || textH <= 0) return textH * 0.8 || 12;
+
+  const maxW = textW * 0.95;
+  const baseFontSize = textH * 0.8;
+  ctx.font = `${baseFontSize}px sans-serif`;
+  const measured = ctx.measureText(label || 'A'); // fallback for empty label
+  return measured.width > maxW ? baseFontSize * (maxW / measured.width) : baseFontSize;
+}
+
 function drawMarkerLabel(
   ctx: CanvasRenderingContext2D,
   rect: { x: number; y: number; w: number; h: number },
   label: string,
   style: { color: string; lineWidth: number },
   markerKind: MarkerKind,
+  customFontSize?: number,
 ): void {
   if (!label) return;
   ctx.save();
@@ -567,12 +599,9 @@ function drawMarkerLabel(
     return;
   }
 
-  // Auto font size: fit text using measureText for accurate CJK support
   const maxW = textW * 0.95;
-  const baseFontSize = textH * 0.8;
-  ctx.font = `${baseFontSize}px sans-serif`;
-  const measured = ctx.measureText(label);
-  const fontSize = measured.width > maxW ? baseFontSize * (maxW / measured.width) : baseFontSize;
+  const fontSize =
+    customFontSize ?? computeMarkerAutoFontSize(ctx, rect, label, markerKind);
 
   ctx.fillStyle = style.color;
   ctx.font = `${fontSize}px sans-serif`;

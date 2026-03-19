@@ -18,6 +18,7 @@ import type {
 } from './types.ts';
 import { CAMERA_COLOR_PRESETS } from './camera.ts';
 import { updateBoundingBox } from './polygon.ts';
+import { FONT_SIZE_MIN, FONT_SIZE_MAX } from './interior-object.ts';
 
 const VALID_SIDES = new Set(['n', 'e', 's', 'w']);
 const VALID_WALL_OBJECT_TYPES = new Set(['window', 'door', 'opening']);
@@ -167,6 +168,9 @@ export function ensureInteriorObjectIds(objects: unknown[]): RoomInteriorObject[
           : 'body';
         const result: Marker = { id, type: 'marker', markerKind, direction, x, y, w, h };
         if (typeof obj.label === 'string' && obj.label) result.label = obj.label;
+        if (typeof obj.fontSize === 'number' && Number.isFinite(obj.fontSize)) {
+          result.fontSize = Math.max(FONT_SIZE_MIN, Math.min(FONT_SIZE_MAX, obj.fontSize));
+        }
         return result;
       }
 
@@ -234,7 +238,7 @@ export function ensureFreeTextIds(objects: unknown[]): FreeText[] {
         w: obj.w as number,
         h: obj.h as number,
         label: obj.label as string,
-        fontSize: typeof obj.fontSize === 'number' ? Math.max(4, Math.min(80, obj.fontSize)) : 14,
+        fontSize: typeof obj.fontSize === 'number' ? Math.max(FONT_SIZE_MIN, Math.min(FONT_SIZE_MAX, obj.fontSize)) : 14,
         zLayer: VALID_Z_LAYERS.has(obj.zLayer as string)
           ? (obj.zLayer as 'front' | 'back')
           : 'front',

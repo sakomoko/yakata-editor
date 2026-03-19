@@ -11,15 +11,14 @@ import type { ContextMenuItem } from '../context-menu.ts';
 import type { ViewportState } from '../viewport.ts';
 import type { SnapIndicator } from '../snap.ts';
 
-export interface RoomEditData {
+export interface LabelFontSizeEditData {
   label: string;
   fontSize: number | undefined;
   autoFontSize: number;
 }
 
-export interface MarkerEditData {
-  label: string;
-}
+export type RoomEditData = LabelFontSizeEditData;
+export type MarkerEditData = LabelFontSizeEditData;
 
 export interface ContextMenuRequest {
   screenX: number;
@@ -30,7 +29,7 @@ export interface ContextMenuRequest {
 export interface EditorCallbacks {
   onStatusChange: (text: string) => void;
   onRoomEdit: (data: RoomEditData) => Promise<{ label: string; fontSize?: number } | null>;
-  onMarkerEdit: (data: MarkerEditData) => Promise<{ label: string } | null>;
+  onMarkerEdit: (data: MarkerEditData) => Promise<{ label: string; fontSize?: number } | null>;
   onFreeTextEdit: (data: FreeTextEditData) => Promise<{ label: string; fontSize: number } | null>;
   onContextMenu: (request: ContextMenuRequest) => void;
   onAutoSave: () => void;

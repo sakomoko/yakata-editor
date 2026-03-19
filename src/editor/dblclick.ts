@@ -1,9 +1,10 @@
-import { findFreeTextById, findInteriorObjectById, findRoomById } from '../lookup.ts';
+import { findFreeTextById } from '../lookup.ts';
 import { hitRoom } from '../room.ts';
 import { hitInteriorObjectInRooms } from '../interior-object.ts';
 import { hitFreeText } from '../free-text.ts';
 import type { EditorContext } from './context.ts';
 import { commitChange, applyRoomEdit } from './project.ts';
+import { editMarkerViaDialog } from './marker-edit.ts';
 
 export async function onDblClick(ec: EditorContext, e: MouseEvent): Promise<void> {
   if (ec.state.paintMode) return;
@@ -31,17 +32,7 @@ export async function onDblClick(ec: EditorContext, e: MouseEvent): Promise<void
 
   const intHit = hitInteriorObjectInRooms(ec.state.rooms, m.px, m.py);
   if (intHit && intHit.obj.type === 'marker') {
-    const roomId = intHit.room.id;
-    const objId = intHit.obj.id;
-    const result = await ec.callbacks.onMarkerEdit({ label: intHit.obj.label ?? '' });
-    if (!result) return;
-    const room = findRoomById(ec.state.rooms, roomId);
-    if (!room) return;
-    const obj = findInteriorObjectById(room, objId);
-    if (!obj || obj.type !== 'marker') return;
-    commitChange(ec, () => {
-      obj.label = result.label || undefined;
-    });
+    await editMarkerViaDialog(ec, intHit.room, intHit.obj);
     return;
   }
 
