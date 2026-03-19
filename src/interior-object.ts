@@ -561,7 +561,8 @@ export function computeMarkerAutoFontSize(
   const baseFontSize = textH * 0.8;
   ctx.font = `${baseFontSize}px sans-serif`;
   const measured = ctx.measureText(label || 'A'); // fallback for empty label
-  return measured.width > maxW ? baseFontSize * (maxW / measured.width) : baseFontSize;
+  const raw = measured.width > maxW ? baseFontSize * (maxW / measured.width) : baseFontSize;
+  return Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, raw));
 }
 
 function drawMarkerLabel(

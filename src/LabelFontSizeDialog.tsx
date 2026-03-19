@@ -35,11 +35,16 @@ export default function LabelFontSizeDialog({
   const [fontSize, setFontSize] = useState<number>(data.fontSize ?? data.autoFontSize);
   const [isCustom, setIsCustom] = useState(data.fontSize !== undefined);
 
+  const dataLabel = data.label;
+  const dataFontSize = data.fontSize;
+  const dataAutoFontSize = data.autoFontSize;
   useEffect(() => {
-    setLabel(data.label);
-    setFontSize(data.fontSize ?? data.autoFontSize);
-    setIsCustom(data.fontSize !== undefined);
-  }, [data]);
+    if (open) {
+      setLabel(dataLabel);
+      setFontSize(dataFontSize ?? dataAutoFontSize);
+      setIsCustom(dataFontSize !== undefined);
+    }
+  }, [open, dataLabel, dataFontSize, dataAutoFontSize]);
 
   const handleReset = () => {
     setFontSize(data.autoFontSize);
