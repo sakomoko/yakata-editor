@@ -1,8 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { withFontSizePreview } from './project.ts';
 import type { EditorContext } from './context.ts';
+import type { ViewportState } from '../viewport.ts';
 
 function createMockEc(): EditorContext {
+  const viewport: ViewportState = { zoom: 1, panX: 0, panY: 0 };
   return {
     canvas: {} as HTMLCanvasElement,
     ctx: {} as CanvasRenderingContext2D,
@@ -20,7 +22,7 @@ function createMockEc(): EditorContext {
       paintLineWidth: 2,
       paintOpacity: 1,
     },
-    viewport: { scale: 1, panX: 0, panY: 0 },
+    viewport,
     callbacks: {
       onStatusChange: vi.fn(),
       onRoomEdit: vi.fn(),
@@ -59,8 +61,6 @@ describe('withFontSizePreview', () => {
     );
 
     expect(applyResult).toHaveBeenCalledWith({ label: 'test', fontSize: 20 });
-    // commitChange is called internally via the real implementation;
-    // since we import the real function, check render was called
     expect(currentFontSize).toBe(14); // restored to original before apply
   });
 
@@ -108,5 +108,30 @@ describe('withFontSizePreview', () => {
     expect(currentFontSize).toBe(14);
     // render was called for each preview + once for cancel restore
     expect(ec.render).toHaveBeenCalledTimes(3);
+  });
+
+  it('例外発生時: フォントサイズが元の値に復元され、例外が再throwされる', async () => {
+    const ec = createMockEc();
+    let currentFontSize: number | undefined = 14;
+    const error = new Error('dialog failed');
+
+    await expect(
+      withFontSizePreview(
+        ec,
+        () => currentFontSize,
+        (fs) => {
+          currentFontSize = fs;
+        },
+        async (onPreview) => {
+          onPreview(30);
+          throw error;
+        },
+        vi.fn(),
+      ),
+    ).rejects.toThrow('dialog failed');
+
+    expect(currentFontSize).toBe(14); // restored to original
+    // render called once for preview(30) + once for catch recovery
+    expect(ec.render).toHaveBeenCalledTimes(2);
   });
 });

@@ -155,15 +155,21 @@ export async function withFontSizePreview<R>(
   applyResult: (result: R) => void,
 ): Promise<void> {
   const originalFontSize = getCurrentFontSize();
-  const result = await showDialog((fontSize) => {
-    setCurrentFontSize(fontSize);
+  try {
+    const result = await showDialog((fontSize) => {
+      setCurrentFontSize(fontSize);
+      ec.render();
+    });
+    setCurrentFontSize(originalFontSize);
+    if (result !== null) {
+      commitChange(ec, () => applyResult(result));
+    } else {
+      ec.render();
+    }
+  } catch (e) {
+    setCurrentFontSize(originalFontSize);
     ec.render();
-  });
-  setCurrentFontSize(originalFontSize);
-  if (result !== null) {
-    commitChange(ec, () => applyResult(result));
-  } else {
-    ec.render();
+    throw e;
   }
 }
 
