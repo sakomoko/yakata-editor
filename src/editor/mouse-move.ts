@@ -27,7 +27,7 @@ import {
 import {
   hitInteriorObjectInRooms,
   hitInteriorObjectHandleInRooms,
-  computeInteriorObjectMove,
+  computeInteriorObjectMoveUnclamped,
   computeInteriorObjectResize,
   clampAllInteriorObjects,
 } from '../interior-object.ts';
@@ -342,9 +342,8 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
       if (obj) {
         const gxF = drag.snapToGrid ? m.gx : m.px / GRID;
         const gyF = drag.snapToGrid ? m.gy : m.py / GRID;
-        const pos = computeInteriorObjectMove(
+        const pos = computeInteriorObjectMoveUnclamped(
           targetRoom,
-          obj,
           gxF,
           gyF,
           drag.offsetX,
