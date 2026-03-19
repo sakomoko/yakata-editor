@@ -130,6 +130,7 @@ function drawPolygonRoom(
   // 壁描画
   drawWallSegments(ctx, room, isSelected, zoom);
 
+  // 重心はラベル配置と内角表示の両方で使用
   const centroid = getQuadCentroid(verts);
 
   // ラベル（重心に配置）
@@ -169,10 +170,10 @@ function drawPolygonRoom(
     ctx.fillStyle = '#E65100';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    for (let i = 0; i < 4; i++) {
-      const prev = verts[(i + 3) % 4];
+    for (let i = 0; i < verts.length; i++) {
+      const prev = verts[(i + verts.length - 1) % verts.length];
       const curr = verts[i];
-      const next = verts[(i + 1) % 4];
+      const next = verts[(i + 1) % verts.length];
       const angle = calculateInteriorAngle(prev, curr, next);
       const vpx = curr.gx * GRID;
       const vpy = curr.gy * GRID;
@@ -180,8 +181,8 @@ function drawPolygonRoom(
       const dx = cx - vpx;
       const dy = cy - vpy;
       const dist = Math.hypot(dx, dy);
-      const offset = 16 / zoom;
       if (dist < 1e-6) continue;
+      const offset = Math.min(16 / zoom, dist * 0.8);
       const tx = vpx + (dx / dist) * offset;
       const ty = vpy + (dy / dist) * offset;
       ctx.fillText(formatAngle(angle), tx, ty);
