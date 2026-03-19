@@ -3,7 +3,7 @@ import { hitRoom } from '../room.ts';
 import { hitInteriorObjectInRooms } from '../interior-object.ts';
 import { hitFreeText } from '../free-text.ts';
 import type { EditorContext } from './context.ts';
-import { commitChange, applyRoomEdit } from './project.ts';
+import { applyRoomEdit, withFontSizePreview } from './project.ts';
 import { editMarkerViaDialog } from './marker-edit.ts';
 
 export async function onDblClick(ec: EditorContext, e: MouseEvent): Promise<void> {
@@ -16,17 +16,30 @@ export async function onDblClick(ec: EditorContext, e: MouseEvent): Promise<void
     hitFreeText(ec.state.freeTexts, m.px, m.py, 'back');
   if (ftHit) {
     const ftId = ftHit.id;
-    const result = await ec.callbacks.onFreeTextEdit({
-      label: ftHit.label,
-      fontSize: ftHit.fontSize,
-    });
-    if (!result || !result.label) return;
-    commitChange(ec, () => {
-      const ft = findFreeTextById(ec.state.freeTexts, ftId);
-      if (!ft) return;
-      ft.label = result.label;
-      ft.fontSize = result.fontSize;
-    });
+    const findFt = () => findFreeTextById(ec.state.freeTexts, ftId);
+    await withFontSizePreview(
+      ec,
+      () => findFt()?.fontSize,
+      (fs) => {
+        const ft = findFt();
+        if (ft && fs !== undefined) ft.fontSize = fs;
+      },
+      (onPreview) =>
+        ec.callbacks
+          .onFreeTextEdit({
+            label: ftHit.label,
+            fontSize: ftHit.fontSize,
+            onFontSizePreview: onPreview,
+          })
+          .then((r) => (r && r.label ? r : null)),
+      (result) => {
+        const ft = findFt();
+        if (ft) {
+          ft.label = result.label;
+          ft.fontSize = result.fontSize;
+        }
+      },
+    );
     return;
   }
 

@@ -124,6 +124,7 @@ export interface FreeStroke {
 export interface FreeTextEditData {
   label: string;
   fontSize: number;
+  onFontSizePreview?: (fontSize: number | undefined) => void;
 }
 
 export interface Project {
