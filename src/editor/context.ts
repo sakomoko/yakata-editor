@@ -1,9 +1,11 @@
 import type {
   EditorState,
   Room,
+  Arrow,
   FreeText,
   FreeStroke,
   FreeTextEditData,
+  GridPoint,
   MouseCoord,
   ProjectData,
 } from '../types.ts';
@@ -37,12 +39,18 @@ export interface EditorCallbacks {
   onAutoSave: () => void;
   onViewportChange: () => void;
   onPaintModeChange?: (paintMode: boolean) => void;
+  onArrowModeChange?: (arrowMode: boolean) => void;
 }
 
 export interface EditorAPI {
   undo: () => void;
   newProject: () => void;
-  loadProject: (data: { rooms: Room[]; freeTexts: FreeText[]; freeStrokes?: FreeStroke[] }) => void;
+  loadProject: (data: {
+    rooms: Room[];
+    freeTexts: FreeText[];
+    freeStrokes?: FreeStroke[];
+    arrows?: Arrow[];
+  }) => void;
   saveProject: () => Promise<void>;
   exportAsPng: () => void;
   resize: () => void;
@@ -51,6 +59,7 @@ export interface EditorAPI {
     rooms: Room[];
     freeTexts: FreeText[];
     freeStrokes: FreeStroke[];
+    arrows: Arrow[];
     history: string[];
     redoHistory: string[];
   };
@@ -65,6 +74,14 @@ export interface EditorAPI {
     paintColor: string;
     paintLineWidth: number;
     paintOpacity: number;
+  };
+  setArrowMode: (on: boolean) => void;
+  setArrowColor: (color: string) => void;
+  setArrowLineWidth: (width: number) => void;
+  getArrowState: () => {
+    arrowMode: boolean;
+    arrowColor: string;
+    arrowLineWidth: number;
   };
 }
 
@@ -83,6 +100,8 @@ export interface EditorContext {
     clipboard: ClipboardData | null;
     /** saveUndoPoint でクリアされる前のRedoスタックの退避。cancelLastUndoでの復元に使う。 */
     savedRedo: string[] | null;
+    /** 矢印作成中の状態。クリック間はボタン非押下のためDragStateではない */
+    pendingArrow: { points: GridPoint[]; previewPoint?: GridPoint } | null;
   };
   render: () => void;
   commitChange: (fn: () => void) => void;

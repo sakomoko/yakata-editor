@@ -21,14 +21,60 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     e.preventDefault();
     state.paintMode = !state.paintMode;
     if (state.paintMode) {
+      state.arrowMode = false;
+      flags.pendingArrow = null;
       clearSelection(state.selection);
       flags.activeInteriorObjectId = undefined;
       flags.activeFreeTextId = undefined;
+      ec.callbacks.onArrowModeChange?.(false);
     }
     canvas.style.cursor = state.paintMode ? 'crosshair' : 'default';
     ec.render();
     ec.callbacks.onPaintModeChange?.(state.paintMode);
     return;
+  }
+
+  // A キーでアローモードトグル
+  if (
+    e.key.toLowerCase() === 'a' &&
+    !e.metaKey &&
+    !e.ctrlKey &&
+    document.activeElement === document.body
+  ) {
+    e.preventDefault();
+    state.arrowMode = !state.arrowMode;
+    if (state.arrowMode) {
+      state.paintMode = false;
+      clearSelection(state.selection);
+      flags.activeInteriorObjectId = undefined;
+      flags.activeFreeTextId = undefined;
+      ec.callbacks.onPaintModeChange?.(false);
+    } else {
+      flags.pendingArrow = null;
+    }
+    canvas.style.cursor = state.arrowMode ? 'crosshair' : 'default';
+    ec.render();
+    ec.callbacks.onArrowModeChange?.(state.arrowMode);
+    return;
+  }
+
+  // Arrow mode: Escape to cancel, Backspace to remove last point
+  if (state.arrowMode && flags.pendingArrow) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      flags.pendingArrow = null;
+      ec.render();
+      return;
+    }
+    if (e.key === 'Backspace' && document.activeElement === document.body) {
+      e.preventDefault();
+      flags.pendingArrow.points.pop();
+      if (flags.pendingArrow.points.length === 0) {
+        flags.pendingArrow = null;
+      }
+      ec.render();
+      return;
+    }
   }
 
   if (e.code === 'Space' && !flags.isPanning && document.activeElement === document.body) {
@@ -81,6 +127,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
       state.rooms,
       state.freeTexts,
       state.freeStrokes,
+      state.arrows,
     );
     const changed = fn(state.rooms, roomId);
     if (changed) {

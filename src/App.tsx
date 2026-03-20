@@ -17,6 +17,7 @@ import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import ImageIcon from '@mui/icons-material/Image';
 import UndoIcon from '@mui/icons-material/Undo';
 import BrushIcon from '@mui/icons-material/Brush';
+import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import {
   initEditor,
@@ -117,6 +118,9 @@ export default function App() {
   const [paintColor, setPaintColor] = useState('#ff0000');
   const [paintLineWidth, setPaintLineWidth] = useState(3);
   const [paintOpacity, setPaintOpacity] = useState(1);
+  const [arrowMode, setArrowMode] = useState(false);
+  const [arrowColor, setArrowColor] = useState('#cc0000');
+  const [arrowLineWidth, setArrowLineWidth] = useState(2);
 
   // Multi-project state
   // tabState: React state (レンダリング用), tabStateRef: ref (コールバック内での最新値参照用)
@@ -198,12 +202,13 @@ export default function App() {
     const editor = editorRef.current;
     const activeId = tabStateRef.current.activeTabId;
     if (!editor || !activeId) return;
-    const { rooms, freeTexts, freeStrokes, history } = editor.getState();
+    const { rooms, freeTexts, freeStrokes, arrows, history } = editor.getState();
     const viewport = editor.getViewport();
     saveProjectData(activeId, {
       rooms,
       freeTexts,
       freeStrokes,
+      arrows,
       viewport,
       history,
     } satisfies ProjectData);
@@ -237,6 +242,7 @@ export default function App() {
           rooms: [],
           freeTexts: [],
           freeStrokes: [],
+          arrows: [],
           viewport: { zoom: 1, panX: 0, panY: 0 },
           history: [],
         },
@@ -353,6 +359,7 @@ export default function App() {
         // onViewportChange はホイール等で高頻度に呼ばれるため、debounce で全データシリアライズの頻度を抑制
         onViewportChange: () => debouncedSaveCurrentProject(),
         onPaintModeChange: (mode: boolean) => setPaintMode(mode),
+        onArrowModeChange: (mode: boolean) => setArrowMode(mode),
       },
       activeResult?.data ?? undefined,
     );
@@ -739,6 +746,61 @@ export default function App() {
                 <option value={0.8}>80%</option>
                 <option value={0.5}>50%</option>
                 <option value={0.3}>30%</option>
+              </select>
+            </>
+          )}
+          <Button
+            size="small"
+            variant="contained"
+            color="inherit"
+            sx={{
+              ...toolbarButtonSx,
+              ...(arrowMode && {
+                bgcolor: '#1976d2',
+                color: '#fff',
+                borderColor: '#1976d2',
+                '&:hover': { bgcolor: '#1565c0', color: '#fff', boxShadow: 'none' },
+              }),
+            }}
+            startIcon={<TrendingFlatIcon />}
+            onClick={() => {
+              editorRef.current?.setArrowMode(!arrowMode);
+            }}
+          >
+            矢印 (A)
+          </Button>
+          {arrowMode && (
+            <>
+              <input
+                type="color"
+                value={arrowColor}
+                onChange={(e) => {
+                  setArrowColor(e.target.value);
+                  editorRef.current?.setArrowColor(e.target.value);
+                }}
+                style={{ width: 28, height: 24, border: 'none', padding: 0, cursor: 'pointer' }}
+                title="矢印の色"
+              />
+              <select
+                value={arrowLineWidth}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setArrowLineWidth(v);
+                  editorRef.current?.setArrowLineWidth(v);
+                }}
+                style={{
+                  height: 24,
+                  fontSize: 11,
+                  background: '#444',
+                  color: '#ccc',
+                  border: '1px solid #555',
+                  borderRadius: 3,
+                }}
+                title="矢印の太さ"
+              >
+                <option value={1}>1px</option>
+                <option value={2}>2px</option>
+                <option value={4}>4px</option>
               </select>
             </>
           )}

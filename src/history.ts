@@ -1,4 +1,4 @@
-import type { Room, FreeText, FreeStroke } from './types.ts';
+import type { Room, FreeText, FreeStroke, Arrow } from './types.ts';
 
 const MAX_HISTORY = 50;
 
@@ -6,6 +6,7 @@ interface Snapshot {
   rooms: Room[];
   freeTexts: FreeText[];
   freeStrokes: FreeStroke[];
+  arrows: Arrow[];
 }
 
 function pushSnapshot(
@@ -13,8 +14,9 @@ function pushSnapshot(
   rooms: Room[],
   freeTexts: FreeText[] = [],
   freeStrokes: FreeStroke[] = [],
+  arrows: Arrow[] = [],
 ): void {
-  const snapshot: Snapshot = { rooms, freeTexts, freeStrokes };
+  const snapshot: Snapshot = { rooms, freeTexts, freeStrokes, arrows };
   stack.push(JSON.stringify(snapshot));
   if (stack.length > MAX_HISTORY) stack.shift();
 }
@@ -24,13 +26,14 @@ function popSnapshot(stack: string[]): Snapshot | null {
   const raw: unknown = JSON.parse(stack.pop()!);
   // 後方互換: 旧形式は配列（rooms only）
   if (Array.isArray(raw)) {
-    return { rooms: raw as Room[], freeTexts: [], freeStrokes: [] };
+    return { rooms: raw as Room[], freeTexts: [], freeStrokes: [], arrows: [] };
   }
   const obj = raw as Record<string, unknown>;
   return {
     rooms: (obj.rooms as Room[]) ?? [],
     freeTexts: (obj.freeTexts as FreeText[]) ?? [],
     freeStrokes: (obj.freeStrokes as FreeStroke[]) ?? [],
+    arrows: (obj.arrows as Arrow[]) ?? [],
   };
 }
 
@@ -39,8 +42,9 @@ export function pushUndo(
   rooms: Room[],
   freeTexts: FreeText[] = [],
   freeStrokes: FreeStroke[] = [],
+  arrows: Arrow[] = [],
 ): void {
-  pushSnapshot(history, rooms, freeTexts, freeStrokes);
+  pushSnapshot(history, rooms, freeTexts, freeStrokes, arrows);
 }
 
 export function popUndo(history: string[]): Snapshot | null {
@@ -69,8 +73,9 @@ export function pushRedo(
   rooms: Room[],
   freeTexts: FreeText[] = [],
   freeStrokes: FreeStroke[] = [],
+  arrows: Arrow[] = [],
 ): void {
-  pushSnapshot(redoHistory, rooms, freeTexts, freeStrokes);
+  pushSnapshot(redoHistory, rooms, freeTexts, freeStrokes, arrows);
 }
 
 export function popRedo(redoHistory: string[]): Snapshot | null {
@@ -90,9 +95,10 @@ export function saveUndoPoint(
   rooms: Room[],
   freeTexts: FreeText[] = [],
   freeStrokes: FreeStroke[] = [],
+  arrows: Arrow[] = [],
 ): string[] {
   const savedRedo = [...redoHistory];
-  pushSnapshot(history, rooms, freeTexts, freeStrokes);
+  pushSnapshot(history, rooms, freeTexts, freeStrokes, arrows);
   clearRedo(redoHistory);
   return savedRedo;
 }

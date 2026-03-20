@@ -56,6 +56,7 @@ export function loadProjectData(id: string): LoadProjectResult | null {
       rooms: obj.rooms,
       freeTexts: obj.freeTexts,
       freeStrokes: obj.freeStrokes,
+      arrows: obj.arrows,
     });
     const viewport = parseViewport(obj.viewport);
     const history: string[] = Array.isArray(obj.history)
@@ -70,6 +71,7 @@ export function loadProjectData(id: string): LoadProjectResult | null {
         rooms: storageData.rooms,
         freeTexts: storageData.freeTexts,
         freeStrokes: storageData.freeStrokes,
+        arrows: storageData.arrows,
         viewport,
         history,
         redoHistory,
@@ -212,6 +214,7 @@ async function syncFromServer(): Promise<void> {
             rooms: storageData.rooms,
             freeTexts: storageData.freeTexts,
             freeStrokes: storageData.freeStrokes,
+            arrows: storageData.arrows,
             viewport: parseViewport(obj && typeof obj === 'object' ? obj.viewport : undefined),
             history: Array.isArray(obj?.history)
               ? (obj.history as unknown[]).filter((h): h is string => typeof h === 'string')
@@ -338,6 +341,7 @@ export function createNewProject(name?: string): { meta: ProjectMeta; data: Proj
     rooms: [],
     freeTexts: [],
     freeStrokes: [],
+    arrows: [],
     viewport: { zoom: 1, panX: 0, panY: 0 },
     history: [],
     redoHistory: [],
@@ -400,6 +404,7 @@ export function migrateIfNeeded(): void {
         rooms: storageData.rooms,
         freeTexts: storageData.freeTexts,
         freeStrokes: storageData.freeStrokes,
+        arrows: storageData.arrows,
         viewport,
         history: [],
         redoHistory: [],

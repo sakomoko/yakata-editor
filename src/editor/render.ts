@@ -11,6 +11,7 @@ import { drawOutwardDoorsOverlay } from '../wall-object.ts';
 import { drawCameraFovOverlay, drawCameraHandles } from '../camera.ts';
 import { drawFreeText, drawFreeTextHandles } from '../free-text.ts';
 import { drawFreeStroke, drawFreeStrokeBounds } from '../free-stroke.ts';
+import { drawArrow, drawArrowHandles, drawPendingArrow } from '../arrow.ts';
 import { drawLinkGroupIndicators } from '../link.ts';
 import type { SnapIndicator } from '../snap.ts';
 import type { EditorContext } from './context.ts';
@@ -116,6 +117,26 @@ export function render(ec: EditorContext): void {
     }
   }
 
+  // Arrows
+  for (const arrow of state.arrows) {
+    drawArrow(ctx, arrow, viewport.zoom);
+    if (state.selection.has(arrow.id)) {
+      drawArrowHandles(ctx, arrow, viewport.zoom);
+    }
+  }
+
+  // Pending arrow preview
+  if (flags.pendingArrow && flags.pendingArrow.points.length >= 1) {
+    drawPendingArrow(
+      ctx,
+      flags.pendingArrow.points,
+      flags.pendingArrow.previewPoint,
+      state.arrowColor,
+      state.arrowLineWidth,
+      viewport.zoom,
+    );
+  }
+
   // Free strokes (最前面レイヤー)
   for (const stroke of state.freeStrokes) {
     drawFreeStroke(ctx, stroke, viewport.zoom);
@@ -176,6 +197,9 @@ export function updateStatus(ec: EditorContext): void {
   let text = `(${gx},${gy}) |${rooms} |${zoom}%`;
   if (state.paintMode) {
     text += ' | pen';
+  }
+  if (state.arrowMode) {
+    text += ' | arrow';
   }
   if (state.selection.size === 1) {
     const sel = getSingleSelected(state.rooms, state.selection);

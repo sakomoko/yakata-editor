@@ -82,6 +82,14 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
     return;
   }
 
+  if (state.drag.type === 'moveArrow' || state.drag.type === 'moveArrowPoint') {
+    state.drag = null;
+    canvas.style.cursor = state.arrowMode ? 'crosshair' : 'default';
+    ec.render();
+    ec.callbacks.onAutoSave();
+    return;
+  }
+
   if (state.drag.type === 'moveVertex') {
     const room = findRoomById(state.rooms, state.drag.roomId);
     if (room) {
@@ -171,6 +179,7 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
         state.rooms,
         state.freeTexts,
         state.freeStrokes,
+        state.arrows,
       );
       const snap = e.shiftKey ? (v: number) => v : Math.round;
       const room = createRoom(

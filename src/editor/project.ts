@@ -1,10 +1,11 @@
-import type { Room, FreeText, FreeStroke } from '../types.ts';
+import type { Room, Arrow, FreeText, FreeStroke } from '../types.ts';
 import { GRID } from '../grid.ts';
 import { popUndo, pushRedo, popRedo, pushUndo, saveUndoPoint } from '../history.ts';
 import { clearSelection } from '../selection.ts';
 import { cleanupSingletonGroups } from '../link.ts';
 import { exportPng, saveAsJson } from '../persistence.ts';
 import { getStrokeBounds } from '../free-stroke.ts';
+import { getArrowBounds } from '../arrow.ts';
 import { computeRoomsBoundingBox, calcAutoFontSize } from '../room.ts';
 import { syncAllPairedOpenings } from '../adjacency.ts';
 import { findRoomById } from '../lookup.ts';
@@ -17,6 +18,7 @@ export function commitChange(ec: EditorContext, fn: () => void): void {
     ec.state.rooms,
     ec.state.freeTexts,
     ec.state.freeStrokes,
+    ec.state.arrows,
   );
   fn();
   ec.render();
@@ -29,6 +31,7 @@ export function deleteSelectedEntities(ec: EditorContext): void {
   commitChange(ec, () => {
     state.freeTexts = state.freeTexts.filter((f) => !state.selection.has(f.id));
     state.freeStrokes = state.freeStrokes.filter((s) => !state.selection.has(s.id));
+    state.arrows = state.arrows.filter((a) => !state.selection.has(a.id));
     state.rooms = state.rooms.filter((r) => !state.selection.has(r.id));
     cleanupSingletonGroups(state.rooms);
     syncAllPairedOpenings(state.rooms);
@@ -57,11 +60,12 @@ export function deleteRoom(ec: EditorContext, roomId: string): void {
 
 function applySnapshot(
   ec: EditorContext,
-  restored: { rooms: Room[]; freeTexts: FreeText[]; freeStrokes: FreeStroke[] },
+  restored: { rooms: Room[]; freeTexts: FreeText[]; freeStrokes: FreeStroke[]; arrows: Arrow[] },
 ): void {
   ec.state.rooms = restored.rooms;
   ec.state.freeTexts = restored.freeTexts;
   ec.state.freeStrokes = restored.freeStrokes;
+  ec.state.arrows = restored.arrows;
   ec.state.drag = null;
   clearSelection(ec.state.selection);
   ec.flags.activeInteriorObjectId = undefined;
@@ -73,7 +77,13 @@ function applySnapshot(
 export function undo(ec: EditorContext): void {
   const restored = popUndo(ec.state.history);
   if (!restored) return;
-  pushRedo(ec.state.redoHistory, ec.state.rooms, ec.state.freeTexts, ec.state.freeStrokes);
+  pushRedo(
+    ec.state.redoHistory,
+    ec.state.rooms,
+    ec.state.freeTexts,
+    ec.state.freeStrokes,
+    ec.state.arrows,
+  );
   applySnapshot(ec, restored);
 }
 
@@ -81,13 +91,22 @@ export function redo(ec: EditorContext): void {
   const restored = popRedo(ec.state.redoHistory);
   if (!restored) return;
   // redo時は現在状態をUndoスタックに退避するだけ。saveUndoPointではなくpushUndoを使い、Redoスタックをクリアしない。
-  pushUndo(ec.state.history, ec.state.rooms, ec.state.freeTexts, ec.state.freeStrokes);
+  pushUndo(
+    ec.state.history,
+    ec.state.rooms,
+    ec.state.freeTexts,
+    ec.state.freeStrokes,
+    ec.state.arrows,
+  );
   applySnapshot(ec, restored);
 }
 
 export function newProject(ec: EditorContext): void {
   if (
-    (ec.state.rooms.length || ec.state.freeTexts.length || ec.state.freeStrokes.length) &&
+    (ec.state.rooms.length ||
+      ec.state.freeTexts.length ||
+      ec.state.freeStrokes.length ||
+      ec.state.arrows.length) &&
     !confirm('現在の間取り図をクリアしますか？')
   )
     return;
@@ -95,6 +114,7 @@ export function newProject(ec: EditorContext): void {
     ec.state.rooms = [];
     ec.state.freeTexts = [];
     ec.state.freeStrokes = [];
+    ec.state.arrows = [];
     clearSelection(ec.state.selection);
   });
   ec.flags.activeInteriorObjectId = undefined;
@@ -103,12 +123,18 @@ export function newProject(ec: EditorContext): void {
 
 export function loadProjectData(
   ec: EditorContext,
-  data: { rooms: Room[]; freeTexts: FreeText[]; freeStrokes?: FreeStroke[] },
+  data: {
+    rooms: Room[];
+    freeTexts: FreeText[];
+    freeStrokes?: FreeStroke[];
+    arrows?: Arrow[];
+  },
 ): void {
   commitChange(ec, () => {
     ec.state.rooms = data.rooms;
     ec.state.freeTexts = data.freeTexts;
     ec.state.freeStrokes = data.freeStrokes ?? [];
+    ec.state.arrows = data.arrows ?? [];
     clearSelection(ec.state.selection);
     syncAllPairedOpenings(ec.state.rooms);
   });
@@ -117,7 +143,7 @@ export function loadProjectData(
 }
 
 export async function saveProject(ec: EditorContext): Promise<void> {
-  await saveAsJson(ec.state.rooms, ec.state.freeTexts, ec.state.freeStrokes);
+  await saveAsJson(ec.state.rooms, ec.state.freeTexts, ec.state.freeStrokes, ec.state.arrows);
 }
 
 export function exportAsPng(ec: EditorContext): void {
@@ -161,6 +187,18 @@ export function exportAsPng(ec: EditorContext): void {
         if (bounds.x + bounds.w > maxX) maxX = bounds.x + bounds.w;
         if (bounds.y + bounds.h > maxY) maxY = bounds.y + bounds.h;
       }
+    }
+
+    for (const arrow of state.arrows) {
+      const ab = getArrowBounds(arrow);
+      const abMinX = ab.minGx * GRID;
+      const abMinY = ab.minGy * GRID;
+      const abMaxX = ab.maxGx * GRID;
+      const abMaxY = ab.maxGy * GRID;
+      if (abMinX < minX) minX = abMinX;
+      if (abMinY < minY) minY = abMinY;
+      if (abMaxX > maxX) maxX = abMaxX;
+      if (abMaxY > maxY) maxY = abMaxY;
     }
 
     // rooms も FreeText もない場合のフォールバック

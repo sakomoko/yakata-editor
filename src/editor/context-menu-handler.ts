@@ -34,7 +34,8 @@ import {
 import { createSecurityCamera } from '../camera.ts';
 import { hitFreeText, createFreeText } from '../free-text.ts';
 import { hitFreeStrokeInList, STROKE_HIT_TOLERANCE_PX } from '../free-stroke.ts';
-import { findFreeStrokeById } from '../lookup.ts';
+import { hitArrowInList, hitArrowPoint, ARROW_COLOR_PRESETS, ARROW_LINE_WIDTHS } from '../arrow.ts';
+import { findArrowById, findFreeStrokeById } from '../lookup.ts';
 import type { ContextMenuItem } from '../context-menu.ts';
 import { bringToFront, sendToBack, bringForward, sendBackward } from '../z-order.ts';
 import {
@@ -588,6 +589,92 @@ const STROKE_WIDTHS = [
   { label: '極太 (10px)', value: 10 },
 ];
 
+function buildArrowMenu(
+  ec: EditorContext,
+  arrowId: string,
+  hitGx: number,
+  hitGy: number,
+): ContextMenuItem[] {
+  const { state } = ec;
+  const items: ContextMenuItem[] = [];
+
+  // Color change
+  for (const c of ARROW_COLOR_PRESETS) {
+    items.push({
+      label: `色: ${c.label}`,
+      action: () => {
+        const arrow = findArrowById(state.arrows, arrowId);
+        if (!arrow) return;
+        commitChange(ec, () => {
+          arrow.color = c.value;
+        });
+      },
+    });
+  }
+  items.push({ separator: true });
+
+  // Line width change
+  for (const w of ARROW_LINE_WIDTHS) {
+    items.push({
+      label: w.label,
+      action: () => {
+        const arrow = findArrowById(state.arrows, arrowId);
+        if (!arrow) return;
+        commitChange(ec, () => {
+          arrow.lineWidth = w.value;
+        });
+      },
+    });
+  }
+  items.push({ separator: true });
+
+  // Delete point (if hit on a point and arrow has >2 points)
+  const arrow = findArrowById(state.arrows, arrowId);
+  if (arrow) {
+    const ptIdx = hitArrowPoint(arrow, hitGx, hitGy);
+    if (ptIdx !== undefined && arrow.points.length > 2) {
+      items.push({
+        label: 'ポイントを削除',
+        action: () => {
+          const a = findArrowById(state.arrows, arrowId);
+          if (!a || a.points.length <= 2 || ptIdx >= a.points.length) return;
+          commitChange(ec, () => {
+            a.points.splice(ptIdx, 1);
+          });
+        },
+      });
+      items.push({ separator: true });
+    }
+  }
+
+  // Label edit
+  items.push({
+    label: 'ラベルを変更',
+    action: () => {
+      const a = findArrowById(state.arrows, arrowId);
+      if (!a) return;
+      const newLabel = prompt('矢印のラベル', a.label ?? '');
+      if (newLabel !== null) {
+        commitChange(ec, () => {
+          a.label = newLabel || undefined;
+        });
+      }
+    },
+  });
+
+  items.push({ separator: true });
+  items.push({
+    label: '矢印を削除',
+    action: () => {
+      commitChange(ec, () => {
+        state.arrows = state.arrows.filter((a) => a.id !== arrowId);
+        state.selection.delete(arrowId);
+      });
+    },
+  });
+  return items;
+}
+
 function buildFreeStrokeMenu(ec: EditorContext, strokeId: string): ContextMenuItem[] {
   const { state } = ec;
   const items: ContextMenuItem[] = [];
@@ -632,9 +719,23 @@ function buildFreeStrokeMenu(ec: EditorContext, strokeId: string): ContextMenuIt
 
 export function onContextMenu(ec: EditorContext, e: MouseEvent): void {
   e.preventDefault();
-  if (ec.state.paintMode) return;
+  if (ec.state.paintMode || ec.state.arrowMode) return;
   const { state, callbacks } = ec;
   const m = ec.mousePos(e);
+
+  // Arrow
+  {
+    const arrowGx = m.px / GRID;
+    const arrowGy = m.py / GRID;
+    const arrowHit = hitArrowInList(state.arrows, arrowGx, arrowGy);
+    if (arrowHit) {
+      selectSingle(state.selection, arrowHit.id);
+      const items = buildArrowMenu(ec, arrowHit.id, arrowGx, arrowGy);
+      callbacks.onContextMenu({ screenX: e.clientX, screenY: e.clientY, items });
+      ec.render();
+      return;
+    }
+  }
 
   // FreeStroke
   const strokeHitTolerance = STROKE_HIT_TOLERANCE_PX / ec.viewport.zoom;

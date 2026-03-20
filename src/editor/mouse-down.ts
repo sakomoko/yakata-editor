@@ -15,6 +15,7 @@ import { hitInteriorObjectInRooms, hitInteriorObjectHandleInRooms } from '../int
 import { hitCameraHandleInRooms } from '../camera.ts';
 import { hitFreeText, hitFreeTextHandle } from '../free-text.ts';
 import { createFreeStroke, hitFreeStrokeInList, STROKE_HIT_TOLERANCE_PX } from '../free-stroke.ts';
+import { hitArrowInList, hitArrowPoint, constrainToAxis } from '../arrow.ts';
 import { expandWithLinked } from '../link.ts';
 import { hitVertexHandle, edgeResizeCursor } from '../polygon.ts';
 import type { EditorContext } from './context.ts';
@@ -47,6 +48,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
       state.rooms,
       state.freeTexts,
       state.freeStrokes,
+      state.arrows,
     );
     const stroke = createFreeStroke(
       [{ px: m.px, py: m.py }],
@@ -61,6 +63,23 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
     return;
   }
 
+  // Arrow mode: add point to pending arrow
+  if (state.arrowMode && e.button === 0) {
+    let point = { gx: m.gx, gy: m.gy };
+    if (flags.pendingArrow && flags.pendingArrow.points.length > 0 && shift) {
+      const lastPt = flags.pendingArrow.points[flags.pendingArrow.points.length - 1];
+      point = constrainToAxis(lastPt, point);
+    }
+    if (!flags.pendingArrow) {
+      flags.pendingArrow = { points: [point] };
+    } else {
+      flags.pendingArrow.points.push(point);
+    }
+    flags.pendingArrow.previewPoint = undefined;
+    ec.render();
+    return;
+  }
+
   // Check wall object edge hit (resize) FIRST — on narrow walls, room handles overlap
   const selectedRooms = state.rooms.filter((r) => state.selection.has(r.id));
   const edgeHit = hitWallObjectEdgeInRooms(selectedRooms, m.px, m.py, viewport.zoom, true);
@@ -71,6 +90,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
       state.rooms,
       state.freeTexts,
       state.freeStrokes,
+      state.arrows,
     );
     flags.activeInteriorObjectId = undefined;
     state.drag = {
@@ -99,6 +119,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
           state.rooms,
           state.freeTexts,
           state.freeStrokes,
+          state.arrows,
         );
         state.drag = {
           type: 'moveVertex',
@@ -124,6 +145,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
           state.rooms,
           state.freeTexts,
           state.freeStrokes,
+          state.arrows,
         );
         state.drag = {
           type: 'resizeFreeText',
@@ -153,6 +175,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
       state.rooms,
       state.freeTexts,
       state.freeStrokes,
+      state.arrows,
     );
     flags.activeInteriorObjectId = camHandleHit.cam.id;
     const dragType =
@@ -180,6 +203,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
       state.rooms,
       state.freeTexts,
       state.freeStrokes,
+      state.arrows,
     );
     flags.activeInteriorObjectId = intHandleHit.obj.id;
     state.drag = {
@@ -208,6 +232,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
       state.rooms,
       state.freeTexts,
       state.freeStrokes,
+      state.arrows,
     );
     const { handle, room } = handleHit;
     state.drag = {
@@ -234,6 +259,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
           state.rooms,
           state.freeTexts,
           state.freeStrokes,
+          state.arrows,
         );
         const expanded = expandWithLinked(state.rooms, state.selection);
         const expandedRooms = state.rooms.filter((r) => expanded.has(r.id));
@@ -288,6 +314,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
       state.rooms,
       state.freeTexts,
       state.freeStrokes,
+      state.arrows,
     );
     flags.activeInteriorObjectId = undefined;
     state.drag = {
@@ -309,6 +336,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
       state.rooms,
       state.freeTexts,
       state.freeStrokes,
+      state.arrows,
     );
     selectSingle(state.selection, intHit.room.id);
     flags.activeInteriorObjectId = intHit.obj.id;
@@ -345,6 +373,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
       state.rooms,
       state.freeTexts,
       state.freeStrokes,
+      state.arrows,
     );
     state.drag = {
       type: 'moveFreeText',
@@ -354,6 +383,64 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
     };
     canvas.style.cursor = 'grabbing';
     ec.render();
+  }
+
+  // Check arrow hit (select/move)
+  {
+    const arrowGx = m.px / GRID;
+    const arrowGy = m.py / GRID;
+    // First check if we hit a point handle on a selected arrow
+    for (const arrow of state.arrows) {
+      if (!state.selection.has(arrow.id)) continue;
+      const ptIdx = hitArrowPoint(arrow, arrowGx, arrowGy);
+      if (ptIdx !== undefined) {
+        flags.savedRedo = saveUndoPoint(
+          state.history,
+          state.redoHistory,
+          state.rooms,
+          state.freeTexts,
+          state.freeStrokes,
+          state.arrows,
+        );
+        state.drag = {
+          type: 'moveArrowPoint',
+          arrowId: arrow.id,
+          pointIndex: ptIdx,
+        };
+        flags.activeFreeTextId = undefined;
+        canvas.style.cursor = 'grabbing';
+        ec.render();
+        return;
+      }
+    }
+    // Then check segment hit
+    const arrowHit = hitArrowInList(state.arrows, arrowGx, arrowGy);
+    if (arrowHit) {
+      if (shift) {
+        toggleSelection(state.selection, arrowHit.id);
+      } else {
+        selectSingle(state.selection, arrowHit.id);
+      }
+      flags.savedRedo = saveUndoPoint(
+        state.history,
+        state.redoHistory,
+        state.rooms,
+        state.freeTexts,
+        state.freeStrokes,
+        state.arrows,
+      );
+      state.drag = {
+        type: 'moveArrow',
+        arrowId: arrowHit.id,
+        startGx: m.gx,
+        startGy: m.gy,
+        origPoints: arrowHit.points.map((p) => ({ gx: p.gx, gy: p.gy })),
+      };
+      flags.activeFreeTextId = undefined;
+      canvas.style.cursor = 'grabbing';
+      ec.render();
+      return;
+    }
   }
 
   // Check free stroke hit (select/move)
@@ -371,6 +458,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
       state.rooms,
       state.freeTexts,
       state.freeStrokes,
+      state.arrows,
     );
     state.drag = {
       type: 'moveStroke',
@@ -411,6 +499,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
       state.rooms,
       state.freeTexts,
       state.freeStrokes,
+      state.arrows,
     );
     const expanded = expandWithLinked(state.rooms, state.selection);
     const originals = new Map<string, { x: number; y: number; vertices?: Room['vertices'] }>();
