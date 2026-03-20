@@ -101,11 +101,15 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
     if (startPoint.gx === endPoint.gx && startPoint.gy === endPoint.gy) {
       cancelLastUndo(state.history, state.redoHistory, flags.savedRedo);
       flags.savedRedo = null;
-    } else {
-      const arrow = createArrow([startPoint, endPoint], state.arrowColor, state.arrowLineWidth);
-      state.arrows.push(arrow);
-      selectSingle(state.selection, arrow.id);
+      state.drag = null;
+      canvas.style.cursor = 'crosshair';
+      ec.render();
+      return;
     }
+    const arrow = createArrow([startPoint, endPoint], state.arrowColor, state.arrowLineWidth);
+    state.arrows.push(arrow);
+    selectSingle(state.selection, arrow.id);
+    flags.savedRedo = null;
     state.drag = null;
     canvas.style.cursor = 'crosshair';
     ec.render();
