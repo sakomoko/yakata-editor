@@ -294,49 +294,41 @@ const VALID_HEX_COLOR_OR_NAMED = /^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})|[a-z]+)$/;
 
 /** @internal Exported for testing */
 export function ensureArrowIds(objects: unknown[]): Arrow[] {
-  return objects
-    .filter((o) => {
-      const obj = o as Record<string, unknown>;
-      return (
-        Array.isArray(obj.points) &&
-        obj.points.length >= 2 &&
-        typeof obj.color === 'string' &&
-        typeof obj.lineWidth === 'number'
-      );
-    })
-    .map((o): Arrow => {
-      const obj = o as Record<string, unknown>;
-      const points = (obj.points as unknown[])
-        .filter(
-          (p) =>
-            p &&
-            typeof p === 'object' &&
-            typeof (p as Record<string, unknown>).gx === 'number' &&
-            typeof (p as Record<string, unknown>).gy === 'number',
-        )
-        .map((p) => ({
-          gx: (p as Record<string, unknown>).gx as number,
-          gy: (p as Record<string, unknown>).gy as number,
-        }));
-      if (points.length < 2) {
-        // Will be filtered out below
-        return { id: '', points: [], color: '', lineWidth: 1 };
-      }
-      const result: Arrow = {
-        id: typeof obj.id === 'string' ? obj.id : crypto.randomUUID(),
-        points,
-        color: VALID_HEX_COLOR_OR_NAMED.test(obj.color as string)
-          ? (obj.color as string)
-          : '#cc0000',
-        lineWidth: Math.max(1, Math.min(10, obj.lineWidth as number)),
-      };
-      if (typeof obj.label === 'string' && obj.label) result.label = obj.label;
-      if (typeof obj.fontSize === 'number' && Number.isFinite(obj.fontSize)) {
-        result.fontSize = Math.max(FONT_SIZE_MIN, Math.min(FONT_SIZE_MAX, obj.fontSize));
-      }
-      return result;
-    })
-    .filter((a) => a.points.length >= 2);
+  return objects.flatMap((o): Arrow[] => {
+    const obj = o as Record<string, unknown>;
+    if (
+      !Array.isArray(obj.points) ||
+      obj.points.length < 2 ||
+      typeof obj.color !== 'string' ||
+      typeof obj.lineWidth !== 'number'
+    ) {
+      return [];
+    }
+    const points = (obj.points as unknown[])
+      .filter(
+        (p) =>
+          p &&
+          typeof p === 'object' &&
+          typeof (p as Record<string, unknown>).gx === 'number' &&
+          typeof (p as Record<string, unknown>).gy === 'number',
+      )
+      .map((p) => ({
+        gx: (p as Record<string, unknown>).gx as number,
+        gy: (p as Record<string, unknown>).gy as number,
+      }));
+    if (points.length < 2) return [];
+    const result: Arrow = {
+      id: typeof obj.id === 'string' ? obj.id : crypto.randomUUID(),
+      points,
+      color: VALID_HEX_COLOR_OR_NAMED.test(obj.color) ? obj.color : '#cc0000',
+      lineWidth: Math.max(1, Math.min(10, obj.lineWidth)),
+    };
+    if (typeof obj.label === 'string' && obj.label) result.label = obj.label;
+    if (typeof obj.fontSize === 'number' && Number.isFinite(obj.fontSize)) {
+      result.fontSize = Math.max(FONT_SIZE_MIN, Math.min(FONT_SIZE_MAX, obj.fontSize));
+    }
+    return [result];
+  });
 }
 
 function ensureIds(rooms: unknown[]): Room[] {

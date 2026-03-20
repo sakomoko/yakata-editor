@@ -452,7 +452,18 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
     const drag = state.drag;
     const arrow = findArrowById(state.arrows, drag.arrowId);
     if (arrow && drag.pointIndex < arrow.points.length) {
-      arrow.points[drag.pointIndex] = { gx: m.gx, gy: m.gy };
+      let pt = { gx: m.gx, gy: m.gy };
+      // Shift制約: 隣接ポイントに対して水平/垂直に制約
+      if (e.shiftKey) {
+        const neighbor =
+          drag.pointIndex > 0
+            ? arrow.points[drag.pointIndex - 1]
+            : arrow.points[drag.pointIndex + 1];
+        if (neighbor) {
+          pt = constrainToAxis(neighbor, pt);
+        }
+      }
+      arrow.points[drag.pointIndex] = pt;
     }
   }
 

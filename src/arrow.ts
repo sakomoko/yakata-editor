@@ -8,6 +8,10 @@ export const ARROW_START_RADIUS = 0.15; // グリッド単位
 const ARROW_HIT_TOLERANCE_GRID = 0.3;
 const ARROW_POINT_HIT_TOLERANCE_GRID = 0.4;
 
+function calcHeadSize(zoom: number): number {
+  return Math.max(ARROW_HEAD_SIZE * GRID, (ARROW_HEAD_SIZE * GRID) / zoom);
+}
+
 export const ARROW_COLOR_PRESETS = [
   { label: '赤', value: '#cc0000' },
   { label: '青', value: '#0055cc' },
@@ -70,8 +74,7 @@ export function drawArrow(ctx: CanvasRenderingContext2D, arrow: Arrow, zoom: num
   // Draw arrowhead at end
   const ep = arrow.points[arrow.points.length - 1];
   const pp = arrow.points[arrow.points.length - 2];
-  const headSize = Math.max(ARROW_HEAD_SIZE * GRID, (ARROW_HEAD_SIZE * GRID) / zoom);
-  drawArrowHead(ctx, pp, ep, arrow.color, headSize);
+  drawArrowHead(ctx, pp, ep, arrow.color, calcHeadSize(zoom));
 
   // Draw label at first segment midpoint
   if (arrow.label) {
@@ -175,8 +178,7 @@ export function drawPendingArrow(
   if (allPoints.length >= 2) {
     const ep = allPoints[allPoints.length - 1];
     const pp = allPoints[allPoints.length - 2];
-    const headSize = Math.max(ARROW_HEAD_SIZE * GRID, (ARROW_HEAD_SIZE * GRID) / zoom);
-    drawArrowHead(ctx, pp, ep, color, headSize);
+    drawArrowHead(ctx, pp, ep, color, calcHeadSize(zoom));
   }
 
   // Draw waypoint handles

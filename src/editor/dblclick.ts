@@ -29,7 +29,11 @@ export async function onDblClick(ec: EditorContext, e: MouseEvent): Promise<void
         break;
       }
     }
-    if (pts.length >= 2) {
+    // ゼロ長矢印（始点と終点が同一座標）は作成しない
+    const hasLength =
+      pts.length >= 2 &&
+      (pts[0].gx !== pts[pts.length - 1].gx || pts[0].gy !== pts[pts.length - 1].gy);
+    if (hasLength) {
       const arrow = createArrow(pts, state.arrowColor, state.arrowLineWidth);
       commitChange(ec, () => {
         state.arrows.push(arrow);
