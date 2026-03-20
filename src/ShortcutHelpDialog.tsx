@@ -53,6 +53,7 @@ const shortcuts: { category: string; items: { keys: string; description: string 
     items: [
       { keys: 'ドラッグ', description: '始点→終点で矢印を作成' },
       { keys: 'Shift+ドラッグ', description: '水平/垂直に制約して矢印を作成' },
+      { keys: 'Escape', description: 'ドラッグ中の矢印作成をキャンセル' },
     ],
   },
   {

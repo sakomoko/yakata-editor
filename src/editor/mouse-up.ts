@@ -106,6 +106,8 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
       ec.render();
       return;
     }
+    // commitChange を使わず直接変更する。mousedown で先に saveUndoPoint を呼んでいるため、
+    // commitChange の二重保存を避ける必要がある。moveArrow/paint 等と同じパターン。
     const arrow = createArrow([startPoint, endPoint], state.arrowColor, state.arrowLineWidth);
     state.arrows.push(arrow);
     selectSingle(state.selection, arrow.id);
