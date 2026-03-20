@@ -42,6 +42,7 @@ export function initGestures(
   let longPressTimer: ReturnType<typeof setTimeout> | null = null;
   let longPressStartX = 0;
   let longPressStartY = 0;
+  let capturedPointerId: number | null = null;
 
   function clearLongPress(): void {
     if (longPressTimer !== null) {
@@ -108,6 +109,11 @@ export function initGestures(
 
       if (pointers.size >= 2) {
         clearLongPress();
+        // Release pointer capture from single-finger phase so multitouch events fire correctly
+        if (capturedPointerId !== null) {
+          canvas.releasePointerCapture(capturedPointerId);
+          capturedPointerId = null;
+        }
         // Cancel any ongoing single-finger drag and restore undo
         if (!gestureActive) {
           cancelDrag();
@@ -122,8 +128,10 @@ export function initGestures(
         return;
       }
 
-      // Single touch — delegate to normal handler (unless gesture is active)
+      // Single touch — capture pointer so drag continues even outside canvas (important on iOS Safari)
       if (!gestureActive) {
+        canvas.setPointerCapture(e.pointerId);
+        capturedPointerId = e.pointerId;
         onPointerDown(e);
       }
       return;
@@ -202,6 +210,9 @@ export function initGestures(
     if (e.pointerType === 'touch') {
       pointers.delete(e.pointerId);
       clearLongPress();
+      if (e.pointerId === capturedPointerId) {
+        capturedPointerId = null;
+      }
 
       if (pointers.size < 2) {
         pinch = null;
@@ -224,9 +235,14 @@ export function initGestures(
     onPointerUp(e);
   }
 
+  // pointercancel fires on the element that received pointerdown, so canvas registration is correct.
+  // If setPointerCapture is active, the cancel still targets the capturing element (canvas).
   function handlePointerCancel(e: PointerEvent): void {
     pointers.delete(e.pointerId);
     clearLongPress();
+    if (e.pointerId === capturedPointerId) {
+      capturedPointerId = null;
+    }
     if (pointers.size < 2) {
       pinch = null;
     }
