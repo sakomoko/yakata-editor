@@ -67,6 +67,7 @@ function makeEc(
       freeStrokes,
       selection,
       history: [],
+      redoHistory: [],
       drag: null,
       mouse: { px: 0, py: 0, gx: 0, gy: 0 },
       paintMode: false,

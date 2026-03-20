@@ -18,6 +18,7 @@ function createMockEc(): EditorContext {
       freeStrokes: [],
       selection: new Set<string>(),
       history: [],
+      redoHistory: [],
       drag: null,
       mouse: { px: 0, py: 0, gx: 0, gy: 0 },
       paintMode: false,

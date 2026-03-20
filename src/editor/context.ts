@@ -52,6 +52,7 @@ export interface EditorAPI {
     freeTexts: FreeText[];
     freeStrokes: FreeStroke[];
     history: string[];
+    redoHistory: string[];
   };
   getViewport: () => ViewportState;
   loadProjectState: (data: ProjectData) => void;

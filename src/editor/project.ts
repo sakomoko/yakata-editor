@@ -1,6 +1,6 @@
 import type { Room, FreeText, FreeStroke } from '../types.ts';
 import { GRID } from '../grid.ts';
-import { pushUndo, popUndo } from '../history.ts';
+import { popUndo, pushRedo, popRedo, pushUndo, saveUndoPoint } from '../history.ts';
 import { clearSelection } from '../selection.ts';
 import { cleanupSingletonGroups } from '../link.ts';
 import { exportPng, saveAsJson } from '../persistence.ts';
@@ -11,7 +11,13 @@ import { findRoomById } from '../lookup.ts';
 import type { EditorContext } from './context.ts';
 
 export function commitChange(ec: EditorContext, fn: () => void): void {
-  pushUndo(ec.state.history, ec.state.rooms, ec.state.freeTexts, ec.state.freeStrokes);
+  saveUndoPoint(
+    ec.state.history,
+    ec.state.redoHistory,
+    ec.state.rooms,
+    ec.state.freeTexts,
+    ec.state.freeStrokes,
+  );
   fn();
   ec.render();
   ec.callbacks.onAutoSave();
@@ -49,9 +55,10 @@ export function deleteRoom(ec: EditorContext, roomId: string): void {
   });
 }
 
-export function undo(ec: EditorContext): void {
-  const restored = popUndo(ec.state.history);
-  if (!restored) return;
+function applySnapshot(
+  ec: EditorContext,
+  restored: { rooms: Room[]; freeTexts: FreeText[]; freeStrokes: FreeStroke[] },
+): void {
   ec.state.rooms = restored.rooms;
   ec.state.freeTexts = restored.freeTexts;
   ec.state.freeStrokes = restored.freeStrokes;
@@ -61,6 +68,20 @@ export function undo(ec: EditorContext): void {
   ec.flags.activeFreeTextId = undefined;
   ec.render();
   ec.callbacks.onAutoSave();
+}
+
+export function undo(ec: EditorContext): void {
+  const restored = popUndo(ec.state.history);
+  if (!restored) return;
+  pushRedo(ec.state.redoHistory, ec.state.rooms, ec.state.freeTexts, ec.state.freeStrokes);
+  applySnapshot(ec, restored);
+}
+
+export function redo(ec: EditorContext): void {
+  const restored = popRedo(ec.state.redoHistory);
+  if (!restored) return;
+  pushUndo(ec.state.history, ec.state.rooms, ec.state.freeTexts, ec.state.freeStrokes);
+  applySnapshot(ec, restored);
 }
 
 export function newProject(ec: EditorContext): void {

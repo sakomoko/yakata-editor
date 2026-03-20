@@ -5,7 +5,7 @@ import {
   findInteriorObjectById,
 } from '../lookup.ts';
 import { selectSingle, clearSelection } from '../selection.ts';
-import { pushUndo, cancelLastUndo } from '../history.ts';
+import { saveUndoPoint, cancelLastUndo } from '../history.ts';
 import { hitWallObjectInRooms, clampWallObjects } from '../wall-object.ts';
 import {
   clampAllInteriorObjects,
@@ -165,7 +165,7 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
       }
     } else if (area.w > 0 && area.h > 0) {
       // 部屋作成: 包含する部屋がなければ新規作成にフォールバック
-      pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
+      saveUndoPoint(state.history, state.redoHistory, state.rooms, state.freeTexts, state.freeStrokes);
       const snap = e.shiftKey ? (v: number) => v : Math.round;
       const room = createRoom(
         snap(area.x),

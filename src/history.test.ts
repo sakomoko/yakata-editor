@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { pushUndo, popUndo, cancelLastUndo } from './history.ts';
+import {
+  pushUndo,
+  popUndo,
+  cancelLastUndo,
+  pushRedo,
+  popRedo,
+  clearRedo,
+  saveUndoPoint,
+} from './history.ts';
 import { createRoom } from './room.ts';
 
 describe('pushUndo / popUndo', () => {
@@ -96,5 +104,85 @@ describe('pushUndo / popUndo', () => {
     expect(restored!.rooms).toHaveLength(1);
     expect(restored!.rooms[0].label).toBe('old');
     expect(restored!.freeTexts).toHaveLength(0);
+  });
+});
+
+describe('pushRedo / popRedo / clearRedo', () => {
+  it('should save and restore via redo stack', () => {
+    const redoHistory: string[] = [];
+    const rooms = [createRoom(1, 2, 3, 4, 'A')];
+    pushRedo(redoHistory, rooms);
+
+    const restored = popRedo(redoHistory);
+    expect(restored).not.toBeNull();
+    expect(restored!.rooms).toHaveLength(1);
+    expect(restored!.rooms[0].label).toBe('A');
+  });
+
+  it('should return null when redo history is empty', () => {
+    expect(popRedo([])).toBeNull();
+  });
+
+  it('should limit redo history to 50 entries', () => {
+    const redoHistory: string[] = [];
+    const rooms = [createRoom(0, 0, 1, 1)];
+    for (let i = 0; i < 55; i++) {
+      pushRedo(redoHistory, rooms);
+    }
+    expect(redoHistory).toHaveLength(50);
+  });
+
+  it('clearRedo should empty the stack', () => {
+    const redoHistory: string[] = [];
+    const rooms = [createRoom(0, 0, 1, 1)];
+    pushRedo(redoHistory, rooms);
+    pushRedo(redoHistory, rooms);
+    expect(redoHistory).toHaveLength(2);
+
+    clearRedo(redoHistory);
+    expect(redoHistory).toHaveLength(0);
+  });
+
+  it('undo then redo should restore state symmetrically', () => {
+    const history: string[] = [];
+    const redoHistory: string[] = [];
+
+    // Initial state: room 'before'
+    const rooms = [createRoom(0, 0, 1, 1, 'before')];
+    pushUndo(history, rooms);
+
+    // Change to 'after'
+    rooms[0].label = 'after';
+
+    // Simulate undo: save current to redo, restore from undo
+    pushRedo(redoHistory, rooms);
+    const undone = popUndo(history);
+    expect(undone!.rooms[0].label).toBe('before');
+
+    // Simulate redo: save current (undone) to undo, restore from redo
+    pushUndo(history, undone!.rooms, undone!.freeTexts, undone!.freeStrokes);
+    const redone = popRedo(redoHistory);
+    expect(redone!.rooms[0].label).toBe('after');
+  });
+});
+
+describe('saveUndoPoint', () => {
+  it('should push to undo and clear redo in one call', () => {
+    const history: string[] = [];
+    const redoHistory: string[] = [];
+    const rooms = [createRoom(0, 0, 1, 1, 'A')];
+
+    // Redoスタックに何か入れておく
+    pushRedo(redoHistory, rooms);
+    pushRedo(redoHistory, rooms);
+    expect(redoHistory).toHaveLength(2);
+
+    saveUndoPoint(history, redoHistory, rooms);
+
+    expect(history).toHaveLength(1);
+    expect(redoHistory).toHaveLength(0);
+
+    const restored = popUndo(history);
+    expect(restored!.rooms[0].label).toBe('A');
   });
 });
