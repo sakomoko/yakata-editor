@@ -176,8 +176,8 @@ export function describeProject(project: ProjectFile): string {
   if (arrows.length > 0) {
     lines.push('');
     lines.push(`## 矢印 (${arrows.length}本)`);
-    for (let i = 0; i < arrows.length; i++) {
-      lines.push(`- ${describeArrow(arrows[i], i)}`);
+    for (const [i, arrow] of arrows.entries()) {
+      lines.push(`- ${describeArrow(arrow, i)}`);
     }
   }
 
