@@ -330,7 +330,10 @@ describe('describeArrow', () => {
   it('formats arrow without label', () => {
     const arrow: Arrow = {
       id: 'a2',
-      points: [{ gx: 0, gy: 0 }, { gx: 5, gy: 5 }],
+      points: [
+        { gx: 0, gy: 0 },
+        { gx: 5, gy: 5 },
+      ],
       color: '#0000ff',
       lineWidth: 1,
     };

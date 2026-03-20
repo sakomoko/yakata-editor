@@ -1,7 +1,14 @@
 /// <reference types="node" />
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { Room, WallObject, RoomInteriorObject, FreeText, FreeStroke, Arrow } from '../types.ts';
+import type {
+  Room,
+  WallObject,
+  RoomInteriorObject,
+  FreeText,
+  FreeStroke,
+  Arrow,
+} from '../types.ts';
 import { parseStorageData } from '../persistence.ts';
 import { findAdjacentRoomsOnWall } from '../adjacency.ts';
 import type { WallSide } from '../types.ts';
@@ -33,7 +40,12 @@ function loadProject(filePath: string): ProjectFile {
     process.exit(1);
   }
   const data = parseStorageData(parsed);
-  return { rooms: data.rooms, freeTexts: data.freeTexts, freeStrokes: data.freeStrokes, arrows: data.arrows };
+  return {
+    rooms: data.rooms,
+    freeTexts: data.freeTexts,
+    freeStrokes: data.freeStrokes,
+    arrows: data.arrows,
+  };
 }
 
 /** @internal Exported for testing */
