@@ -5,6 +5,13 @@
 
 ## [Unreleased]
 
+### Changed
+
+- トップレベルエンティティ（rooms, freeTexts, freeStrokes, arrows）の受け渡しを個別引数から `EntitySnapshot` オブジェクトパターンに統一
+  - `history.ts`, `persistence.ts`, `clipboard.ts` の関数シグネチャを簡素化
+  - `ClipboardData` と `StorageData` が `EntitySnapshot` を extends する形に変更
+  - 新エンティティ型の追加時に変更が必要な箇所を大幅に削減
+
 ### Added
 
 - Redo機能（⌘Shift+Z / Ctrl+Y）で、Undoしすぎた操作をやり直し可能に
