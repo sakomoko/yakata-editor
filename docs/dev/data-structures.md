@@ -269,6 +269,7 @@ interface EditorState {
   freeStrokes: FreeStroke[]; // フリーペイントストロークデータ
   selection: Set<string>;  // 選択中の部屋/FreeText/FreeStrokeのID
   history: string[];       // Undoスナップショット（JSON文字列、最大50件）
+  redoHistory: string[];   // Redoスナップショット（JSON文字列、最大50件）
   drag: DragState;         // 現在のドラッグ操作
   mouse: MouseCoord;       // 現在のマウス座標
   paintMode: boolean;      // ペイントモードON/OFF
@@ -356,7 +357,8 @@ interface ProjectData {
   freeTexts: FreeText[];
   freeStrokes: FreeStroke[];
   viewport: { zoom: number; panX: number; panY: number };
-  history: string[];   // Undoスナップショット（JSON文字列）
+  history: string[];        // Undoスナップショット（JSON文字列）
+  redoHistory?: string[];   // Redoスナップショット（JSON文字列、後方互換のためオプショナル）
 }
 ```
 
