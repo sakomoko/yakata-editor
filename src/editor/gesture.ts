@@ -95,9 +95,15 @@ export function initGestures(
         longPressTimer = setTimeout(() => {
           longPressTimer = null;
           if (pointers.size !== 1 || gestureActive) return;
+          // Cancel any drag started by onPointerDown (e.g. 'create' drag) before showing menu.
+          // Without this, gestureActive prevents onPointerUp from calling the delegate,
+          // leaving state.drag non-null and causing misbehavior on the next interaction.
+          gestureActive = true;
+          cancelDrag();
           // Fire context menu at the stored position.
           // Uses MouseEvent because onContextMenu accepts MouseEvent (contextmenu is natively MouseEvent).
-          gestureActive = true;
+          // Note: synthetic event's target will not be canvas; this is fine because
+          // onContextMenu uses only clientX/clientY for positioning.
           const syntheticEvent = new MouseEvent('contextmenu', {
             clientX: longPressStartX,
             clientY: longPressStartY,

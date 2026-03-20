@@ -97,7 +97,9 @@ export function initEditor(
 
   // Disable browser default touch gestures (scroll, zoom) on canvas
   canvas.style.touchAction = 'none';
-  // Prevent iOS Safari elastic overscroll
+  // Prevent iOS Safari elastic overscroll.
+  // On some iOS versions this only works on body/html; container-level is sufficient here
+  // because App.tsx renders the container as a full-viewport element.
   container.style.overscrollBehavior = 'none';
 
   // Single-pointer handlers bound to ec (passed to gesture layer, not registered directly)
