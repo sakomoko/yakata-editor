@@ -100,6 +100,7 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
     // ゼロ長ドラッグ（クリックのみ）は矢印を作成せずUndoを取り消し
     if (startPoint.gx === endPoint.gx && startPoint.gy === endPoint.gy) {
       cancelLastUndo(state.history, state.redoHistory, flags.savedRedo);
+      flags.savedRedo = null;
     } else {
       const arrow = createArrow([startPoint, endPoint], state.arrowColor, state.arrowLineWidth);
       state.arrows.push(arrow);

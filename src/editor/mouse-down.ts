@@ -61,6 +61,8 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
   if (state.arrowMode && e.button === 0) {
     flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
     state.drag = { type: 'drawArrow', startPoint: { gx: m.gx, gy: m.gy } };
+    // mousedown 時点で始点にプレビューを設定し、即座に視覚フィードバックを提供
+    flags.drawArrowPreview = { gx: m.gx, gy: m.gy };
     canvas.style.cursor = 'crosshair';
     ec.render();
     return;

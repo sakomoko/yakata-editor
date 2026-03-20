@@ -12,6 +12,18 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
 
   const { canvas, state, viewport, flags } = ec;
 
+  // Escape: 矢印ドラッグ中のキャンセル
+  if (e.key === 'Escape' && state.drag?.type === 'drawArrow') {
+    e.preventDefault();
+    cancelLastUndo(state.history, state.redoHistory, flags.savedRedo);
+    flags.savedRedo = null;
+    flags.drawArrowPreview = null;
+    state.drag = null;
+    canvas.style.cursor = 'crosshair';
+    ec.render();
+    return;
+  }
+
   // P キーでペイントモードトグル
   if (
     e.key.toLowerCase() === 'p' &&
