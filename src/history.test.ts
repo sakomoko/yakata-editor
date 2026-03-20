@@ -115,6 +115,21 @@ describe('pushUndo / popUndo', () => {
     expect(redoHistory).toHaveLength(2);
   });
 
+  it('cancelLastUndo with null savedRedo should not touch redo stack', () => {
+    const history: string[] = [];
+    const redoHistory: string[] = [];
+    const rooms = [createRoom(0, 0, 1, 1)];
+
+    pushUndo(history, rooms);
+    pushRedo(redoHistory, rooms);
+    expect(history).toHaveLength(1);
+    expect(redoHistory).toHaveLength(1);
+
+    cancelLastUndo(history, redoHistory, null);
+    expect(history).toHaveLength(0);
+    expect(redoHistory).toHaveLength(1);
+  });
+
   it('should handle legacy format (array of rooms)', () => {
     const history: string[] = [];
     // Simulate old format: just an array
