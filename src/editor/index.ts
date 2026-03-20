@@ -41,6 +41,7 @@ export function initEditor(
     rooms: initialData?.rooms ?? [],
     freeTexts: initialData?.freeTexts ?? [],
     freeStrokes: initialData?.freeStrokes ?? [],
+    arrows: initialData?.arrows ?? [],
     selection: new Set(),
     history: initialData?.history ?? [],
     redoHistory: initialData?.redoHistory ?? [],
@@ -50,6 +51,9 @@ export function initEditor(
     paintColor: '#ff0000',
     paintLineWidth: 3,
     paintOpacity: 1.0,
+    arrowMode: false,
+    arrowColor: '#cc0000',
+    arrowLineWidth: 2,
   };
 
   const viewport = initialData?.viewport
@@ -62,6 +66,7 @@ export function initEditor(
     snapIndicator: null,
     clipboard: null,
     savedRedo: null,
+    pendingArrow: null,
   };
 
   const mousePos = createMousePos(canvas, viewport);
@@ -133,6 +138,7 @@ export function initEditor(
       rooms: state.rooms,
       freeTexts: state.freeTexts,
       freeStrokes: state.freeStrokes,
+      arrows: state.arrows,
       history: state.history,
       redoHistory: state.redoHistory,
     }),
@@ -140,9 +146,12 @@ export function initEditor(
     setPaintMode: (on: boolean) => {
       state.paintMode = on;
       if (on) {
+        state.arrowMode = false;
+        flags.pendingArrow = null;
         clearSelection(state.selection);
         flags.activeInteriorObjectId = undefined;
         flags.activeFreeTextId = undefined;
+        ec.callbacks.onArrowModeChange?.(false);
       }
       canvas.style.cursor = on ? 'crosshair' : 'default';
       ec.render();
@@ -163,19 +172,48 @@ export function initEditor(
       paintLineWidth: state.paintLineWidth,
       paintOpacity: state.paintOpacity,
     }),
+    setArrowMode: (on: boolean) => {
+      state.arrowMode = on;
+      if (on) {
+        state.paintMode = false;
+        clearSelection(state.selection);
+        flags.activeInteriorObjectId = undefined;
+        flags.activeFreeTextId = undefined;
+        ec.callbacks.onPaintModeChange?.(false);
+      } else {
+        flags.pendingArrow = null;
+      }
+      canvas.style.cursor = on ? 'crosshair' : 'default';
+      ec.render();
+      ec.callbacks.onArrowModeChange?.(on);
+    },
+    setArrowColor: (color: string) => {
+      state.arrowColor = color;
+    },
+    setArrowLineWidth: (width: number) => {
+      state.arrowLineWidth = width;
+    },
+    getArrowState: () => ({
+      arrowMode: state.arrowMode,
+      arrowColor: state.arrowColor,
+      arrowLineWidth: state.arrowLineWidth,
+    }),
     loadProjectState: (data: ProjectData) => {
       state.rooms = data.rooms;
       state.freeTexts = data.freeTexts;
       state.freeStrokes = data.freeStrokes;
+      state.arrows = data.arrows ?? [];
       state.history = data.history;
       state.redoHistory = data.redoHistory ?? [];
       state.drag = null;
       state.paintMode = false;
+      state.arrowMode = false;
       clearSelection(state.selection);
       flags.isPanning = false;
       flags.activeInteriorObjectId = undefined;
       flags.activeFreeTextId = undefined;
       flags.snapIndicator = null;
+      flags.pendingArrow = null;
       viewport.zoom = data.viewport.zoom;
       viewport.panX = data.viewport.panX;
       viewport.panY = data.viewport.panY;

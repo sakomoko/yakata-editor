@@ -1,5 +1,6 @@
 import type {
   Room,
+  Arrow,
   GridPoint,
   FreeText,
   FreeStroke,
@@ -289,6 +290,47 @@ export function ensureFreeStrokeIds(objects: unknown[]): FreeStroke[] {
     .filter((s) => s.points.length > 0);
 }
 
+const VALID_HEX_COLOR_OR_NAMED = /^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})|[a-z]+)$/;
+
+/** @internal Exported for testing */
+export function ensureArrowIds(objects: unknown[]): Arrow[] {
+  return objects.flatMap((o): Arrow[] => {
+    const obj = o as Record<string, unknown>;
+    if (
+      !Array.isArray(obj.points) ||
+      obj.points.length < 2 ||
+      typeof obj.color !== 'string' ||
+      typeof obj.lineWidth !== 'number'
+    ) {
+      return [];
+    }
+    const points = (obj.points as unknown[])
+      .filter(
+        (p) =>
+          p &&
+          typeof p === 'object' &&
+          typeof (p as Record<string, unknown>).gx === 'number' &&
+          typeof (p as Record<string, unknown>).gy === 'number',
+      )
+      .map((p) => ({
+        gx: (p as Record<string, unknown>).gx as number,
+        gy: (p as Record<string, unknown>).gy as number,
+      }));
+    if (points.length < 2) return [];
+    const result: Arrow = {
+      id: typeof obj.id === 'string' ? obj.id : crypto.randomUUID(),
+      points,
+      color: VALID_HEX_COLOR_OR_NAMED.test(obj.color) ? obj.color : '#cc0000',
+      lineWidth: Math.max(1, Math.min(10, obj.lineWidth)),
+    };
+    if (typeof obj.label === 'string' && obj.label) result.label = obj.label;
+    if (typeof obj.fontSize === 'number' && Number.isFinite(obj.fontSize)) {
+      result.fontSize = Math.max(FONT_SIZE_MIN, Math.min(FONT_SIZE_MAX, obj.fontSize));
+    }
+    return [result];
+  });
+}
+
 function ensureIds(rooms: unknown[]): Room[] {
   return rooms.map((r) => {
     const room = r as Record<string, unknown>;
@@ -343,6 +385,7 @@ export interface StorageData {
   rooms: Room[];
   freeTexts: FreeText[];
   freeStrokes: FreeStroke[];
+  arrows: Arrow[];
   /** データが存在したが解析できなかった場合の警告メッセージ */
   warning?: string;
 }
@@ -354,29 +397,43 @@ const WARNING_UNRECOGNIZED_FORMAT =
 export function parseStorageData(parsed: unknown): StorageData {
   // 旧形式: 配列（rooms only）
   if (Array.isArray(parsed)) {
-    return { rooms: ensureIds(parsed), freeTexts: [], freeStrokes: [] };
+    return { rooms: ensureIds(parsed), freeTexts: [], freeStrokes: [], arrows: [] };
   }
-  // 新形式: { rooms, freeTexts, freeStrokes }
+  // 新形式: { rooms, freeTexts, freeStrokes, arrows }
   if (parsed && typeof parsed === 'object') {
     const obj = parsed as Record<string, unknown>;
     if (!Array.isArray(obj.rooms)) {
-      return { rooms: [], freeTexts: [], freeStrokes: [], warning: WARNING_UNRECOGNIZED_FORMAT };
+      return {
+        rooms: [],
+        freeTexts: [],
+        freeStrokes: [],
+        arrows: [],
+        warning: WARNING_UNRECOGNIZED_FORMAT,
+      };
     }
     return {
       rooms: ensureIds(obj.rooms),
       freeTexts: Array.isArray(obj.freeTexts) ? ensureFreeTextIds(obj.freeTexts) : [],
       freeStrokes: Array.isArray(obj.freeStrokes) ? ensureFreeStrokeIds(obj.freeStrokes) : [],
+      arrows: Array.isArray(obj.arrows) ? ensureArrowIds(obj.arrows) : [],
     };
   }
-  return { rooms: [], freeTexts: [], freeStrokes: [], warning: WARNING_UNRECOGNIZED_FORMAT };
+  return {
+    rooms: [],
+    freeTexts: [],
+    freeStrokes: [],
+    arrows: [],
+    warning: WARNING_UNRECOGNIZED_FORMAT,
+  };
 }
 
 export async function saveAsJson(
   rooms: Room[],
   freeTexts: FreeText[] = [],
   freeStrokes: FreeStroke[] = [],
+  arrows: Arrow[] = [],
 ): Promise<void> {
-  const data = { rooms, freeTexts, freeStrokes };
+  const data = { rooms, freeTexts, freeStrokes, arrows };
   const json = JSON.stringify(data, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
 

@@ -121,6 +121,16 @@ export interface FreeStroke {
   opacity: number;
 }
 
+export interface Arrow {
+  id: string;
+  /** ウェイポイント（グリッド座標、最低2点） */
+  points: GridPoint[];
+  color: string;
+  lineWidth: number;
+  label?: string;
+  fontSize?: number;
+}
+
 export interface FreeTextEditData {
   label: string;
   fontSize: number;
@@ -134,6 +144,7 @@ export interface Project {
   rooms: Room[];
   freeTexts?: FreeText[];
   freeStrokes?: FreeStroke[];
+  arrows?: Arrow[];
 }
 
 export interface MouseCoord {
@@ -271,12 +282,25 @@ export type DragState =
       roomId: string;
       vertexIndex: number;
     }
+  | {
+      type: 'moveArrow';
+      arrowId: string;
+      startGx: number;
+      startGy: number;
+      origPoints: GridPoint[];
+    }
+  | {
+      type: 'moveArrowPoint';
+      arrowId: string;
+      pointIndex: number;
+    }
   | null;
 
 export interface EditorState {
   rooms: Room[];
   freeTexts: FreeText[];
   freeStrokes: FreeStroke[];
+  arrows: Arrow[];
   selection: Set<string>;
   history: string[];
   redoHistory: string[];
@@ -286,6 +310,9 @@ export interface EditorState {
   paintColor: string;
   paintLineWidth: number;
   paintOpacity: number;
+  arrowMode: boolean;
+  arrowColor: string;
+  arrowLineWidth: number;
 }
 
 export interface ProjectMeta {
@@ -299,6 +326,7 @@ export interface ProjectData {
   rooms: Room[];
   freeTexts: FreeText[];
   freeStrokes: FreeStroke[];
+  arrows?: Arrow[];
   viewport: { zoom: number; panX: number; panY: number };
   history: string[];
   redoHistory?: string[];

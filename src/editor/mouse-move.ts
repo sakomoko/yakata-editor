@@ -45,7 +45,8 @@ import {
   moveStroke as moveStrokeFn,
   STROKE_HIT_TOLERANCE_PX,
 } from '../free-stroke.ts';
-import { findFreeStrokeById } from '../lookup.ts';
+import { hitArrowInList, constrainToAxis } from '../arrow.ts';
+import { findArrowById, findFreeStrokeById } from '../lookup.ts';
 import { syncPairedOpening } from '../adjacency.ts';
 import type { EditorContext } from './context.ts';
 import { updateStatus } from './render.ts';
@@ -55,7 +56,8 @@ import type { MouseCoord } from '../types.ts';
 /** 壁オブジェクト・インテリア・FreeText・部屋のヒット判定に基づくデフォルトカーソルを返す */
 function resolveDefaultCursor(ec: EditorContext, m: MouseCoord): string {
   const { state, viewport } = ec;
-  if (state.paintMode) return 'crosshair';
+  if (state.paintMode || state.arrowMode) return 'crosshair';
+  if (hitArrowInList(state.arrows, m.px / GRID, m.py / GRID)) return 'grab';
   if (hitFreeStrokeInList(state.freeStrokes, m.px, m.py, STROKE_HIT_TOLERANCE_PX / viewport.zoom))
     return 'grab';
   if (hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom, true)) return 'grab';
@@ -433,6 +435,51 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
       drag.offsetPx = m.px;
       drag.offsetPy = m.py;
     }
+  } else if (state.drag.type === 'moveArrow') {
+    const drag = state.drag;
+    const arrow = findArrowById(state.arrows, drag.arrowId);
+    if (arrow) {
+      const dgx = m.gx - drag.startGx;
+      const dgy = m.gy - drag.startGy;
+      for (let i = 0; i < arrow.points.length; i++) {
+        arrow.points[i] = {
+          gx: drag.origPoints[i].gx + dgx,
+          gy: drag.origPoints[i].gy + dgy,
+        };
+      }
+    }
+  } else if (state.drag.type === 'moveArrowPoint') {
+    const drag = state.drag;
+    const arrow = findArrowById(state.arrows, drag.arrowId);
+    if (arrow && drag.pointIndex < arrow.points.length) {
+      let pt = { gx: m.gx, gy: m.gy };
+      // Shift制約: 隣接ポイントに対して水平/垂直に制約
+      if (e.shiftKey) {
+        const neighbor =
+          drag.pointIndex > 0
+            ? arrow.points[drag.pointIndex - 1]
+            : arrow.points[drag.pointIndex + 1];
+        if (neighbor) {
+          pt = constrainToAxis(neighbor, pt);
+        }
+      }
+      arrow.points[drag.pointIndex] = pt;
+    }
+  }
+
+  // Arrow mode: update preview point
+  if (
+    state.arrowMode &&
+    flags.pendingArrow &&
+    flags.pendingArrow.points.length >= 1 &&
+    !state.drag
+  ) {
+    let previewPt = { gx: m.gx, gy: m.gy };
+    if (e.shiftKey) {
+      const lastPt = flags.pendingArrow.points[flags.pendingArrow.points.length - 1];
+      previewPt = constrainToAxis(lastPt, previewPt);
+    }
+    flags.pendingArrow.previewPoint = previewPt;
   }
 
   ec.render();
