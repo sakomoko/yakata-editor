@@ -417,6 +417,65 @@ describe('mirror horizontal', () => {
     expect(rooms[0].vertices![3].gx).toBe(0);
   });
 
+  it('mirrors polygon room with WallObject using pre-computed side length', () => {
+    // Trapezoid: top edge (n) is shorter than bottom edge (s)
+    // n edge: (1,0)->(3,0) = length 2
+    // s edge: (0,3)->(4,3) = length 4
+    const v: [GridPoint, GridPoint, GridPoint, GridPoint] = [
+      { gx: 1, gy: 0 },
+      { gx: 3, gy: 0 },
+      { gx: 4, gy: 3 },
+      { gx: 0, gy: 3 },
+    ];
+    const rooms: Room[] = [
+      makeRoom({
+        x: 0,
+        y: 0,
+        w: 4,
+        h: 3,
+        vertices: v,
+        wallObjects: [{ id: 'w1', type: 'window', side: 'n', offset: 0.5, width: 1 }],
+      }),
+    ];
+    _applyMirrorHorizontal(rooms, [], [], 2);
+    // n edge length was 2 (pre-computed), so offset = 2 - 0.5 - 1 = 0.5
+    expect(rooms[0].wallObjects![0].offset).toBe(0.5);
+  });
+
+  it('mirrors polygon room InteriorObject using pre-computed room width', () => {
+    const v: [GridPoint, GridPoint, GridPoint, GridPoint] = [
+      { gx: 1, gy: 0 },
+      { gx: 3, gy: 0 },
+      { gx: 4, gy: 3 },
+      { gx: 0, gy: 3 },
+    ];
+    const rooms: Room[] = [
+      makeRoom({
+        x: 0,
+        y: 0,
+        w: 4,
+        h: 3,
+        vertices: v,
+        interiorObjects: [
+          {
+            id: 'i1',
+            type: 'stairs',
+            stairsType: 'straight',
+            x: 0,
+            y: 0,
+            w: 2,
+            h: 3,
+            direction: 'e',
+          },
+        ],
+      }),
+    ];
+    _applyMirrorHorizontal(rooms, [], [], 2);
+    // preW = 4, so x = 4 - 0 - 2 = 2
+    expect(rooms[0].interiorObjects![0].x).toBe(2);
+    expect(rooms[0].interiorObjects![0]).toHaveProperty('direction', 'w');
+  });
+
   it('mirrors FreeText position', () => {
     const freeTexts: FreeText[] = [makeFreeText({ gx: 1, gy: 2, w: 3, h: 1 })];
     _applyMirrorHorizontal([], freeTexts, [], 4);
@@ -604,6 +663,51 @@ describe('duplicateSelection', () => {
     expect(dup.x).toBe(6);
     expect(dup.y).toBe(6);
     expect(dup.id).not.toBe(room.id);
+  });
+
+  it('duplicates FreeText offset by 1 grid', () => {
+    const ft = makeFreeText({ gx: 3, gy: 4, w: 2, h: 1 });
+    const ec = makeEc([], [ft], [], new Set([ft.id]));
+    duplicateSelection(ec);
+
+    expect(ec.state.freeTexts).toHaveLength(2);
+    const dup = ec.state.freeTexts[1];
+    expect(dup.gx).toBe(4);
+    expect(dup.gy).toBe(5);
+    expect(dup.id).not.toBe(ft.id);
+  });
+
+  it('duplicates FreeStroke offset by 1 grid', () => {
+    const fs = makeFreeStroke({
+      points: [
+        { px: 60, py: 80 },
+        { px: 100, py: 120 },
+      ],
+    });
+    const ec = makeEc([], [], [fs], new Set([fs.id]));
+    duplicateSelection(ec);
+
+    expect(ec.state.freeStrokes).toHaveLength(2);
+    const dup = ec.state.freeStrokes[1];
+    // dx=1, dy=1 → px += 20, py += 20
+    expect(dup.points[0].px).toBe(80);
+    expect(dup.points[0].py).toBe(100);
+    expect(dup.points[1].px).toBe(120);
+    expect(dup.points[1].py).toBe(140);
+    expect(dup.id).not.toBe(fs.id);
+  });
+
+  it('preserves original clipboard after duplicate', () => {
+    const room = makeRoom({ x: 0, y: 0, w: 4, h: 3 });
+    const ec = makeEc([room], [], [], new Set([room.id]));
+    // First copy something
+    copySelection(ec);
+    const originalClipboard = ec.flags.clipboard;
+
+    // Then duplicate (should not destroy clipboard)
+    duplicateSelection(ec);
+
+    expect(ec.flags.clipboard).toBe(originalClipboard);
   });
 });
 

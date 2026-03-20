@@ -163,6 +163,20 @@ function applyMirrorHorizontal(
   const centerPx = centerGx * GRID;
 
   for (const room of rooms) {
+    // Pre-compute wall side lengths and room dimensions BEFORE vertex mirroring,
+    // so WallObject offset and InteriorObject position calculations use original values.
+    // For polygon rooms, vertex reordering changes edge-side mapping, which would
+    // cause wallSideLength/room.w to return values for the wrong side after update.
+    const preW = room.w;
+    const preSideLengths = new Map<WallSide, number>();
+    if (room.wallObjects) {
+      for (const obj of room.wallObjects) {
+        if (!preSideLengths.has(obj.side)) {
+          preSideLengths.set(obj.side, wallSideLength(room, obj.side));
+        }
+      }
+    }
+
     if (room.vertices) {
       // Mirror vertices and reorder to maintain edge-side correspondence:
       // edges 0->1, 1->2, 2->3, 3->0 map to n, e, s, w sides.
@@ -187,9 +201,9 @@ function applyMirrorHorizontal(
       for (const obj of room.wallObjects) {
         const origSide = obj.side;
         obj.side = flipSideHorizontal(origSide);
-        // For n/s walls, offset needs flipping (use origSide for wall length since n/s don't change)
+        // For n/s walls, offset needs flipping
         if (origSide === 'n' || origSide === 's') {
-          const sideLen = wallSideLength(room, origSide);
+          const sideLen = preSideLengths.get(origSide)!;
           obj.offset = sideLen - obj.offset - obj.width;
         }
         // Door hinge flip for n/s walls
@@ -201,7 +215,7 @@ function applyMirrorHorizontal(
 
     if (room.interiorObjects) {
       for (const obj of room.interiorObjects) {
-        obj.x = room.w - obj.x - obj.w;
+        obj.x = preW - obj.x - obj.w;
         if (obj.type === 'stairs' || obj.type === 'marker') {
           if (obj.direction === 'e') obj.direction = 'w';
           else if (obj.direction === 'w') obj.direction = 'e';
@@ -233,6 +247,17 @@ function applyMirrorVertical(
   const centerPy = centerGy * GRID;
 
   for (const room of rooms) {
+    // Pre-compute wall side lengths and room dimensions BEFORE vertex mirroring
+    const preH = room.h;
+    const preSideLengths = new Map<WallSide, number>();
+    if (room.wallObjects) {
+      for (const obj of room.wallObjects) {
+        if (!preSideLengths.has(obj.side)) {
+          preSideLengths.set(obj.side, wallSideLength(room, obj.side));
+        }
+      }
+    }
+
     if (room.vertices) {
       // Vertical flip swaps top/bottom, reorder [v3,v2,v1,v0] preserves winding.
       for (const v of room.vertices) {
@@ -254,9 +279,9 @@ function applyMirrorVertical(
       for (const obj of room.wallObjects) {
         const origSide = obj.side;
         obj.side = flipSideVertical(origSide);
-        // For e/w walls, offset needs flipping (use origSide for wall length since e/w don't change)
+        // For e/w walls, offset needs flipping
         if (origSide === 'e' || origSide === 'w') {
-          const sideLen = wallSideLength(room, origSide);
+          const sideLen = preSideLengths.get(origSide)!;
           obj.offset = sideLen - obj.offset - obj.width;
         }
         // Door hinge flip for e/w walls
@@ -268,7 +293,7 @@ function applyMirrorVertical(
 
     if (room.interiorObjects) {
       for (const obj of room.interiorObjects) {
-        obj.y = room.h - obj.y - obj.h;
+        obj.y = preH - obj.y - obj.h;
         if (obj.type === 'stairs' || obj.type === 'marker') {
           if (obj.direction === 'n') obj.direction = 's';
           else if (obj.direction === 's') obj.direction = 'n';
