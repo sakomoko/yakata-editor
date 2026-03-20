@@ -259,11 +259,15 @@ export function initGestures(
     }
   }
 
-  // Register gesture-aware handlers — this is the sole owner of pointer event listeners
+  // Register gesture-aware handlers — this is the sole owner of pointer event listeners.
+  // pointercancel is registered on both canvas and document: normally it fires on the
+  // pointerdown target (canvas), but after releasePointerCapture the OS may dispatch
+  // cancel events to document instead on some platforms (e.g. iOS Safari).
   canvas.addEventListener('pointerdown', handlePointerDown);
   canvas.addEventListener('pointermove', handlePointerMove);
   document.addEventListener('pointerup', handlePointerUp);
   canvas.addEventListener('pointercancel', handlePointerCancel);
+  document.addEventListener('pointercancel', handlePointerCancel);
 
   return () => {
     clearLongPress();
@@ -271,5 +275,6 @@ export function initGestures(
     canvas.removeEventListener('pointermove', handlePointerMove);
     document.removeEventListener('pointerup', handlePointerUp);
     canvas.removeEventListener('pointercancel', handlePointerCancel);
+    document.removeEventListener('pointercancel', handlePointerCancel);
   };
 }
