@@ -320,7 +320,11 @@ function applyOffset(
   }
 }
 
-export function pasteClipboard(ec: EditorContext, mirror: MirrorMode): void {
+export function pasteClipboard(
+  ec: EditorContext,
+  mirror: MirrorMode,
+  targetPos?: { gx: number; gy: number },
+): void {
   const { state, flags } = ec;
   const clipboard = flags.clipboard;
   if (!clipboard) return;
@@ -340,9 +344,10 @@ export function pasteClipboard(ec: EditorContext, mirror: MirrorMode): void {
 
   regenerateIds(clonedRooms, clonedFreeTexts, clonedFreeStrokes);
 
-  // Offset to mouse position
-  const dx = Math.round(state.mouse.gx - clipboard.originGx);
-  const dy = Math.round(state.mouse.gy - clipboard.originGy);
+  // Offset to target position (defaults to current mouse position)
+  const pos = targetPos ?? state.mouse;
+  const dx = Math.round(pos.gx - clipboard.originGx);
+  const dy = Math.round(pos.gy - clipboard.originGy);
   applyOffset(clonedRooms, clonedFreeTexts, clonedFreeStrokes, dx, dy);
 
   commitChange(ec, () => {
@@ -366,18 +371,11 @@ export function duplicateSelection(ec: EditorContext): void {
   const clipboard = ec.flags.clipboard;
   if (!clipboard) return;
 
-  // Shift origin so paste places 1 grid offset right-down
-  const savedMouse = { ...ec.state.mouse };
-  try {
-    ec.state.mouse = {
-      ...ec.state.mouse,
-      gx: clipboard.originGx + 1,
-      gy: clipboard.originGy + 1,
-    };
-    pasteClipboard(ec, 'none');
-  } finally {
-    ec.state.mouse = savedMouse;
-  }
+  // Paste at 1 grid offset right-down from origin
+  pasteClipboard(ec, 'none', {
+    gx: clipboard.originGx + 1,
+    gy: clipboard.originGy + 1,
+  });
 }
 
 // Exported for testing
