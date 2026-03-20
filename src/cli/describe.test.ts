@@ -266,7 +266,7 @@ describe('describeProject', () => {
             { gx: 5, gy: 3 },
             { gx: 5, gy: 7 },
           ],
-          color: '赤',
+          color: '#cc0000',
           lineWidth: 2,
           label: '犯人の動線',
         },
@@ -275,7 +275,7 @@ describe('describeProject', () => {
     const result = describeProject(project);
     expect(result).toContain('## 矢印 (1本)');
     expect(result).toContain('矢印1: (2, 3) → (5, 3) → (5, 7)');
-    expect(result).toContain('[赤, 2px]');
+    expect(result).toContain('[#cc0000, 2px]');
     expect(result).toContain('ラベル: 犯人の動線');
   });
 
@@ -291,13 +291,13 @@ describe('describeProject', () => {
             { gx: 0, gy: 0 },
             { gx: 4, gy: 0 },
           ],
-          color: '青',
+          color: '#0055cc',
           lineWidth: 1,
         },
       ],
     };
     const result = describeProject(project);
-    expect(result).toContain('矢印1: (0, 0) → (4, 0) [青, 1px]');
+    expect(result).toContain('矢印1: (0, 0) → (4, 0) [#0055cc, 1px]');
     expect(result).not.toContain('ラベル:');
   });
 });
@@ -315,6 +315,16 @@ describe('describeArrow', () => {
       label: 'テスト',
     };
     expect(describeArrow(arrow, 0)).toBe('矢印1: (1, 2) → (3, 4) [#ff0000, 2px] ラベル: テスト');
+  });
+
+  it('handles empty points array', () => {
+    const arrow: Arrow = {
+      id: 'a0',
+      points: [],
+      color: '#cc0000',
+      lineWidth: 1,
+    };
+    expect(describeArrow(arrow, 0)).toBe('矢印1: (点なし) [#cc0000, 1px]');
   });
 
   it('formats arrow without label', () => {

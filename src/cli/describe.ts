@@ -72,7 +72,11 @@ export function describeInterior(obj: RoomInteriorObject): string {
 
 /** @internal Exported for testing */
 export function describeArrow(arrow: Arrow, index: number): string {
-  const route = arrow.points.map((p) => `(${p.gx}, ${p.gy})`).join(' → ');
+  // fontSize は省略（概要出力では冗長なため）
+  const route =
+    arrow.points.length === 0
+      ? '(点なし)'
+      : arrow.points.map((p) => `(${p.gx}, ${p.gy})`).join(' → ');
   const meta = `[${arrow.color}, ${arrow.lineWidth}px]`;
   const label = arrow.label ? ` ラベル: ${arrow.label}` : '';
   return `矢印${index + 1}: ${route} ${meta}${label}`;
