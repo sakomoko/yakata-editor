@@ -1,5 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { withFontSizePreview, deleteSelectedEntities, deleteRoom } from './project.ts';
+import {
+  withFontSizePreview,
+  deleteSelectedEntities,
+  deleteRoom,
+  commitChange,
+  undo,
+  redo,
+} from './project.ts';
 import { createRoom } from '../room.ts';
 import { createFreeText } from '../free-text.ts';
 import { createFreeStroke } from '../free-stroke.ts';
@@ -18,6 +25,7 @@ function createMockEc(): EditorContext {
       freeStrokes: [],
       selection: new Set<string>(),
       history: [],
+      redoHistory: [],
       drag: null,
       mouse: { px: 0, py: 0, gx: 0, gy: 0 },
       paintMode: false,
@@ -40,6 +48,7 @@ function createMockEc(): EditorContext {
       activeInteriorObjectId: undefined,
       activeFreeTextId: undefined,
       snapIndicator: null,
+      savedRedo: null,
     },
     render: vi.fn(),
     commitChange: vi.fn((fn: () => void) => fn()),
@@ -247,5 +256,134 @@ describe('deleteRoom', () => {
 
     expect(ec.state.rooms).toHaveLength(0);
     expect(ec.state.selection.has(room.id)).toBe(false);
+  });
+});
+
+describe('undo / redo 統合テスト', () => {
+  /** commitChange を実際に動かすための EditorContext を生成する */
+  function createRealCommitEc(): EditorContext {
+    const viewport: ViewportState = { zoom: 1, panX: 0, panY: 0 };
+    const ec = {
+      canvas: {} as HTMLCanvasElement,
+      ctx: {} as CanvasRenderingContext2D,
+      container: {} as HTMLElement,
+      state: {
+        rooms: [],
+        freeTexts: [],
+        freeStrokes: [],
+        selection: new Set<string>(),
+        history: [],
+        redoHistory: [],
+        drag: null,
+        mouse: { px: 0, py: 0, gx: 0, gy: 0 },
+        paintMode: false,
+        paintColor: '#000000',
+        paintLineWidth: 2,
+        paintOpacity: 1,
+      },
+      viewport,
+      callbacks: {
+        onStatusChange: vi.fn(),
+        onRoomEdit: vi.fn(),
+        onMarkerEdit: vi.fn(),
+        onFreeTextEdit: vi.fn(),
+        onContextMenu: vi.fn(),
+        onAutoSave: vi.fn(),
+        onViewportChange: vi.fn(),
+      },
+      flags: {
+        isPanning: false,
+        activeInteriorObjectId: undefined,
+        activeFreeTextId: undefined,
+        snapIndicator: null,
+        clipboard: null,
+        savedRedo: null,
+      },
+      render: vi.fn(),
+      commitChange: null as unknown as (fn: () => void) => void,
+      mousePos: vi.fn(),
+    } as unknown as EditorContext;
+    // commitChange を実物に差し替え
+    ec.commitChange = (fn: () => void) => commitChange(ec, fn);
+    return ec;
+  }
+
+  it('部屋作成→Undo→Redo で部屋が復元される', () => {
+    const ec = createRealCommitEc();
+
+    commitChange(ec, () => {
+      ec.state.rooms.push(createRoom(0, 0, 5, 5, 'A'));
+    });
+    expect(ec.state.rooms).toHaveLength(1);
+
+    undo(ec);
+    expect(ec.state.rooms).toHaveLength(0);
+
+    redo(ec);
+    expect(ec.state.rooms).toHaveLength(1);
+    expect(ec.state.rooms[0].label).toBe('A');
+  });
+
+  it('複数Undo→複数Redo で状態が正しく復元される', () => {
+    const ec = createRealCommitEc();
+
+    commitChange(ec, () => {
+      ec.state.rooms.push(createRoom(0, 0, 5, 5, 'A'));
+    });
+    commitChange(ec, () => {
+      ec.state.rooms.push(createRoom(5, 0, 5, 5, 'B'));
+    });
+    expect(ec.state.rooms).toHaveLength(2);
+
+    undo(ec);
+    expect(ec.state.rooms).toHaveLength(1);
+    expect(ec.state.rooms[0].label).toBe('A');
+
+    undo(ec);
+    expect(ec.state.rooms).toHaveLength(0);
+
+    redo(ec);
+    expect(ec.state.rooms).toHaveLength(1);
+    expect(ec.state.rooms[0].label).toBe('A');
+
+    redo(ec);
+    expect(ec.state.rooms).toHaveLength(2);
+  });
+
+  it('Undo→新しい操作→Redo はできない（Redoスタックがクリアされる）', () => {
+    const ec = createRealCommitEc();
+
+    commitChange(ec, () => {
+      ec.state.rooms.push(createRoom(0, 0, 5, 5, 'A'));
+    });
+
+    undo(ec);
+    expect(ec.state.rooms).toHaveLength(0);
+    expect(ec.state.redoHistory.length).toBeGreaterThan(0);
+
+    // 新しい操作をするとRedoスタックがクリアされる
+    commitChange(ec, () => {
+      ec.state.rooms.push(createRoom(5, 0, 5, 5, 'B'));
+    });
+    expect(ec.state.redoHistory).toHaveLength(0);
+
+    // Redoできない
+    redo(ec);
+    expect(ec.state.rooms).toHaveLength(1);
+    expect(ec.state.rooms[0].label).toBe('B');
+  });
+
+  it('Redoスタックが空の場合、redo()は何もしない', () => {
+    const ec = createRealCommitEc();
+
+    commitChange(ec, () => {
+      ec.state.rooms.push(createRoom(0, 0, 5, 5, 'A'));
+    });
+
+    const renderCallCount = (ec.render as ReturnType<typeof vi.fn>).mock.calls.length;
+    redo(ec);
+    // render は呼ばれない（何も変わらない）
+    expect((ec.render as ReturnType<typeof vi.fn>).mock.calls.length).toBe(renderCallCount);
+    expect(ec.state.rooms).toHaveLength(1);
   });
 });

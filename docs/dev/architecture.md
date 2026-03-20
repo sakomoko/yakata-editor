@@ -38,7 +38,7 @@ Canvas 再描画 + App.tsx → project-store.ts → localStorage 保存
   - **editor/index.ts** — `initEditor()` エントリポイント。状態初期化・イベント登録・API返却
   - **editor/context.ts** — `EditorContext`, `EditorCallbacks`, `EditorAPI` 等のインターフェース定義
   - **editor/render.ts** — `render()`, `updateStatus()` 描画処理
-  - **editor/project.ts** — `commitChange()`, `undo()`, `newProject()`, `loadProjectData()`, `saveProject()`, `exportAsPng()`, `applyRoomEdit()`
+  - **editor/project.ts** — `commitChange()`, `undo()`, `redo()`, `newProject()`, `loadProjectData()`, `saveProject()`, `exportAsPng()`, `applyRoomEdit()`
   - **editor/mouse-down.ts** — `onMouseDown()` マウスダウンイベント処理
   - **editor/mouse-move.ts** — `onMouseMove()` マウスムーブイベント処理
   - **editor/mouse-up.ts** — `onMouseUp()` マウスアップイベント処理
@@ -67,7 +67,7 @@ Canvas 再描画 + App.tsx → project-store.ts → localStorage 保存
 - **lookup.ts** — ID検索ヘルパー（`findRoomById`, `findRoomIndexById`, `findFreeTextById`, `findFreeStrokeById`, `findWallObjectById`, `findInteriorObjectById`）。editor/外のモジュールからも利用される共通ユーティリティ
 - **z-order.ts** — 部屋の重なり順序操作（`bringToFront`, `sendToBack`, `bringForward`, `sendBackward`）。rooms配列のインデックスをin-placeで変更する純粋関数群
 - **selection.ts** — `Set<string>` ベースの選択状態管理
-- **history.ts** — Undoスタック（JSON snapshot方式、最大50件）
+- **history.ts** — Undo/Redoスタック（JSON snapshot方式、各最大50件）。`saveUndoPoint()` でUndoへのpushとRedoクリアを一括実行
 - **grid.ts** — グリッド定数（`GRID=20px`）とビューポート対応のグリッド描画
 - **project-store.ts** — マルチプロジェクト対応のlocalStorageストレージ層。プロジェクトindex・プロジェクトデータ・タブ状態のCRUD、旧形式からの自動マイグレーション、デフォルト名生成（`deduplicateName`）、プロジェクト複製（`duplicateProject`）。開発モード時はREST API経由でファイルストレージへの自動同期機能を提供
 - **persistence.ts** — データバリデーション（`parseStorageData`）、JSON/PNGエクスポート、ファイルインポート

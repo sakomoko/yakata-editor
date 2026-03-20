@@ -52,6 +52,7 @@ export interface EditorAPI {
     freeTexts: FreeText[];
     freeStrokes: FreeStroke[];
     history: string[];
+    redoHistory: string[];
   };
   getViewport: () => ViewportState;
   loadProjectState: (data: ProjectData) => void;
@@ -80,6 +81,8 @@ export interface EditorContext {
     activeFreeTextId: string | undefined;
     snapIndicator: SnapIndicator | null;
     clipboard: ClipboardData | null;
+    /** saveUndoPoint でクリアされる前のRedoスタックの退避。cancelLastUndoでの復元に使う。 */
+    savedRedo: string[] | null;
   };
   render: () => void;
   commitChange: (fn: () => void) => void;

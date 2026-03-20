@@ -61,6 +61,9 @@ export function loadProjectData(id: string): LoadProjectResult | null {
     const history: string[] = Array.isArray(obj.history)
       ? (obj.history as unknown[]).filter((h): h is string => typeof h === 'string')
       : [];
+    const redoHistory: string[] = Array.isArray(obj.redoHistory)
+      ? (obj.redoHistory as unknown[]).filter((h): h is string => typeof h === 'string')
+      : [];
 
     return {
       data: {
@@ -69,6 +72,7 @@ export function loadProjectData(id: string): LoadProjectResult | null {
         freeStrokes: storageData.freeStrokes,
         viewport,
         history,
+        redoHistory,
       },
       warning: storageData.warning,
     };
@@ -212,6 +216,9 @@ async function syncFromServer(): Promise<void> {
             history: Array.isArray(obj?.history)
               ? (obj.history as unknown[]).filter((h): h is string => typeof h === 'string')
               : [],
+            redoHistory: Array.isArray(obj?.redoHistory)
+              ? (obj.redoHistory as unknown[]).filter((h): h is string => typeof h === 'string')
+              : [],
           };
           return { meta, data, isNew: !localMap.has(meta.id) };
         } catch {
@@ -333,6 +340,7 @@ export function createNewProject(name?: string): { meta: ProjectMeta; data: Proj
     freeStrokes: [],
     viewport: { zoom: 1, panX: 0, panY: 0 },
     history: [],
+    redoHistory: [],
   });
 }
 
@@ -353,6 +361,7 @@ export function duplicateProject(
   // Deep copy data, then clear history for the new project
   const clonedData: ProjectData = structuredClone(result.data);
   clonedData.history = [];
+  clonedData.redoHistory = [];
 
   return registerProject(projectName, clonedData);
 }
@@ -393,6 +402,7 @@ export function migrateIfNeeded(): void {
         freeStrokes: storageData.freeStrokes,
         viewport,
         history: [],
+        redoHistory: [],
       };
 
       saveProjectIndex([meta]);

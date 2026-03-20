@@ -43,6 +43,7 @@ export function initEditor(
     freeStrokes: initialData?.freeStrokes ?? [],
     selection: new Set(),
     history: initialData?.history ?? [],
+    redoHistory: initialData?.redoHistory ?? [],
     drag: null,
     mouse: { px: 0, py: 0, gx: 0, gy: 0 },
     paintMode: false,
@@ -60,6 +61,7 @@ export function initEditor(
     activeFreeTextId: undefined,
     snapIndicator: null,
     clipboard: null,
+    savedRedo: null,
   };
 
   const mousePos = createMousePos(canvas, viewport);
@@ -132,6 +134,7 @@ export function initEditor(
       freeTexts: state.freeTexts,
       freeStrokes: state.freeStrokes,
       history: state.history,
+      redoHistory: state.redoHistory,
     }),
     getViewport: () => ({ ...viewport }),
     setPaintMode: (on: boolean) => {
@@ -165,6 +168,7 @@ export function initEditor(
       state.freeTexts = data.freeTexts;
       state.freeStrokes = data.freeStrokes;
       state.history = data.history;
+      state.redoHistory = data.redoHistory ?? [];
       state.drag = null;
       state.paintMode = false;
       clearSelection(state.selection);

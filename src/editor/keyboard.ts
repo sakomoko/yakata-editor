@@ -1,9 +1,9 @@
 import { zoomAtCenter as zoomAtCenterFn } from '../viewport.ts';
-import { pushUndo, cancelLastUndo } from '../history.ts';
+import { saveUndoPoint, cancelLastUndo } from '../history.ts';
 import { clearSelection } from '../selection.ts';
 import { bringToFront, sendToBack, bringForward, sendBackward } from '../z-order.ts';
 import type { EditorContext } from './context.ts';
-import { commitChange, undo, deleteSelectedEntities } from './project.ts';
+import { commitChange, undo, redo, deleteSelectedEntities } from './project.ts';
 import { copySelection, pasteClipboard, duplicateSelection } from './clipboard.ts';
 
 export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
@@ -75,13 +75,19 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
       : forward
         ? bringForward
         : sendBackward;
-    pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
+    flags.savedRedo = saveUndoPoint(
+      state.history,
+      state.redoHistory,
+      state.rooms,
+      state.freeTexts,
+      state.freeStrokes,
+    );
     const changed = fn(state.rooms, roomId);
     if (changed) {
       ec.render();
       ec.callbacks.onAutoSave();
     } else {
-      cancelLastUndo(state.history);
+      cancelLastUndo(state.history, state.redoHistory, flags.savedRedo);
     }
     return;
   }
@@ -134,6 +140,11 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     return;
   }
 
+  if ((e.metaKey || e.ctrlKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+    e.preventDefault();
+    redo(ec);
+    return;
+  }
   if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
     e.preventDefault();
     undo(ec);

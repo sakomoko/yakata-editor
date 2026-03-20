@@ -279,6 +279,7 @@ export interface EditorState {
   freeStrokes: FreeStroke[];
   selection: Set<string>;
   history: string[];
+  redoHistory: string[];
   drag: DragState;
   mouse: MouseCoord;
   paintMode: boolean;
@@ -300,6 +301,7 @@ export interface ProjectData {
   freeStrokes: FreeStroke[];
   viewport: { zoom: number; panX: number; panY: number };
   history: string[];
+  redoHistory?: string[];
 }
 
 export interface TabState {
