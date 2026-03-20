@@ -1,7 +1,14 @@
 /// <reference types="node" />
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { Room, WallObject, RoomInteriorObject, FreeText, FreeStroke } from '../types.ts';
+import type {
+  Room,
+  WallObject,
+  RoomInteriorObject,
+  FreeText,
+  FreeStroke,
+  Arrow,
+} from '../types.ts';
 import { parseStorageData } from '../persistence.ts';
 import { findAdjacentRoomsOnWall } from '../adjacency.ts';
 import type { WallSide } from '../types.ts';
@@ -14,6 +21,7 @@ export interface ProjectFile {
   rooms: Room[];
   freeTexts: FreeText[];
   freeStrokes: FreeStroke[];
+  arrows: Arrow[];
 }
 
 function loadProject(filePath: string): ProjectFile {
@@ -32,7 +40,12 @@ function loadProject(filePath: string): ProjectFile {
     process.exit(1);
   }
   const data = parseStorageData(parsed);
-  return { rooms: data.rooms, freeTexts: data.freeTexts, freeStrokes: data.freeStrokes };
+  return {
+    rooms: data.rooms,
+    freeTexts: data.freeTexts,
+    freeStrokes: data.freeStrokes,
+    arrows: data.arrows,
+  };
 }
 
 /** @internal Exported for testing */
@@ -70,9 +83,21 @@ export function describeInterior(obj: RoomInteriorObject): string {
 }
 
 /** @internal Exported for testing */
+export function describeArrow(arrow: Arrow, index: number): string {
+  // fontSize は省略（概要出力では冗長なため）
+  const route =
+    arrow.points.length === 0
+      ? '(点なし)'
+      : arrow.points.map((p) => `(${p.gx}, ${p.gy})`).join(' → ');
+  const meta = `[${arrow.color}, ${arrow.lineWidth}px]`;
+  const label = arrow.label ? ` ラベル: ${arrow.label}` : '';
+  return `矢印${index + 1}: ${route} ${meta}${label}`;
+}
+
+/** @internal Exported for testing */
 export function describeProject(project: ProjectFile): string {
   const lines: string[] = [];
-  const { rooms, freeTexts, freeStrokes } = project;
+  const { rooms, freeTexts, freeStrokes, arrows } = project;
 
   lines.push('# プロジェクト構造');
   lines.push('');
@@ -145,6 +170,14 @@ export function describeProject(project: ProjectFile): string {
       lines.push(
         `- ${stroke.color} (lineWidth: ${stroke.lineWidth}, opacity: ${stroke.opacity}) ${stroke.points.length}点`,
       );
+    }
+  }
+
+  if (arrows.length > 0) {
+    lines.push('');
+    lines.push(`## 矢印 (${arrows.length}本)`);
+    for (const [i, arrow] of arrows.entries()) {
+      lines.push(`- ${describeArrow(arrow, i)}`);
     }
   }
 
