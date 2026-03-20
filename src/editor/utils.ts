@@ -3,6 +3,7 @@ import { GRID } from '../grid.ts';
 import { screenToWorld } from '../viewport.ts';
 import type { ViewportState } from '../viewport.ts';
 
+/** 参照のみ収集。クローンは呼び出し側が必要に応じて行う */
 export function getEntitySnapshot(state: EditorState): EntitySnapshot {
   return {
     rooms: state.rooms,

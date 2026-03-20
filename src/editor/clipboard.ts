@@ -369,7 +369,8 @@ export function pasteClipboard(
   const clipboard = flags.clipboard;
   if (!clipboard) return;
 
-  const cloned: EntitySnapshot = structuredClone(clipboard);
+  const { rooms, freeTexts, freeStrokes, arrows } = clipboard;
+  const cloned: EntitySnapshot = structuredClone({ rooms, freeTexts, freeStrokes, arrows });
 
   // Apply mirror before offset (mirror around clipboard center)
   if (mirror === 'horizontal') {
