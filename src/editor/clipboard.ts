@@ -350,32 +350,37 @@ export function pasteClipboard(
   const dy = Math.round(pos.gy - clipboard.originGy);
   applyOffset(clonedRooms, clonedFreeTexts, clonedFreeStrokes, dx, dy);
 
+  // Update selection inside commitChange so a single render() covers both data and selection
   commitChange(ec, () => {
     state.rooms.push(...clonedRooms);
     state.freeTexts.push(...clonedFreeTexts);
     state.freeStrokes.push(...clonedFreeStrokes);
     syncAllPairedOpenings(state.rooms);
+
+    state.selection.clear();
+    for (const r of clonedRooms) state.selection.add(r.id);
+    for (const ft of clonedFreeTexts) state.selection.add(ft.id);
+    for (const fs of clonedFreeStrokes) state.selection.add(fs.id);
   });
-
-  // Update selection to pasted elements
-  state.selection.clear();
-  for (const r of clonedRooms) state.selection.add(r.id);
-  for (const ft of clonedFreeTexts) state.selection.add(ft.id);
-  for (const fs of clonedFreeStrokes) state.selection.add(fs.id);
-
-  ec.render();
 }
 
 export function duplicateSelection(ec: EditorContext): void {
+  const savedClipboard = ec.flags.clipboard;
   copySelection(ec);
   const clipboard = ec.flags.clipboard;
-  if (!clipboard) return;
+  if (!clipboard) {
+    ec.flags.clipboard = savedClipboard;
+    return;
+  }
 
   // Paste at 1 grid offset right-down from origin
   pasteClipboard(ec, 'none', {
     gx: clipboard.originGx + 1,
     gy: clipboard.originGy + 1,
   });
+
+  // Restore original clipboard so ⌘D doesn't destroy ⌘C content
+  ec.flags.clipboard = savedClipboard;
 }
 
 // Exported for testing
