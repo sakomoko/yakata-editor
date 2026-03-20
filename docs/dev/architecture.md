@@ -7,7 +7,7 @@ yakata-editorは、Canvas APIベースのグリッド間取り図エディタ。
 ## データフロー
 
 ```
-ユーザー入力（マウス/キーボード）
+ユーザー入力（マウス/タッチ/ペン/キーボード）
     ↓
 editor/ イベントハンドラ（mouse-down.ts, mouse-move.ts 等）
     ↓
@@ -48,6 +48,7 @@ Canvas 再描画 + App.tsx → project-store.ts → localStorage 保存
   - **editor/dblclick.ts** — `onDblClick()` ダブルクリックイベント処理
   - **editor/clipboard.ts** — `copySelection()`, `pasteClipboard()`, `duplicateSelection()` コピー＆ペースト・ミラー変換処理。`ClipboardData` を `flags.clipboard` に保持（Undo対象外）
   - **editor/marker-edit.ts** — `editMarkerViaDialog()` マーカー編集ダイアログの共通処理（dblclick/context-menuから利用）
+  - **editor/gesture.ts** — `initGestures()` マルチタッチジェスチャー認識（ピンチズーム・2本指パン・長押しコンテキストメニュー）。Pointer Eventsのリスナー登録を一元管理し、シングルポインタイベントをハンドラに委譲
   - **editor/utils.ts** — `labelDisplayWidth()`, `createMousePos()`, `getEntitySnapshot()` ユーティリティ
 - **types.ts** — 全型定義（`Room`, `FreeText`, `FreeStroke`, `WallObject`, `RoomInteriorObject`, `Project`, `EditorState`, `DragState`, `MouseCoord`, `Handle`, `GroupHandle`, `GroupScaleOriginal`, `GridPoint`, `CornerDirection`, `ProjectMeta`, `ProjectData`, `TabState`, `EntitySnapshot`）
 
@@ -91,6 +92,7 @@ main.ts
   │   │   ├─ editor/context.ts (EditorContext, EditorCallbacks, EditorAPI)
   │   │   ├─ editor/render.ts → room.ts, polygon.ts, wall-object.ts, camera.ts, free-text.ts, free-stroke.ts, snap.ts, grid.ts, lookup.ts
   │   │   ├─ editor/project.ts → history.ts, selection.ts, room.ts, adjacency.ts, free-stroke.ts
+  │   │   ├─ editor/gesture.ts → viewport.ts, history.ts, editor/context-menu-handler.ts
   │   │   ├─ editor/mouse-down.ts → room.ts, polygon.ts, wall-object.ts, interior-object.ts, camera.ts, free-text.ts, free-stroke.ts, link.ts, lookup.ts
   │   │   ├─ editor/mouse-move.ts → room.ts, wall-object.ts, interior-object.ts, camera.ts, free-text.ts, free-stroke.ts, adjacency.ts, snap.ts, lookup.ts
   │   │   ├─ editor/mouse-up.ts → room.ts, wall-object.ts, free-text.ts, free-stroke.ts, adjacency.ts, lookup.ts
