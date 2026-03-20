@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { Room, FreeText, FreeStroke, EntitySnapshot, GridPoint } from '../types.ts';
+import type { Room, FreeText, FreeStroke, Arrow, EntitySnapshot, GridPoint } from '../types.ts';
 import type { EditorContext } from './context.ts';
 import {
   copySelection,
@@ -15,8 +15,9 @@ function ents(
   rooms: Room[] = [],
   freeTexts: FreeText[] = [],
   freeStrokes: FreeStroke[] = [],
+  arrows: Arrow[] = [],
 ): EntitySnapshot {
-  return { rooms, freeTexts, freeStrokes, arrows: [] };
+  return { rooms, freeTexts, freeStrokes, arrows };
 }
 
 function makeRoom(overrides: Partial<Room> = {}): Room {

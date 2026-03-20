@@ -11,8 +11,13 @@ import {
 import type { EntitySnapshot } from './types.ts';
 import { createRoom } from './room.ts';
 
-function snap(rooms: EntitySnapshot['rooms']): EntitySnapshot {
-  return { rooms, freeTexts: [], freeStrokes: [], arrows: [] };
+function snap(
+  rooms: EntitySnapshot['rooms'],
+  freeTexts: EntitySnapshot['freeTexts'] = [],
+  freeStrokes: EntitySnapshot['freeStrokes'] = [],
+  arrows: EntitySnapshot['arrows'] = [],
+): EntitySnapshot {
+  return { rooms, freeTexts, freeStrokes, arrows };
 }
 
 describe('pushUndo / popUndo', () => {
