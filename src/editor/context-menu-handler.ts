@@ -556,17 +556,17 @@ function buildEmptyAreaMenu(ec: EditorContext, m: MouseCoord): ContextMenuItem[]
   items.push({
     label: '貼り付け',
     disabled: !hasClipboard,
-    action: () => pasteClipboard(ec, 'none'),
+    action: () => pasteClipboard(ec, 'none', { gx: m.gx, gy: m.gy }),
   });
   items.push({
     label: '左右反転して貼り付け',
     disabled: !hasClipboard,
-    action: () => pasteClipboard(ec, 'horizontal'),
+    action: () => pasteClipboard(ec, 'horizontal', { gx: m.gx, gy: m.gy }),
   });
   items.push({
     label: '上下反転して貼り付け',
     disabled: !hasClipboard,
-    action: () => pasteClipboard(ec, 'vertical'),
+    action: () => pasteClipboard(ec, 'vertical', { gx: m.gx, gy: m.gy }),
   });
   return items;
 }

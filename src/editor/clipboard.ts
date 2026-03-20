@@ -344,7 +344,9 @@ export function pasteClipboard(
 
   regenerateIds(clonedRooms, clonedFreeTexts, clonedFreeStrokes);
 
-  // Offset to target position (defaults to current mouse position)
+  // Offset to target position (defaults to current mouse position).
+  // Intentionally round to integer grid — paste always snaps to full grid units
+  // even when Shift sub-grid mode provides fractional coordinates.
   const pos = targetPos ?? state.mouse;
   const dx = Math.round(pos.gx - clipboard.originGx);
   const dy = Math.round(pos.gy - clipboard.originGy);
