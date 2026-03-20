@@ -1,4 +1,4 @@
-import type { Room, Arrow, FreeText, FreeStroke } from '../types.ts';
+import type { Room, FreeText, FreeStroke, Arrow, EntitySnapshot } from '../types.ts';
 import { GRID } from '../grid.ts';
 import { popUndo, pushRedo, popRedo, pushUndo, saveUndoPoint } from '../history.ts';
 import { clearSelection } from '../selection.ts';
@@ -10,16 +10,10 @@ import { computeRoomsBoundingBox, calcAutoFontSize } from '../room.ts';
 import { syncAllPairedOpenings } from '../adjacency.ts';
 import { findRoomById } from '../lookup.ts';
 import type { EditorContext } from './context.ts';
+import { getEntitySnapshot } from './utils.ts';
 
 export function commitChange(ec: EditorContext, fn: () => void): void {
-  saveUndoPoint(
-    ec.state.history,
-    ec.state.redoHistory,
-    ec.state.rooms,
-    ec.state.freeTexts,
-    ec.state.freeStrokes,
-    ec.state.arrows,
-  );
+  saveUndoPoint(ec.state.history, ec.state.redoHistory, getEntitySnapshot(ec.state));
   fn();
   ec.render();
   ec.callbacks.onAutoSave();
@@ -58,10 +52,7 @@ export function deleteRoom(ec: EditorContext, roomId: string): void {
   });
 }
 
-function applySnapshot(
-  ec: EditorContext,
-  restored: { rooms: Room[]; freeTexts: FreeText[]; freeStrokes: FreeStroke[]; arrows: Arrow[] },
-): void {
+function applySnapshot(ec: EditorContext, restored: EntitySnapshot): void {
   ec.state.rooms = restored.rooms;
   ec.state.freeTexts = restored.freeTexts;
   ec.state.freeStrokes = restored.freeStrokes;
@@ -77,13 +68,7 @@ function applySnapshot(
 export function undo(ec: EditorContext): void {
   const restored = popUndo(ec.state.history);
   if (!restored) return;
-  pushRedo(
-    ec.state.redoHistory,
-    ec.state.rooms,
-    ec.state.freeTexts,
-    ec.state.freeStrokes,
-    ec.state.arrows,
-  );
+  pushRedo(ec.state.redoHistory, getEntitySnapshot(ec.state));
   applySnapshot(ec, restored);
 }
 
@@ -91,13 +76,7 @@ export function redo(ec: EditorContext): void {
   const restored = popRedo(ec.state.redoHistory);
   if (!restored) return;
   // redo時は現在状態をUndoスタックに退避するだけ。saveUndoPointではなくpushUndoを使い、Redoスタックをクリアしない。
-  pushUndo(
-    ec.state.history,
-    ec.state.rooms,
-    ec.state.freeTexts,
-    ec.state.freeStrokes,
-    ec.state.arrows,
-  );
+  pushUndo(ec.state.history, getEntitySnapshot(ec.state));
   applySnapshot(ec, restored);
 }
 
@@ -143,7 +122,7 @@ export function loadProjectData(
 }
 
 export async function saveProject(ec: EditorContext): Promise<void> {
-  await saveAsJson(ec.state.rooms, ec.state.freeTexts, ec.state.freeStrokes, ec.state.arrows);
+  await saveAsJson(getEntitySnapshot(ec.state));
 }
 
 export function exportAsPng(ec: EditorContext): void {

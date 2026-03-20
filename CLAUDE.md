@@ -27,7 +27,7 @@ Canvas上でのマウス操作 → editor/ のイベントハンドラ → state
 
 ### Module Structure
 
-- **types.ts** — 全型定義 (`Room`, `WallObject`, `FreeStroke`, `Project`, `EditorState`, `DragState` discriminated union, `MouseCoord`, `GridPoint`, `ProjectMeta`, `ProjectData`, `TabState`)
+- **types.ts** — 全型定義 (`Room`, `WallObject`, `FreeStroke`, `Project`, `EditorState`, `DragState` discriminated union, `MouseCoord`, `GridPoint`, `ProjectMeta`, `ProjectData`, `TabState`, `EntitySnapshot`)
 - **editor/** — エディタのオーケストレーター。`EditorContext`オブジェクトで共有状態を管理し、各ハンドラを独立モジュールに分割
   - **editor/index.ts** — `initEditor()` エントリポイント。状態初期化・イベント登録・API返却
   - **editor/context.ts** — `EditorContext`, `EditorCallbacks`, `EditorAPI` 等のインターフェース定義
@@ -42,7 +42,7 @@ Canvas上でのマウス操作 → editor/ のイベントハンドラ → state
   - **editor/dblclick.ts** — `onDblClick()` ダブルクリックイベント処理
   - **editor/clipboard.ts** — `copySelection()`, `pasteClipboard()`, `duplicateSelection()` コピー＆ペースト・ミラー変換処理
   - **editor/marker-edit.ts** — `editMarkerViaDialog()` マーカー編集ダイアログの共通処理
-  - **editor/utils.ts** — `labelDisplayWidth()`, `createMousePos()` ユーティリティ
+  - **editor/utils.ts** — `labelDisplayWidth()`, `createMousePos()`, `getEntitySnapshot()` ユーティリティ
 - **lookup.ts** — ID検索ヘルパー (`findRoomById`, `findRoomIndexById`, `findFreeTextById`, `findFreeStrokeById`, `findWallObjectById`, `findInteriorObjectById`)
 - **snap.ts** — 頂点スナップ計算。他部屋の頂点・辺への近接スナップ(`findVertexSnap`)。`polygon.ts`の`getRoomVertices`/`projectPointOnSegment`を利用
 - **polygon.ts** — 四角形（非直角）部屋のユーティリティ。点の包含判定(`pointInQuad`)、重心計算(`quadCentroid`)、AABB更新(`updateRoomBBFromVertices`)、辺計算(`quadEdgeEndpoints`, `quadEdgeLength`)、頂点ハンドル(`getVertexHandles`, `hitVertexHandle`)

@@ -1,6 +1,7 @@
 import type {
   Room,
   Arrow,
+  EntitySnapshot,
   GridPoint,
   FreeText,
   FreeStroke,
@@ -381,11 +382,7 @@ function ensureIds(rooms: unknown[]): Room[] {
   });
 }
 
-export interface StorageData {
-  rooms: Room[];
-  freeTexts: FreeText[];
-  freeStrokes: FreeStroke[];
-  arrows: Arrow[];
+export interface StorageData extends EntitySnapshot {
   /** データが存在したが解析できなかった場合の警告メッセージ */
   warning?: string;
 }
@@ -427,14 +424,8 @@ export function parseStorageData(parsed: unknown): StorageData {
   };
 }
 
-export async function saveAsJson(
-  rooms: Room[],
-  freeTexts: FreeText[] = [],
-  freeStrokes: FreeStroke[] = [],
-  arrows: Arrow[] = [],
-): Promise<void> {
-  const data = { rooms, freeTexts, freeStrokes, arrows };
-  const json = JSON.stringify(data, null, 2);
+export async function saveAsJson(entities: EntitySnapshot): Promise<void> {
+  const json = JSON.stringify(entities, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
 
   if (typeof window.showSaveFilePicker === 'function') {

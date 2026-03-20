@@ -48,8 +48,8 @@ Canvas 再描画 + App.tsx → project-store.ts → localStorage 保存
   - **editor/dblclick.ts** — `onDblClick()` ダブルクリックイベント処理
   - **editor/clipboard.ts** — `copySelection()`, `pasteClipboard()`, `duplicateSelection()` コピー＆ペースト・ミラー変換処理。`ClipboardData` を `flags.clipboard` に保持（Undo対象外）
   - **editor/marker-edit.ts** — `editMarkerViaDialog()` マーカー編集ダイアログの共通処理（dblclick/context-menuから利用）
-  - **editor/utils.ts** — `labelDisplayWidth()`, `createMousePos()` ユーティリティ
-- **types.ts** — 全型定義（`Room`, `FreeText`, `FreeStroke`, `WallObject`, `RoomInteriorObject`, `Project`, `EditorState`, `DragState`, `MouseCoord`, `Handle`, `GroupHandle`, `GroupScaleOriginal`, `GridPoint`, `CornerDirection`, `ProjectMeta`, `ProjectData`, `TabState`）
+  - **editor/utils.ts** — `labelDisplayWidth()`, `createMousePos()`, `getEntitySnapshot()` ユーティリティ
+- **types.ts** — 全型定義（`Room`, `FreeText`, `FreeStroke`, `WallObject`, `RoomInteriorObject`, `Project`, `EditorState`, `DragState`, `MouseCoord`, `Handle`, `GroupHandle`, `GroupScaleOriginal`, `GridPoint`, `CornerDirection`, `ProjectMeta`, `ProjectData`, `TabState`, `EntitySnapshot`）
 
 ### 機能モジュール
 

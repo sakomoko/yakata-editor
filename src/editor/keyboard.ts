@@ -5,6 +5,7 @@ import { bringToFront, sendToBack, bringForward, sendBackward } from '../z-order
 import type { EditorContext } from './context.ts';
 import { commitChange, undo, redo, deleteSelectedEntities } from './project.ts';
 import { copySelection, pasteClipboard, duplicateSelection } from './clipboard.ts';
+import { getEntitySnapshot } from './utils.ts';
 
 export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
   if (e.isComposing) return;
@@ -121,14 +122,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
       : forward
         ? bringForward
         : sendBackward;
-    flags.savedRedo = saveUndoPoint(
-      state.history,
-      state.redoHistory,
-      state.rooms,
-      state.freeTexts,
-      state.freeStrokes,
-      state.arrows,
-    );
+    flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
     const changed = fn(state.rooms, roomId);
     if (changed) {
       ec.render();

@@ -131,6 +131,13 @@ export interface Arrow {
   fontSize?: number;
 }
 
+export interface EntitySnapshot {
+  rooms: Room[];
+  freeTexts: FreeText[];
+  freeStrokes: FreeStroke[];
+  arrows: Arrow[];
+}
+
 export interface FreeTextEditData {
   label: string;
   fontSize: number;

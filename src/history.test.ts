@@ -8,13 +8,23 @@ import {
   clearRedo,
   saveUndoPoint,
 } from './history.ts';
+import type { EntitySnapshot } from './types.ts';
 import { createRoom } from './room.ts';
+
+function snap(
+  rooms: EntitySnapshot['rooms'],
+  freeTexts: EntitySnapshot['freeTexts'] = [],
+  freeStrokes: EntitySnapshot['freeStrokes'] = [],
+  arrows: EntitySnapshot['arrows'] = [],
+): EntitySnapshot {
+  return { rooms, freeTexts, freeStrokes, arrows };
+}
 
 describe('pushUndo / popUndo', () => {
   it('should save and restore rooms', () => {
     const history: string[] = [];
     const rooms = [createRoom(1, 2, 3, 4, 'A')];
-    pushUndo(history, rooms);
+    pushUndo(history, snap(rooms));
 
     const restored = popUndo(history);
     expect(restored).not.toBeNull();
@@ -39,7 +49,7 @@ describe('pushUndo / popUndo', () => {
         zLayer: 'front' as const,
       },
     ];
-    pushUndo(history, rooms, freeTexts);
+    pushUndo(history, { rooms, freeTexts, freeStrokes: [], arrows: [] });
 
     const restored = popUndo(history);
     expect(restored).not.toBeNull();
@@ -55,7 +65,7 @@ describe('pushUndo / popUndo', () => {
     const history: string[] = [];
     const rooms = [createRoom(0, 0, 1, 1)];
     for (let i = 0; i < 55; i++) {
-      pushUndo(history, rooms);
+      pushUndo(history, snap(rooms));
     }
     expect(history).toHaveLength(50);
   });
@@ -63,9 +73,9 @@ describe('pushUndo / popUndo', () => {
   it('should restore independent snapshots', () => {
     const history: string[] = [];
     const rooms = [createRoom(0, 0, 1, 1, 'before')];
-    pushUndo(history, rooms);
+    pushUndo(history, snap(rooms));
     rooms[0].label = 'after';
-    pushUndo(history, rooms);
+    pushUndo(history, snap(rooms));
 
     const second = popUndo(history);
     expect(second!.rooms[0].label).toBe('after');
@@ -82,9 +92,9 @@ describe('pushUndo / popUndo', () => {
   it('cancelLastUndo should remove the last entry', () => {
     const history: string[] = [];
     const rooms = [createRoom(0, 0, 1, 1, 'first')];
-    pushUndo(history, rooms);
+    pushUndo(history, snap(rooms));
     rooms[0].label = 'second';
-    pushUndo(history, rooms);
+    pushUndo(history, snap(rooms));
     expect(history).toHaveLength(2);
 
     cancelLastUndo(history);
@@ -100,12 +110,12 @@ describe('pushUndo / popUndo', () => {
     const rooms = [createRoom(0, 0, 1, 1, 'A')];
 
     // Redoスタックにエントリを入れる
-    pushRedo(redoHistory, rooms);
-    pushRedo(redoHistory, rooms);
+    pushRedo(redoHistory, snap(rooms));
+    pushRedo(redoHistory, snap(rooms));
     expect(redoHistory).toHaveLength(2);
 
     // saveUndoPoint でRedoがクリアされる（savedRedoに退避）
-    const savedRedo = saveUndoPoint(history, redoHistory, rooms);
+    const savedRedo = saveUndoPoint(history, redoHistory, snap(rooms));
     expect(redoHistory).toHaveLength(0);
     expect(savedRedo).toHaveLength(2);
 
@@ -120,8 +130,8 @@ describe('pushUndo / popUndo', () => {
     const redoHistory: string[] = [];
     const rooms = [createRoom(0, 0, 1, 1)];
 
-    pushUndo(history, rooms);
-    pushRedo(redoHistory, rooms);
+    pushUndo(history, snap(rooms));
+    pushRedo(redoHistory, snap(rooms));
     expect(history).toHaveLength(1);
     expect(redoHistory).toHaveLength(1);
 
@@ -147,7 +157,7 @@ describe('pushRedo / popRedo / clearRedo', () => {
   it('should save and restore via redo stack', () => {
     const redoHistory: string[] = [];
     const rooms = [createRoom(1, 2, 3, 4, 'A')];
-    pushRedo(redoHistory, rooms);
+    pushRedo(redoHistory, snap(rooms));
 
     const restored = popRedo(redoHistory);
     expect(restored).not.toBeNull();
@@ -163,7 +173,7 @@ describe('pushRedo / popRedo / clearRedo', () => {
     const redoHistory: string[] = [];
     const rooms = [createRoom(0, 0, 1, 1)];
     for (let i = 0; i < 55; i++) {
-      pushRedo(redoHistory, rooms);
+      pushRedo(redoHistory, snap(rooms));
     }
     expect(redoHistory).toHaveLength(50);
   });
@@ -171,8 +181,8 @@ describe('pushRedo / popRedo / clearRedo', () => {
   it('clearRedo should empty the stack', () => {
     const redoHistory: string[] = [];
     const rooms = [createRoom(0, 0, 1, 1)];
-    pushRedo(redoHistory, rooms);
-    pushRedo(redoHistory, rooms);
+    pushRedo(redoHistory, snap(rooms));
+    pushRedo(redoHistory, snap(rooms));
     expect(redoHistory).toHaveLength(2);
 
     clearRedo(redoHistory);
@@ -185,18 +195,18 @@ describe('pushRedo / popRedo / clearRedo', () => {
 
     // Initial state: room 'before'
     const rooms = [createRoom(0, 0, 1, 1, 'before')];
-    pushUndo(history, rooms);
+    pushUndo(history, snap(rooms));
 
     // Change to 'after'
     rooms[0].label = 'after';
 
     // Simulate undo: save current to redo, restore from undo
-    pushRedo(redoHistory, rooms);
+    pushRedo(redoHistory, snap(rooms));
     const undone = popUndo(history);
     expect(undone!.rooms[0].label).toBe('before');
 
     // Simulate redo: save current (undone) to undo, restore from redo
-    pushUndo(history, undone!.rooms, undone!.freeTexts, undone!.freeStrokes);
+    pushUndo(history, undone!);
     const redone = popRedo(redoHistory);
     expect(redone!.rooms[0].label).toBe('after');
   });
@@ -209,11 +219,11 @@ describe('saveUndoPoint', () => {
     const rooms = [createRoom(0, 0, 1, 1, 'A')];
 
     // Redoスタックに何か入れておく
-    pushRedo(redoHistory, rooms);
-    pushRedo(redoHistory, rooms);
+    pushRedo(redoHistory, snap(rooms));
+    pushRedo(redoHistory, snap(rooms));
     expect(redoHistory).toHaveLength(2);
 
-    saveUndoPoint(history, redoHistory, rooms);
+    saveUndoPoint(history, redoHistory, snap(rooms));
 
     expect(history).toHaveLength(1);
     expect(redoHistory).toHaveLength(0);
