@@ -21,8 +21,13 @@ import { hitVertexHandle, edgeResizeCursor } from '../polygon.ts';
 import type { EditorContext } from './context.ts';
 import { getEntitySnapshot } from './utils.ts';
 
-export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
+export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
   const { canvas, state, viewport, flags } = ec;
+
+  // Prevent browser from synthesizing mouse events from touch
+  if (e.pointerType === 'touch') {
+    e.preventDefault();
+  }
 
   if (e.button === 1 || (e.button === 0 && flags.isPanning)) {
     e.preventDefault();

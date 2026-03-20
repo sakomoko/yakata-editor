@@ -20,7 +20,7 @@ import { syncPairedOpening, syncAllPairedOpenings } from '../adjacency.ts';
 import type { EditorContext } from './context.ts';
 import { getEntitySnapshot } from './utils.ts';
 
-export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
+export function onMouseUp(ec: EditorContext, e: PointerEvent): void {
   const { state, canvas, viewport, flags } = ec;
 
   if (!state.drag) return;

@@ -106,5 +106,5 @@ export interface EditorContext {
   };
   render: () => void;
   commitChange: (fn: () => void) => void;
-  mousePos: (e: MouseEvent) => MouseCoord;
+  mousePos: (e: Pick<MouseEvent, 'clientX' | 'clientY' | 'shiftKey'>) => MouseCoord;
 }
