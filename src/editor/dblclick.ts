@@ -2,7 +2,7 @@ import { findFreeTextById, findArrowById } from '../lookup.ts';
 import { hitRoom } from '../room.ts';
 import { hitInteriorObjectInRooms } from '../interior-object.ts';
 import { hitFreeText } from '../free-text.ts';
-import { createArrow, hitArrowInList, hitArrowSegment } from '../arrow.ts';
+import { createArrow, hitArrowInList, hitArrowPoint, hitArrowSegment } from '../arrow.ts';
 import { GRID } from '../grid.ts';
 import { selectSingle } from '../selection.ts';
 import type { EditorContext } from './context.ts';
@@ -45,11 +45,31 @@ export async function onDblClick(ec: EditorContext, e: MouseEvent): Promise<void
     return;
   }
 
-  // Arrow segment double click: insert waypoint
+  // Arrow double click: point handle hit → label edit, segment hit → waypoint insert
   {
     const arrowGx = m.px / GRID;
     const arrowGy = m.py / GRID;
-    // Selected arrows only
+    // ポイントハンドルをセグメントより先にチェック（エンドポイント付近での誤挿入を防止）
+    for (const arrow of state.arrows) {
+      if (!state.selection.has(arrow.id)) continue;
+      const ptIdx = hitArrowPoint(arrow, arrowGx, arrowGy);
+      if (ptIdx !== undefined) {
+        // ポイント上のダブルクリック → ラベル編集
+        selectSingle(state.selection, arrow.id);
+        const arrowId = arrow.id;
+        const newLabel = prompt('矢印のラベル', arrow.label ?? '');
+        if (newLabel !== null) {
+          const a = findArrowById(state.arrows, arrowId);
+          if (a) {
+            commitChange(ec, () => {
+              a.label = newLabel || undefined;
+            });
+          }
+        }
+        return;
+      }
+    }
+    // セグメント上のダブルクリック → 中間ウェイポイント挿入
     for (const arrow of state.arrows) {
       if (!state.selection.has(arrow.id)) continue;
       const insertIdx = hitArrowSegment(arrow, arrowGx, arrowGy);
@@ -60,7 +80,7 @@ export async function onDblClick(ec: EditorContext, e: MouseEvent): Promise<void
         return;
       }
     }
-    // Arrow label edit on double click
+    // 非選択矢印のダブルクリック → ラベル編集
     const hitA = hitArrowInList(state.arrows, arrowGx, arrowGy);
     if (hitA) {
       selectSingle(state.selection, hitA.id);

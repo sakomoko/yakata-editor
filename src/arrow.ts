@@ -8,6 +8,7 @@ export const ARROW_START_RADIUS = 0.15; // グリッド単位
 const ARROW_HIT_TOLERANCE_GRID = 0.3;
 const ARROW_POINT_HIT_TOLERANCE_GRID = 0.4;
 
+/** スクリーン上での最小サイズを保証しつつ、zoom < 1 では拡大して視認性を維持する */
 function calcHeadSize(zoom: number): number {
   return Math.max(ARROW_HEAD_SIZE * GRID, (ARROW_HEAD_SIZE * GRID) / zoom);
 }
