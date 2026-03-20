@@ -11,7 +11,7 @@ import { drawOutwardDoorsOverlay } from '../wall-object.ts';
 import { drawCameraFovOverlay, drawCameraHandles } from '../camera.ts';
 import { drawFreeText, drawFreeTextHandles } from '../free-text.ts';
 import { drawFreeStroke, drawFreeStrokeBounds } from '../free-stroke.ts';
-import { drawArrow, drawArrowHandles, drawPendingArrow } from '../arrow.ts';
+import { drawArrow, drawArrowHandles, drawDragArrowPreview } from '../arrow.ts';
 import { drawLinkGroupIndicators } from '../link.ts';
 import type { SnapIndicator } from '../snap.ts';
 import type { EditorContext } from './context.ts';
@@ -125,12 +125,12 @@ export function render(ec: EditorContext): void {
     }
   }
 
-  // Pending arrow preview
-  if (flags.pendingArrow && flags.pendingArrow.points.length >= 1) {
-    drawPendingArrow(
+  // Drag arrow preview
+  if (state.drag?.type === 'drawArrow' && flags.drawArrowPreview) {
+    drawDragArrowPreview(
       ctx,
-      flags.pendingArrow.points,
-      flags.pendingArrow.previewPoint,
+      state.drag.startPoint,
+      flags.drawArrowPreview,
       state.arrowColor,
       state.arrowLineWidth,
       viewport.zoom,

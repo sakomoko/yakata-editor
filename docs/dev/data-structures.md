@@ -233,6 +233,9 @@ type DragState =
   | { type: 'moveStroke'; id: string; offsetPx: number; offsetPy: number }
   | { type: 'groupResize'; dir: CornerDirection; origBB: { x: number; y: number; w: number; h: number }; anchor: { gx: number; gy: number }; originals: Map<string, GroupScaleOriginal> }
   | { type: 'moveVertex'; roomId: string; vertexIndex: number }
+  | { type: 'moveArrow'; arrowId: string; startGx: number; startGy: number; origPoints: GridPoint[] }
+  | { type: 'moveArrowPoint'; arrowId: string; pointIndex: number }
+  | { type: 'drawArrow'; startPoint: GridPoint }
   | null;
 ```
 
@@ -256,6 +259,9 @@ type DragState =
 | `moveStroke` | 通常モードでストロークをドラッグ | ストローク全体をオフセット移動 |
 | `groupResize` | グループBBの4隅ハンドルをドラッグ（部屋2つ以上選択時） | アスペクト比維持で選択部屋を一括スケーリング |
 | `moveVertex` | 四角形部屋の頂点ハンドルをドラッグ | 頂点をグリッドスナップで移動、AABBを自動更新 |
+| `moveArrow` | 矢印全体をドラッグ | 矢印の全ポイントをオフセット移動 |
+| `moveArrowPoint` | 矢印のウェイポイントをドラッグ | 個別ポイントを移動（Shift制約対応） |
+| `drawArrow` | アローモードでドラッグ | 始点→終点で新しい矢印を作成（mouseupで確定、ゼロ長はキャンセル） |
 | `null` | ドラッグなし | 通常状態 |
 
 ## EditorState
@@ -276,6 +282,9 @@ interface EditorState {
   paintColor: string;      // 現在の描画色（hex）
   paintLineWidth: number;  // 現在の太さ（px）
   paintOpacity: number;    // 現在の不透明度（0.0〜1.0）
+  arrowMode: boolean;      // アローモードON/OFF
+  arrowColor: string;      // 現在の矢印色（hex）
+  arrowLineWidth: number;  // 現在の矢印太さ（px）
 }
 ```
 

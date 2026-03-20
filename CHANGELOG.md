@@ -7,6 +7,9 @@
 
 ### Changed
 
+- 矢印描画をクリック方式（クリックで点追加→ダブルクリック確定）からドラッグ方式（mousedown→ドラッグ→mouseup確定）に変更
+  - 確定後すぐにUndo可能、操作がより直感的に
+  - 中間ウェイポイントは確定後にセグメントダブルクリックで挿入可能（既存機能）
 - トップレベルエンティティ（rooms, freeTexts, freeStrokes, arrows）の受け渡しを個別引数から `EntitySnapshot` オブジェクトパターンに統一
   - `history.ts`, `persistence.ts`, `clipboard.ts` の関数シグネチャを簡素化
   - `ClipboardData` と `StorageData` が `EntitySnapshot` を extends する形に変更

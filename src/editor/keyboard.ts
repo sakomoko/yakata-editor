@@ -12,6 +12,18 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
 
   const { canvas, state, viewport, flags } = ec;
 
+  // Escape: 矢印ドラッグ中のキャンセル
+  if (e.key === 'Escape' && state.drag?.type === 'drawArrow') {
+    e.preventDefault();
+    cancelLastUndo(state.history, state.redoHistory, flags.savedRedo);
+    flags.savedRedo = null;
+    flags.drawArrowPreview = null;
+    state.drag = null;
+    canvas.style.cursor = 'crosshair';
+    ec.render();
+    return;
+  }
+
   // P キーでペイントモードトグル
   if (
     e.key.toLowerCase() === 'p' &&
@@ -23,7 +35,6 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     state.paintMode = !state.paintMode;
     if (state.paintMode) {
       state.arrowMode = false;
-      flags.pendingArrow = null;
       clearSelection(state.selection);
       flags.activeInteriorObjectId = undefined;
       flags.activeFreeTextId = undefined;
@@ -50,32 +61,11 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
       flags.activeInteriorObjectId = undefined;
       flags.activeFreeTextId = undefined;
       ec.callbacks.onPaintModeChange?.(false);
-    } else {
-      flags.pendingArrow = null;
     }
     canvas.style.cursor = state.arrowMode ? 'crosshair' : 'default';
     ec.render();
     ec.callbacks.onArrowModeChange?.(state.arrowMode);
     return;
-  }
-
-  // Arrow mode: Escape to cancel, Backspace to remove last point
-  if (state.arrowMode && flags.pendingArrow) {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      flags.pendingArrow = null;
-      ec.render();
-      return;
-    }
-    if (e.key === 'Backspace' && document.activeElement === document.body) {
-      e.preventDefault();
-      flags.pendingArrow.points.pop();
-      if (flags.pendingArrow.points.length === 0) {
-        flags.pendingArrow = null;
-      }
-      ec.render();
-      return;
-    }
   }
 
   if (e.code === 'Space' && !flags.isPanning && document.activeElement === document.body) {
