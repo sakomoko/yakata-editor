@@ -425,8 +425,7 @@ export function parseStorageData(parsed: unknown): StorageData {
 }
 
 export async function saveAsJson(entities: EntitySnapshot): Promise<void> {
-  const data = { ...entities };
-  const json = JSON.stringify(data, null, 2);
+  const json = JSON.stringify(entities, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
 
   if (typeof window.showSaveFilePicker === 'function') {

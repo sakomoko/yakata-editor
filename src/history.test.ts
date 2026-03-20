@@ -201,7 +201,7 @@ describe('pushRedo / popRedo / clearRedo', () => {
     expect(undone!.rooms[0].label).toBe('before');
 
     // Simulate redo: save current (undone) to undo, restore from redo
-    pushUndo(history, { rooms: undone!.rooms, freeTexts: undone!.freeTexts, freeStrokes: undone!.freeStrokes, arrows: undone!.arrows });
+    pushUndo(history, undone!);
     const redone = popRedo(redoHistory);
     expect(redone!.rooms[0].label).toBe('after');
   });

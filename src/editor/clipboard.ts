@@ -14,10 +14,6 @@ export interface ClipboardData extends EntitySnapshot {
 
 export type MirrorMode = 'none' | 'horizontal' | 'vertical';
 
-function cloneEntities(entities: EntitySnapshot): EntitySnapshot {
-  return structuredClone(entities);
-}
-
 interface BoundingBox {
   minGx: number;
   minGy: number;
@@ -108,7 +104,7 @@ export function copySelection(ec: EditorContext): void {
   )
     return;
 
-  const cloned = cloneEntities({ rooms, freeTexts, freeStrokes, arrows });
+  const cloned: EntitySnapshot = structuredClone({ rooms, freeTexts, freeStrokes, arrows });
 
   for (const r of cloned.rooms) {
     cleanRoomForClipboard(r);
@@ -373,7 +369,7 @@ export function pasteClipboard(
   const clipboard = flags.clipboard;
   if (!clipboard) return;
 
-  const cloned = cloneEntities(clipboard);
+  const cloned: EntitySnapshot = structuredClone(clipboard);
 
   // Apply mirror before offset (mirror around clipboard center)
   if (mirror === 'horizontal') {

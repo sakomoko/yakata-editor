@@ -282,7 +282,7 @@ describe('mirror horizontal', () => {
   it('mirrors room position', () => {
     const rooms: Room[] = [makeRoom({ x: 2, y: 3, w: 4, h: 3 })];
     // BB center: 2 + 4/2 = 4
-    _applyMirrorHorizontal(ents(rooms),4);
+    _applyMirrorHorizontal(ents(rooms), 4);
     // x = 2*4 - 2 - 4 = 2 (symmetric around center)
     expect(rooms[0].x).toBe(2);
   });
@@ -290,7 +290,7 @@ describe('mirror horizontal', () => {
   it('mirrors room off-center', () => {
     const rooms: Room[] = [makeRoom({ x: 1, y: 0, w: 2, h: 2 })];
     // centerGx = 3 (e.g. bb from 1 to 5)
-    _applyMirrorHorizontal(ents(rooms),3);
+    _applyMirrorHorizontal(ents(rooms), 3);
     // x = 2*3 - 1 - 2 = 3
     expect(rooms[0].x).toBe(3);
   });
@@ -308,7 +308,7 @@ describe('mirror horizontal', () => {
         ],
       }),
     ];
-    _applyMirrorHorizontal(ents(rooms),2);
+    _applyMirrorHorizontal(ents(rooms), 2);
     expect(rooms[0].wallObjects![0].side).toBe('w');
     expect(rooms[0].wallObjects![1].side).toBe('n');
   });
@@ -323,7 +323,7 @@ describe('mirror horizontal', () => {
         wallObjects: [{ id: 'w1', type: 'window', side: 'n', offset: 1, width: 2 }],
       }),
     ];
-    _applyMirrorHorizontal(ents(rooms),3);
+    _applyMirrorHorizontal(ents(rooms), 3);
     // offset = 6 - 1 - 2 = 3
     expect(rooms[0].wallObjects![0].offset).toBe(3);
   });
@@ -348,7 +348,7 @@ describe('mirror horizontal', () => {
         ],
       }),
     ];
-    _applyMirrorHorizontal(ents(rooms),2);
+    _applyMirrorHorizontal(ents(rooms), 2);
     expect(rooms[0].wallObjects![0].type).toBe('door');
     if (rooms[0].wallObjects![0].type === 'door') {
       expect(rooms[0].wallObjects![0].hinge).toBe('end');
@@ -376,7 +376,7 @@ describe('mirror horizontal', () => {
         ],
       }),
     ];
-    _applyMirrorHorizontal(ents(rooms),2);
+    _applyMirrorHorizontal(ents(rooms), 2);
     expect(rooms[0].interiorObjects![0]).toHaveProperty('direction', 'w');
     // x = 4 - 1 - 2 = 1
     expect(rooms[0].interiorObjects![0].x).toBe(1);
@@ -406,7 +406,7 @@ describe('mirror horizontal', () => {
         ],
       }),
     ];
-    _applyMirrorHorizontal(ents(rooms),2);
+    _applyMirrorHorizontal(ents(rooms), 2);
     const cam = rooms[0].interiorObjects![0];
     if (cam.type === 'camera') {
       // PI - PI/4 = 3*PI/4
@@ -422,7 +422,7 @@ describe('mirror horizontal', () => {
       { gx: 0, gy: 3 },
     ];
     const rooms: Room[] = [makeRoom({ x: 0, y: 0, w: 4, h: 3, vertices: v })];
-    _applyMirrorHorizontal(ents(rooms),2);
+    _applyMirrorHorizontal(ents(rooms), 2);
     // After mirror: gx = 2*2 - gx for each
     // Original v0(0)->4, v1(4)->0, v2(4)->0, v3(0)->4
     // Reorder [v1,v0,v3,v2] => [{gx:0},{gx:4},{gx:4},{gx:0}]
@@ -452,7 +452,7 @@ describe('mirror horizontal', () => {
         wallObjects: [{ id: 'w1', type: 'window', side: 'n', offset: 0.5, width: 1 }],
       }),
     ];
-    _applyMirrorHorizontal(ents(rooms),2);
+    _applyMirrorHorizontal(ents(rooms), 2);
     // n edge length was 2 (pre-computed), so offset = 2 - 0.5 - 1 = 0.5
     expect(rooms[0].wallObjects![0].offset).toBe(0.5);
   });
@@ -485,7 +485,7 @@ describe('mirror horizontal', () => {
         ],
       }),
     ];
-    _applyMirrorHorizontal(ents(rooms),2);
+    _applyMirrorHorizontal(ents(rooms), 2);
     // preW = 4, so x = 4 - 0 - 2 = 2
     expect(rooms[0].interiorObjects![0].x).toBe(2);
     expect(rooms[0].interiorObjects![0]).toHaveProperty('direction', 'w');
@@ -493,7 +493,7 @@ describe('mirror horizontal', () => {
 
   it('mirrors FreeText position', () => {
     const freeTexts: FreeText[] = [makeFreeText({ gx: 1, gy: 2, w: 3, h: 1 })];
-    _applyMirrorHorizontal(ents([], freeTexts),4);
+    _applyMirrorHorizontal(ents([], freeTexts), 4);
     // gx = 2*4 - 1 - 3 = 4
     expect(freeTexts[0].gx).toBe(4);
   });
@@ -508,7 +508,7 @@ describe('mirror horizontal', () => {
       }),
     ];
     // centerGx=2, centerPx=2*20=40
-    _applyMirrorHorizontal(ents([], [], freeStrokes),2);
+    _applyMirrorHorizontal(ents([], [], freeStrokes), 2);
     // px[0] = 2*40 - 20 = 60
     expect(freeStrokes[0].points[0].px).toBe(60);
     // px[1] = 2*40 - 60 = 20
@@ -519,7 +519,7 @@ describe('mirror horizontal', () => {
 describe('mirror vertical', () => {
   it('mirrors room position', () => {
     const rooms: Room[] = [makeRoom({ x: 0, y: 1, w: 4, h: 2 })];
-    _applyMirrorVertical(ents(rooms),3);
+    _applyMirrorVertical(ents(rooms), 3);
     // y = 2*3 - 1 - 2 = 3
     expect(rooms[0].y).toBe(3);
   });
@@ -533,7 +533,7 @@ describe('mirror vertical', () => {
         ],
       }),
     ];
-    _applyMirrorVertical(ents(rooms),1.5);
+    _applyMirrorVertical(ents(rooms), 1.5);
     expect(rooms[0].wallObjects![0].side).toBe('s');
     expect(rooms[0].wallObjects![1].side).toBe('e');
   });
@@ -548,7 +548,7 @@ describe('mirror vertical', () => {
         wallObjects: [{ id: 'w1', type: 'window', side: 'e', offset: 1, width: 2 }],
       }),
     ];
-    _applyMirrorVertical(ents(rooms),3);
+    _applyMirrorVertical(ents(rooms), 3);
     // offset = 6 - 1 - 2 = 3
     expect(rooms[0].wallObjects![0].offset).toBe(3);
   });
@@ -569,7 +569,7 @@ describe('mirror vertical', () => {
         ],
       }),
     ];
-    _applyMirrorVertical(ents(rooms),1.5);
+    _applyMirrorVertical(ents(rooms), 1.5);
     if (rooms[0].wallObjects![0].type === 'door') {
       expect(rooms[0].wallObjects![0].hinge).toBe('end');
     }
@@ -592,7 +592,7 @@ describe('mirror vertical', () => {
         ],
       }),
     ];
-    _applyMirrorVertical(ents(rooms),1.5);
+    _applyMirrorVertical(ents(rooms), 1.5);
     expect(rooms[0].interiorObjects![0]).toHaveProperty('direction', 's');
   });
 
@@ -616,7 +616,7 @@ describe('mirror vertical', () => {
         ],
       }),
     ];
-    _applyMirrorVertical(ents(rooms),1.5);
+    _applyMirrorVertical(ents(rooms), 1.5);
     const cam = rooms[0].interiorObjects![0];
     if (cam.type === 'camera') {
       // -PI/4 normalized = 7*PI/4
@@ -632,7 +632,7 @@ describe('mirror vertical', () => {
       { gx: 0, gy: 3 },
     ];
     const rooms: Room[] = [makeRoom({ vertices: v })];
-    _applyMirrorVertical(ents(rooms),1.5);
+    _applyMirrorVertical(ents(rooms), 1.5);
     // After mirror: gy = 2*1.5 - gy
     // v0(0)->3, v1(0)->3, v2(3)->0, v3(3)->0
     // Reorder [v3,v2,v1,v0] => [{gy:0},{gy:0},{gy:3},{gy:3}]
@@ -644,7 +644,7 @@ describe('mirror vertical', () => {
 
   it('mirrors FreeText position', () => {
     const freeTexts: FreeText[] = [makeFreeText({ gx: 1, gy: 2, w: 3, h: 1 })];
-    _applyMirrorVertical(ents([], freeTexts),4);
+    _applyMirrorVertical(ents([], freeTexts), 4);
     // gy = 2*4 - 2 - 1 = 5
     expect(freeTexts[0].gy).toBe(5);
   });
@@ -658,7 +658,7 @@ describe('mirror vertical', () => {
         ],
       }),
     ];
-    _applyMirrorVertical(ents([], [], freeStrokes),3);
+    _applyMirrorVertical(ents([], [], freeStrokes), 3);
     // centerPy = 3*20 = 60
     // py[0] = 2*60 - 40 = 80
     // py[1] = 2*60 - 80 = 40
