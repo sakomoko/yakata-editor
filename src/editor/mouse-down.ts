@@ -385,7 +385,36 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
     ec.render();
   }
 
-  // Check arrow hit (select/move)
+  // Check free stroke hit (select/move) — FreeStrokeは最前面レイヤーなので矢印より先にヒット判定
+  const strokeHitTolerance = STROKE_HIT_TOLERANCE_PX / viewport.zoom;
+  const strokeHit = hitFreeStrokeInList(state.freeStrokes, m.px, m.py, strokeHitTolerance);
+  if (strokeHit) {
+    if (shift) {
+      toggleSelection(state.selection, strokeHit.id);
+    } else {
+      selectSingle(state.selection, strokeHit.id);
+    }
+    flags.savedRedo = saveUndoPoint(
+      state.history,
+      state.redoHistory,
+      state.rooms,
+      state.freeTexts,
+      state.freeStrokes,
+      state.arrows,
+    );
+    state.drag = {
+      type: 'moveStroke',
+      id: strokeHit.id,
+      offsetPx: m.px,
+      offsetPy: m.py,
+    };
+    flags.activeFreeTextId = undefined;
+    canvas.style.cursor = 'grabbing';
+    ec.render();
+    return;
+  }
+
+  // Check arrow hit (select/move) — 矢印はFreeStrokeより背面に描画される
   {
     const arrowGx = m.px / GRID;
     const arrowGy = m.py / GRID;
@@ -441,35 +470,6 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
       ec.render();
       return;
     }
-  }
-
-  // Check free stroke hit (select/move)
-  const strokeHitTolerance = STROKE_HIT_TOLERANCE_PX / viewport.zoom;
-  const strokeHit = hitFreeStrokeInList(state.freeStrokes, m.px, m.py, strokeHitTolerance);
-  if (strokeHit) {
-    if (shift) {
-      toggleSelection(state.selection, strokeHit.id);
-    } else {
-      selectSingle(state.selection, strokeHit.id);
-    }
-    flags.savedRedo = saveUndoPoint(
-      state.history,
-      state.redoHistory,
-      state.rooms,
-      state.freeTexts,
-      state.freeStrokes,
-      state.arrows,
-    );
-    state.drag = {
-      type: 'moveStroke',
-      id: strokeHit.id,
-      offsetPx: m.px,
-      offsetPy: m.py,
-    };
-    flags.activeFreeTextId = undefined;
-    canvas.style.cursor = 'grabbing';
-    ec.render();
-    return;
   }
 
   // Check front-layer FreeText hit

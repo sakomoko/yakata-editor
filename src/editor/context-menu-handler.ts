@@ -719,7 +719,7 @@ function buildFreeStrokeMenu(ec: EditorContext, strokeId: string): ContextMenuIt
 
 export function onContextMenu(ec: EditorContext, e: MouseEvent): void {
   e.preventDefault();
-  if (ec.state.paintMode || ec.state.arrowMode) return;
+  if (ec.state.paintMode) return;
   const { state, callbacks } = ec;
   const m = ec.mousePos(e);
 

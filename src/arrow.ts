@@ -70,7 +70,8 @@ export function drawArrow(ctx: CanvasRenderingContext2D, arrow: Arrow, zoom: num
   // Draw arrowhead at end
   const ep = arrow.points[arrow.points.length - 1];
   const pp = arrow.points[arrow.points.length - 2];
-  drawArrowHead(ctx, pp, ep, arrow.color, ARROW_HEAD_SIZE * GRID);
+  const headSize = Math.max(ARROW_HEAD_SIZE * GRID, (ARROW_HEAD_SIZE * GRID) / zoom);
+  drawArrowHead(ctx, pp, ep, arrow.color, headSize);
 
   // Draw label at first segment midpoint
   if (arrow.label) {
@@ -174,7 +175,8 @@ export function drawPendingArrow(
   if (allPoints.length >= 2) {
     const ep = allPoints[allPoints.length - 1];
     const pp = allPoints[allPoints.length - 2];
-    drawArrowHead(ctx, pp, ep, color, ARROW_HEAD_SIZE * GRID);
+    const headSize = Math.max(ARROW_HEAD_SIZE * GRID, (ARROW_HEAD_SIZE * GRID) / zoom);
+    drawArrowHead(ctx, pp, ep, color, headSize);
   }
 
   // Draw waypoint handles
