@@ -465,21 +465,12 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
       }
       arrow.points[drag.pointIndex] = pt;
     }
-  }
-
-  // Arrow mode: update preview point
-  if (
-    state.arrowMode &&
-    flags.pendingArrow &&
-    flags.pendingArrow.points.length >= 1 &&
-    !state.drag
-  ) {
+  } else if (state.drag.type === 'drawArrow') {
     let previewPt = { gx: m.gx, gy: m.gy };
     if (e.shiftKey) {
-      const lastPt = flags.pendingArrow.points[flags.pendingArrow.points.length - 1];
-      previewPt = constrainToAxis(lastPt, previewPt);
+      previewPt = constrainToAxis(state.drag.startPoint, previewPt);
     }
-    flags.pendingArrow.previewPoint = previewPt;
+    flags.drawArrowPreview = previewPt;
   }
 
   ec.render();

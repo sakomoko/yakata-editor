@@ -15,7 +15,7 @@ import { hitInteriorObjectInRooms, hitInteriorObjectHandleInRooms } from '../int
 import { hitCameraHandleInRooms } from '../camera.ts';
 import { hitFreeText, hitFreeTextHandle } from '../free-text.ts';
 import { createFreeStroke, hitFreeStrokeInList, STROKE_HIT_TOLERANCE_PX } from '../free-stroke.ts';
-import { hitArrowInList, hitArrowPoint, constrainToAxis } from '../arrow.ts';
+import { hitArrowInList, hitArrowPoint } from '../arrow.ts';
 import { expandWithLinked } from '../link.ts';
 import { hitVertexHandle, edgeResizeCursor } from '../polygon.ts';
 import type { EditorContext } from './context.ts';
@@ -57,19 +57,11 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
     return;
   }
 
-  // Arrow mode: add point to pending arrow
+  // Arrow mode: start drag to draw arrow
   if (state.arrowMode && e.button === 0) {
-    let point = { gx: m.gx, gy: m.gy };
-    if (flags.pendingArrow && flags.pendingArrow.points.length > 0 && shift) {
-      const lastPt = flags.pendingArrow.points[flags.pendingArrow.points.length - 1];
-      point = constrainToAxis(lastPt, point);
-    }
-    if (!flags.pendingArrow) {
-      flags.pendingArrow = { points: [point] };
-    } else {
-      flags.pendingArrow.points.push(point);
-    }
-    flags.pendingArrow.previewPoint = undefined;
+    flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
+    state.drag = { type: 'drawArrow', startPoint: { gx: m.gx, gy: m.gy } };
+    canvas.style.cursor = 'crosshair';
     ec.render();
     return;
   }

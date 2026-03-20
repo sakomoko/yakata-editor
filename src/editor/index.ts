@@ -66,7 +66,7 @@ export function initEditor(
     snapIndicator: null,
     clipboard: null,
     savedRedo: null,
-    pendingArrow: null,
+    drawArrowPreview: null,
   };
 
   const mousePos = createMousePos(canvas, viewport);
@@ -147,7 +147,6 @@ export function initEditor(
       state.paintMode = on;
       if (on) {
         state.arrowMode = false;
-        flags.pendingArrow = null;
         clearSelection(state.selection);
         flags.activeInteriorObjectId = undefined;
         flags.activeFreeTextId = undefined;
@@ -180,8 +179,6 @@ export function initEditor(
         flags.activeInteriorObjectId = undefined;
         flags.activeFreeTextId = undefined;
         ec.callbacks.onPaintModeChange?.(false);
-      } else {
-        flags.pendingArrow = null;
       }
       canvas.style.cursor = on ? 'crosshair' : 'default';
       ec.render();
@@ -213,7 +210,7 @@ export function initEditor(
       flags.activeInteriorObjectId = undefined;
       flags.activeFreeTextId = undefined;
       flags.snapIndicator = null;
-      flags.pendingArrow = null;
+      flags.drawArrowPreview = null;
       viewport.zoom = data.viewport.zoom;
       viewport.panX = data.viewport.panX;
       viewport.panY = data.viewport.panY;

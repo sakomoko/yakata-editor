@@ -127,69 +127,36 @@ export function drawArrowHandles(ctx: CanvasRenderingContext2D, arrow: Arrow, zo
   }
 }
 
-export function drawPendingArrow(
+export function drawDragArrowPreview(
   ctx: CanvasRenderingContext2D,
-  points: GridPoint[],
-  previewPoint: GridPoint | undefined,
+  startPoint: GridPoint,
+  endPoint: GridPoint,
   color: string,
   lineWidth: number,
   zoom: number,
 ): void {
-  const allPoints = previewPoint ? [...points, previewPoint] : points;
-  if (allPoints.length < 1) return;
-
   const lw = lineWidth / zoom;
 
-  // Draw existing segments as solid
-  if (points.length >= 2) {
-    ctx.beginPath();
-    ctx.moveTo(points[0].gx * GRID, points[0].gy * GRID);
-    for (let i = 1; i < points.length; i++) {
-      ctx.lineTo(points[i].gx * GRID, points[i].gy * GRID);
-    }
-    ctx.strokeStyle = color;
-    ctx.lineWidth = lw;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.stroke();
-  }
-
-  // Draw preview segment as dashed
-  if (previewPoint && points.length >= 1) {
-    const last = points[points.length - 1];
-    ctx.beginPath();
-    ctx.moveTo(last.gx * GRID, last.gy * GRID);
-    ctx.lineTo(previewPoint.gx * GRID, previewPoint.gy * GRID);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = lw;
-    ctx.setLineDash([6 / zoom, 4 / zoom]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
+  // Draw dashed line from start to end
+  ctx.beginPath();
+  ctx.moveTo(startPoint.gx * GRID, startPoint.gy * GRID);
+  ctx.lineTo(endPoint.gx * GRID, endPoint.gy * GRID);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw;
+  ctx.lineCap = 'round';
+  ctx.setLineDash([6 / zoom, 4 / zoom]);
+  ctx.stroke();
+  ctx.setLineDash([]);
 
   // Draw start circle
-  const sp = allPoints[0];
   const startR = ARROW_START_RADIUS * GRID;
   ctx.beginPath();
-  ctx.arc(sp.gx * GRID, sp.gy * GRID, startR, 0, Math.PI * 2);
+  ctx.arc(startPoint.gx * GRID, startPoint.gy * GRID, startR, 0, Math.PI * 2);
   ctx.fillStyle = color;
   ctx.fill();
 
-  // Draw arrowhead at preview end
-  if (allPoints.length >= 2) {
-    const ep = allPoints[allPoints.length - 1];
-    const pp = allPoints[allPoints.length - 2];
-    drawArrowHead(ctx, pp, ep, color, calcHeadSize(zoom));
-  }
-
-  // Draw waypoint handles
-  const r = 3 / zoom;
-  for (const p of points) {
-    ctx.beginPath();
-    ctx.arc(p.gx * GRID, p.gy * GRID, r, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0, 120, 255, 0.8)';
-    ctx.fill();
-  }
+  // Draw arrowhead at end
+  drawArrowHead(ctx, startPoint, endPoint, color, calcHeadSize(zoom));
 }
 
 // --- Hit Testing ---

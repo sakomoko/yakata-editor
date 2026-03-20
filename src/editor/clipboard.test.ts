@@ -105,7 +105,7 @@ function makeEc(
       snapIndicator: null,
       clipboard: null,
       savedRedo: null,
-      pendingArrow: null,
+      drawArrowPreview: null,
     },
     render: vi.fn(),
     commitChange: vi.fn((fn: () => void) => fn()),

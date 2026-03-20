@@ -7,6 +7,7 @@ import {
 import { selectSingle, clearSelection } from '../selection.ts';
 import { saveUndoPoint, cancelLastUndo } from '../history.ts';
 import { hitWallObjectInRooms, clampWallObjects } from '../wall-object.ts';
+import { createArrow } from '../arrow.ts';
 import {
   clampAllInteriorObjects,
   clampInteriorObject,
@@ -86,6 +87,26 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
   if (state.drag.type === 'moveArrow' || state.drag.type === 'moveArrowPoint') {
     state.drag = null;
     canvas.style.cursor = state.arrowMode ? 'crosshair' : 'default';
+    ec.render();
+    ec.callbacks.onAutoSave();
+    return;
+  }
+
+  if (state.drag.type === 'drawArrow') {
+    const { startPoint } = state.drag;
+    const endPoint = flags.drawArrowPreview ?? { gx: startPoint.gx, gy: startPoint.gy };
+    flags.drawArrowPreview = null;
+
+    // ゼロ長ドラッグ（クリックのみ）は矢印を作成せずUndoを取り消し
+    if (startPoint.gx === endPoint.gx && startPoint.gy === endPoint.gy) {
+      cancelLastUndo(state.history, state.redoHistory, flags.savedRedo);
+    } else {
+      const arrow = createArrow([startPoint, endPoint], state.arrowColor, state.arrowLineWidth);
+      state.arrows.push(arrow);
+      selectSingle(state.selection, arrow.id);
+    }
+    state.drag = null;
+    canvas.style.cursor = 'crosshair';
     ec.render();
     ec.callbacks.onAutoSave();
     return;

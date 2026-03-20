@@ -100,8 +100,8 @@ export interface EditorContext {
     clipboard: ClipboardData | null;
     /** saveUndoPoint でクリアされる前のRedoスタックの退避。cancelLastUndoでの復元に使う。 */
     savedRedo: string[] | null;
-    /** 矢印作成中の状態。クリック間はボタン非押下のためDragStateではない */
-    pendingArrow: { points: GridPoint[]; previewPoint?: GridPoint } | null;
+    /** ドラッグ中の矢印プレビュー終点 */
+    drawArrowPreview: GridPoint | null;
   };
   render: () => void;
   commitChange: (fn: () => void) => void;

@@ -301,6 +301,10 @@ export type DragState =
       arrowId: string;
       pointIndex: number;
     }
+  | {
+      type: 'drawArrow';
+      startPoint: GridPoint;
+    }
   | null;
 
 export interface EditorState {

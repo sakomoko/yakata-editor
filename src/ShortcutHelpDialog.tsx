@@ -51,8 +51,8 @@ const shortcuts: { category: string; items: { keys: string; description: string 
   {
     category: 'アローモード',
     items: [
-      { keys: 'Escape', description: '矢印描画キャンセル' },
-      { keys: 'Backspace', description: '最後の点を削除' },
+      { keys: 'ドラッグ', description: '始点→終点で矢印を作成' },
+      { keys: 'Shift+ドラッグ', description: '水平/垂直に制約して矢印を作成' },
     ],
   },
   {
