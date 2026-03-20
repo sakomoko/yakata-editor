@@ -10,6 +10,7 @@ import type {
 import type { ContextMenuItem } from '../context-menu.ts';
 import type { ViewportState } from '../viewport.ts';
 import type { SnapIndicator } from '../snap.ts';
+import type { ClipboardData } from './clipboard.ts';
 
 export interface LabelFontSizeEditData {
   label: string;
@@ -78,6 +79,7 @@ export interface EditorContext {
     activeInteriorObjectId: string | undefined;
     activeFreeTextId: string | undefined;
     snapIndicator: SnapIndicator | null;
+    clipboard: ClipboardData | null;
   };
   render: () => void;
   commitChange: (fn: () => void) => void;
