@@ -1,27 +1,13 @@
-import type { Room, FreeText, FreeStroke, Arrow } from './types.ts';
+import type { Room, FreeText, FreeStroke, Arrow, EntitySnapshot } from './types.ts';
 
 const MAX_HISTORY = 50;
 
-interface Snapshot {
-  rooms: Room[];
-  freeTexts: FreeText[];
-  freeStrokes: FreeStroke[];
-  arrows: Arrow[];
-}
-
-function pushSnapshot(
-  stack: string[],
-  rooms: Room[],
-  freeTexts: FreeText[] = [],
-  freeStrokes: FreeStroke[] = [],
-  arrows: Arrow[] = [],
-): void {
-  const snapshot: Snapshot = { rooms, freeTexts, freeStrokes, arrows };
-  stack.push(JSON.stringify(snapshot));
+function pushSnapshot(stack: string[], entities: EntitySnapshot): void {
+  stack.push(JSON.stringify(entities));
   if (stack.length > MAX_HISTORY) stack.shift();
 }
 
-function popSnapshot(stack: string[]): Snapshot | null {
+function popSnapshot(stack: string[]): EntitySnapshot | null {
   if (stack.length === 0) return null;
   const raw: unknown = JSON.parse(stack.pop()!);
   // 後方互換: 旧形式は配列（rooms only）
@@ -37,17 +23,11 @@ function popSnapshot(stack: string[]): Snapshot | null {
   };
 }
 
-export function pushUndo(
-  history: string[],
-  rooms: Room[],
-  freeTexts: FreeText[] = [],
-  freeStrokes: FreeStroke[] = [],
-  arrows: Arrow[] = [],
-): void {
-  pushSnapshot(history, rooms, freeTexts, freeStrokes, arrows);
+export function pushUndo(history: string[], entities: EntitySnapshot): void {
+  pushSnapshot(history, entities);
 }
 
-export function popUndo(history: string[]): Snapshot | null {
+export function popUndo(history: string[]): EntitySnapshot | null {
   return popSnapshot(history);
 }
 
@@ -68,17 +48,11 @@ export function cancelLastUndo(
   }
 }
 
-export function pushRedo(
-  redoHistory: string[],
-  rooms: Room[],
-  freeTexts: FreeText[] = [],
-  freeStrokes: FreeStroke[] = [],
-  arrows: Arrow[] = [],
-): void {
-  pushSnapshot(redoHistory, rooms, freeTexts, freeStrokes, arrows);
+export function pushRedo(redoHistory: string[], entities: EntitySnapshot): void {
+  pushSnapshot(redoHistory, entities);
 }
 
-export function popRedo(redoHistory: string[]): Snapshot | null {
+export function popRedo(redoHistory: string[]): EntitySnapshot | null {
   return popSnapshot(redoHistory);
 }
 
@@ -92,13 +66,10 @@ export function clearRedo(redoHistory: string[]): void {
 export function saveUndoPoint(
   history: string[],
   redoHistory: string[],
-  rooms: Room[],
-  freeTexts: FreeText[] = [],
-  freeStrokes: FreeStroke[] = [],
-  arrows: Arrow[] = [],
+  entities: EntitySnapshot,
 ): string[] {
   const savedRedo = [...redoHistory];
-  pushSnapshot(history, rooms, freeTexts, freeStrokes, arrows);
+  pushSnapshot(history, entities);
   clearRedo(redoHistory);
   return savedRedo;
 }

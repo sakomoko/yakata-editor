@@ -19,6 +19,7 @@ import { hitArrowInList, hitArrowPoint, constrainToAxis } from '../arrow.ts';
 import { expandWithLinked } from '../link.ts';
 import { hitVertexHandle, edgeResizeCursor } from '../polygon.ts';
 import type { EditorContext } from './context.ts';
+import { getEntitySnapshot } from './utils.ts';
 
 export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
   const { canvas, state, viewport, flags } = ec;
@@ -42,14 +43,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
 
   // Paint mode: start new stroke
   if (state.paintMode && e.button === 0) {
-    flags.savedRedo = saveUndoPoint(
-      state.history,
-      state.redoHistory,
-      state.rooms,
-      state.freeTexts,
-      state.freeStrokes,
-      state.arrows,
-    );
+    flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
     const stroke = createFreeStroke(
       [{ px: m.px, py: m.py }],
       state.paintColor,
@@ -84,14 +78,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
   const selectedRooms = state.rooms.filter((r) => state.selection.has(r.id));
   const edgeHit = hitWallObjectEdgeInRooms(selectedRooms, m.px, m.py, viewport.zoom, true);
   if (edgeHit) {
-    flags.savedRedo = saveUndoPoint(
-      state.history,
-      state.redoHistory,
-      state.rooms,
-      state.freeTexts,
-      state.freeStrokes,
-      state.arrows,
-    );
+    flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
     flags.activeInteriorObjectId = undefined;
     state.drag = {
       type: 'resizeWallObject',
@@ -113,14 +100,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
     if (selRoom?.vertices) {
       const vHit = hitVertexHandle(selRoom, m.px, m.py, viewport.zoom);
       if (vHit) {
-        flags.savedRedo = saveUndoPoint(
-          state.history,
-          state.redoHistory,
-          state.rooms,
-          state.freeTexts,
-          state.freeStrokes,
-          state.arrows,
-        );
+        flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
         state.drag = {
           type: 'moveVertex',
           roomId: selRoom.id,
@@ -139,14 +119,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
     if (activeFt) {
       const ftHandleDir = hitFreeTextHandle(activeFt, m.px, m.py, viewport.zoom);
       if (ftHandleDir) {
-        flags.savedRedo = saveUndoPoint(
-          state.history,
-          state.redoHistory,
-          state.rooms,
-          state.freeTexts,
-          state.freeStrokes,
-          state.arrows,
-        );
+        flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
         state.drag = {
           type: 'resizeFreeText',
           freeTextId: activeFt.id,
@@ -169,14 +142,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
     flags.activeInteriorObjectId,
   );
   if (camHandleHit) {
-    flags.savedRedo = saveUndoPoint(
-      state.history,
-      state.redoHistory,
-      state.rooms,
-      state.freeTexts,
-      state.freeStrokes,
-      state.arrows,
-    );
+    flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
     flags.activeInteriorObjectId = camHandleHit.cam.id;
     const dragType =
       camHandleHit.hit.type === 'rotate'
@@ -197,14 +163,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
   // Check interior object handle hit (resize)
   const intHandleHit = hitInteriorObjectHandleInRooms(selectedRooms, m.px, m.py, viewport.zoom);
   if (intHandleHit) {
-    flags.savedRedo = saveUndoPoint(
-      state.history,
-      state.redoHistory,
-      state.rooms,
-      state.freeTexts,
-      state.freeStrokes,
-      state.arrows,
-    );
+    flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
     flags.activeInteriorObjectId = intHandleHit.obj.id;
     state.drag = {
       type: 'resizeInteriorObject',
@@ -226,14 +185,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
 
   const handleHit = hitHandle(state.rooms, state.selection, m.px, m.py, viewport.zoom);
   if (handleHit) {
-    flags.savedRedo = saveUndoPoint(
-      state.history,
-      state.redoHistory,
-      state.rooms,
-      state.freeTexts,
-      state.freeStrokes,
-      state.arrows,
-    );
+    flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
     const { handle, room } = handleHit;
     state.drag = {
       type: 'resize',
@@ -253,14 +205,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
       const selBB = computeGroupBoundingBox(selRooms);
       const groupHandle = hitGroupHandle(selBB, m.px, m.py, viewport.zoom);
       if (groupHandle) {
-        flags.savedRedo = saveUndoPoint(
-          state.history,
-          state.redoHistory,
-          state.rooms,
-          state.freeTexts,
-          state.freeStrokes,
-          state.arrows,
-        );
+        flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
         const expanded = expandWithLinked(state.rooms, state.selection);
         const expandedRooms = state.rooms.filter((r) => expanded.has(r.id));
         // origBB/anchor は表示BBと一致する selBB を使用（ハンドル位置とスケール基準を統一）
@@ -308,14 +253,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
   // Check wall object hit (window drag) — skip auto-generated openings
   const wallHit = hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom, true);
   if (wallHit) {
-    flags.savedRedo = saveUndoPoint(
-      state.history,
-      state.redoHistory,
-      state.rooms,
-      state.freeTexts,
-      state.freeStrokes,
-      state.arrows,
-    );
+    flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
     flags.activeInteriorObjectId = undefined;
     state.drag = {
       type: 'moveWallObject',
@@ -330,14 +268,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
   // Check interior object hit (move)
   const intHit = hitInteriorObjectInRooms(state.rooms, m.px, m.py);
   if (intHit) {
-    flags.savedRedo = saveUndoPoint(
-      state.history,
-      state.redoHistory,
-      state.rooms,
-      state.freeTexts,
-      state.freeStrokes,
-      state.arrows,
-    );
+    flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
     selectSingle(state.selection, intHit.room.id);
     flags.activeInteriorObjectId = intHit.obj.id;
     const snapToGrid = intHit.obj.type === 'stairs';
@@ -367,14 +298,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
     } else {
       selectSingle(state.selection, ft.id);
     }
-    flags.savedRedo = saveUndoPoint(
-      state.history,
-      state.redoHistory,
-      state.rooms,
-      state.freeTexts,
-      state.freeStrokes,
-      state.arrows,
-    );
+    flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
     state.drag = {
       type: 'moveFreeText',
       freeTextId: ft.id,
@@ -394,14 +318,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
     } else {
       selectSingle(state.selection, strokeHit.id);
     }
-    flags.savedRedo = saveUndoPoint(
-      state.history,
-      state.redoHistory,
-      state.rooms,
-      state.freeTexts,
-      state.freeStrokes,
-      state.arrows,
-    );
+    flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
     state.drag = {
       type: 'moveStroke',
       id: strokeHit.id,
@@ -423,14 +340,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
       if (!state.selection.has(arrow.id)) continue;
       const ptIdx = hitArrowPoint(arrow, arrowGx, arrowGy);
       if (ptIdx !== undefined) {
-        flags.savedRedo = saveUndoPoint(
-          state.history,
-          state.redoHistory,
-          state.rooms,
-          state.freeTexts,
-          state.freeStrokes,
-          state.arrows,
-        );
+        flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
         state.drag = {
           type: 'moveArrowPoint',
           arrowId: arrow.id,
@@ -450,14 +360,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
       } else {
         selectSingle(state.selection, arrowHit.id);
       }
-      flags.savedRedo = saveUndoPoint(
-        state.history,
-        state.redoHistory,
-        state.rooms,
-        state.freeTexts,
-        state.freeStrokes,
-        state.arrows,
-      );
+      flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
       state.drag = {
         type: 'moveArrow',
         arrowId: arrowHit.id,
@@ -493,14 +396,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
         selectSingle(state.selection, r.id);
       }
     }
-    flags.savedRedo = saveUndoPoint(
-      state.history,
-      state.redoHistory,
-      state.rooms,
-      state.freeTexts,
-      state.freeStrokes,
-      state.arrows,
-    );
+    flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
     const expanded = expandWithLinked(state.rooms, state.selection);
     const originals = new Map<string, { x: number; y: number; vertices?: Room['vertices'] }>();
     for (const room of state.rooms) {

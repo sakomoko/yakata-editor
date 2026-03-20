@@ -17,6 +17,7 @@ import { findFreeTextsInArea } from '../free-text.ts';
 import { simplifyPoints } from '../free-stroke.ts';
 import { syncPairedOpening, syncAllPairedOpenings } from '../adjacency.ts';
 import type { EditorContext } from './context.ts';
+import { getEntitySnapshot } from './utils.ts';
 
 export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
   const { state, canvas, viewport, flags } = ec;
@@ -173,14 +174,7 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
       }
     } else if (area.w > 0 && area.h > 0) {
       // 部屋作成: 包含する部屋がなければ新規作成にフォールバック
-      flags.savedRedo = saveUndoPoint(
-        state.history,
-        state.redoHistory,
-        state.rooms,
-        state.freeTexts,
-        state.freeStrokes,
-        state.arrows,
-      );
+      flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
       const snap = e.shiftKey ? (v: number) => v : Math.round;
       const room = createRoom(
         snap(area.x),

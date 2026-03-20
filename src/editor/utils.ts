@@ -1,7 +1,16 @@
-import type { MouseCoord } from '../types.ts';
+import type { MouseCoord, EditorState, EntitySnapshot } from '../types.ts';
 import { GRID } from '../grid.ts';
 import { screenToWorld } from '../viewport.ts';
 import type { ViewportState } from '../viewport.ts';
+
+export function getEntitySnapshot(state: EditorState): EntitySnapshot {
+  return {
+    rooms: state.rooms,
+    freeTexts: state.freeTexts,
+    freeStrokes: state.freeStrokes,
+    arrows: state.arrows,
+  };
+}
 
 /** CJK文字を2カラム換算した表示幅をグリッド単位で返す */
 export function labelDisplayWidth(label: string): number {
