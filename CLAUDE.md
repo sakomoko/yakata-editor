@@ -98,3 +98,8 @@ Canvas上でのマウス操作 → editor/ のイベントハンドラ → state
 
 テストファイルは `src/` 内に `*.test.ts` として配置。Vitestを使用。
 DOMに依存しないロジック層（history, selection, room計算）がテスト対象。
+
+## GitHub CLI (`gh`) 利用ルール
+
+- `gh pr create` でPR本文を渡すときは **`Write` ツールで `.pr-body.md` を作成** → `--body-file .pr-body.md` → 完了後 `rm .pr-body.md`。Bashでのヒアドキュメント・`$()`・`/tmp` 書き込みは権限チェックでブロックされるため禁止
+- `gh issue create` では `--body "..."` で直接渡す。ただし `#` 見出しを含む場合は上記の `--body-file` 方式を使う
