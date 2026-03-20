@@ -79,7 +79,7 @@ Canvas 再描画 + App.tsx → project-store.ts → localStorage 保存
 
 ### CLIツール
 
-- **cli/describe.ts** — プロジェクトJSONを読み取り、部屋一覧・壁オブジェクト・隣接関係・インテリアオブジェクト・フリーテキストなどを人間/AI可読な形式で出力。`adjacency.ts` の隣接判定ロジックを再利用
+- **cli/describe.ts** — プロジェクトJSONを読み取り、部屋一覧・壁オブジェクト・隣接関係・インテリアオブジェクト・フリーテキスト・矢印などを人間/AI可読な形式で出力。`adjacency.ts` の隣接判定ロジックを再利用
 - **cli/validate.ts** — プロジェクトJSONの整合性チェック。部屋サイズの正値検証、壁オブジェクトのoffset範囲検証、pairedWith参照の相互整合性、部屋の重なり検出
 
 ## モジュール依存関係
