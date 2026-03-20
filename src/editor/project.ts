@@ -80,6 +80,7 @@ export function undo(ec: EditorContext): void {
 export function redo(ec: EditorContext): void {
   const restored = popRedo(ec.state.redoHistory);
   if (!restored) return;
+  // redo時は現在状態をUndoスタックに退避するだけ。saveUndoPointではなくpushUndoを使い、Redoスタックをクリアしない。
   pushUndo(ec.state.history, ec.state.rooms, ec.state.freeTexts, ec.state.freeStrokes);
   applySnapshot(ec, restored);
 }

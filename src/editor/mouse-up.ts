@@ -64,7 +64,7 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
           ) < 2);
       if (isTiny) {
         state.freeStrokes = state.freeStrokes.filter((s) => s.id !== stroke.id);
-        cancelLastUndo(state.history, state.redoHistory, flags.savedRedo ?? undefined);
+        cancelLastUndo(state.history, state.redoHistory, flags.savedRedo);
       }
     }
     state.drag = null;

@@ -52,8 +52,8 @@ export function popUndo(history: string[]): Snapshot | null {
  * savedRedo を渡すと、saveUndoPoint でクリアされたRedoスタックを復元する。 */
 export function cancelLastUndo(
   history: string[],
-  redoHistory?: string[],
-  savedRedo?: string[],
+  redoHistory?: string[] | null,
+  savedRedo?: string[] | null,
 ): void {
   history.pop();
   if (redoHistory && savedRedo) {
