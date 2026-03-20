@@ -4,6 +4,7 @@ import { clearSelection } from '../selection.ts';
 import { bringToFront, sendToBack, bringForward, sendBackward } from '../z-order.ts';
 import type { EditorContext } from './context.ts';
 import { commitChange, undo, deleteSelectedEntities } from './project.ts';
+import { copySelection, pasteClipboard, duplicateSelection } from './clipboard.ts';
 
 export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
   if (e.isComposing) return;
@@ -117,6 +118,22 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
       deleteSelectedEntities(ec);
     }
   }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
+    e.preventDefault();
+    copySelection(ec);
+    return;
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'v') {
+    e.preventDefault();
+    pasteClipboard(ec, 'none');
+    return;
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'd') {
+    e.preventDefault();
+    duplicateSelection(ec);
+    return;
+  }
+
   if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
     e.preventDefault();
     undo(ec);

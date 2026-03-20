@@ -59,6 +59,7 @@ export function initEditor(
     activeInteriorObjectId: undefined,
     activeFreeTextId: undefined,
     snapIndicator: null,
+    clipboard: null,
   };
 
   const mousePos = createMousePos(canvas, viewport);

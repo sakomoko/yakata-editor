@@ -49,6 +49,7 @@ import type { EditorContext } from './context.ts';
 import { commitChange, applyRoomEdit, withFontSizePreview, deleteRoom } from './project.ts';
 import { labelDisplayWidth } from './utils.ts';
 import { editMarkerViaDialog } from './marker-edit.ts';
+import { copySelection, pasteClipboard } from './clipboard.ts';
 
 const CARDINAL_DIRECTIONS: { label: string; dir: 'n' | 'e' | 's' | 'w' }[] = [
   { label: '↑ 上向き', dir: 'n' },
@@ -520,6 +521,12 @@ function buildRoomMenu(ec: EditorContext, contextRoom: Room, m: MouseCoord): Con
 
   items.push({ separator: true });
   items.push({
+    label: 'コピー',
+    action: () => copySelection(ec),
+  });
+
+  items.push({ separator: true });
+  items.push({
     label: '部屋を削除',
     action: () => deleteRoom(ec, roomId),
   });
@@ -529,6 +536,7 @@ function buildRoomMenu(ec: EditorContext, contextRoom: Room, m: MouseCoord): Con
 
 function buildEmptyAreaMenu(ec: EditorContext, m: MouseCoord): ContextMenuItem[] {
   const { state, flags, callbacks } = ec;
+  const hasClipboard = flags.clipboard !== null;
   const items: ContextMenuItem[] = [];
   items.push({
     label: 'テキストを配置',
@@ -543,6 +551,22 @@ function buildEmptyAreaMenu(ec: EditorContext, m: MouseCoord): ContextMenuItem[]
       selectSingle(state.selection, ft.id);
       ec.render();
     },
+  });
+  items.push({ separator: true });
+  items.push({
+    label: '貼り付け',
+    disabled: !hasClipboard,
+    action: () => pasteClipboard(ec, 'none', { gx: m.gx, gy: m.gy }),
+  });
+  items.push({
+    label: '左右反転して貼り付け',
+    disabled: !hasClipboard,
+    action: () => pasteClipboard(ec, 'horizontal', { gx: m.gx, gy: m.gy }),
+  });
+  items.push({
+    label: '上下反転して貼り付け',
+    disabled: !hasClipboard,
+    action: () => pasteClipboard(ec, 'vertical', { gx: m.gx, gy: m.gy }),
   });
   return items;
 }
