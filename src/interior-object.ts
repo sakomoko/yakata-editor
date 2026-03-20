@@ -603,8 +603,7 @@ function drawMarkerLabel(
   }
 
   const maxW = textW * 0.95;
-  const fontSize =
-    customFontSize ?? computeMarkerAutoFontSize(ctx, rect, label, markerKind);
+  const fontSize = customFontSize ?? computeMarkerAutoFontSize(ctx, rect, label, markerKind);
 
   ctx.fillStyle = style.color;
   ctx.font = `${fontSize}px sans-serif`;

@@ -437,16 +437,13 @@ export default function App() {
     [handleTabClick, saveCurrentProject, updateTabState, loadProjectIntoEditor],
   );
 
-  const handleDeleteProject = useCallback(
-    (id: string) => {
-      const index = loadProjectIndex();
-      if (index.length <= 1) return;
-      deleteTargetIdRef.current = id;
-      setDeleteTargetName(index.find((m) => m.id === id)?.name ?? '');
-      setDeleteConfirmOpen(true);
-    },
-    [],
-  );
+  const handleDeleteProject = useCallback((id: string) => {
+    const index = loadProjectIndex();
+    if (index.length <= 1) return;
+    deleteTargetIdRef.current = id;
+    setDeleteTargetName(index.find((m) => m.id === id)?.name ?? '');
+    setDeleteConfirmOpen(true);
+  }, []);
 
   const executeDeleteProject = useCallback(
     (id: string) => {
@@ -532,12 +529,7 @@ export default function App() {
       <CssBaseline />
 
       {/* Header + Tab Bar */}
-      <AppBar
-        position="static"
-        color="inherit"
-        elevation={3}
-        sx={{ bgcolor: '#383838' }}
-      >
+      <AppBar position="static" color="inherit" elevation={3} sx={{ bgcolor: '#383838' }}>
         <Toolbar variant="dense" disableGutters>
           {/* Title area */}
           <Box
@@ -833,7 +825,9 @@ export default function App() {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => handleDeleteConfirmClose(false)} autoFocus>キャンセル</Button>
+          <Button onClick={() => handleDeleteConfirmClose(false)} autoFocus>
+            キャンセル
+          </Button>
           <Button onClick={() => handleDeleteConfirmClose(true)} color="error">
             削除
           </Button>

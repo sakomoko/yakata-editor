@@ -208,7 +208,7 @@ async function syncFromServer(): Promise<void> {
             rooms: storageData.rooms,
             freeTexts: storageData.freeTexts,
             freeStrokes: storageData.freeStrokes,
-            viewport: parseViewport((obj && typeof obj === 'object') ? obj.viewport : undefined),
+            viewport: parseViewport(obj && typeof obj === 'object' ? obj.viewport : undefined),
             history: Array.isArray(obj?.history)
               ? (obj.history as unknown[]).filter((h): h is string => typeof h === 'string')
               : [],

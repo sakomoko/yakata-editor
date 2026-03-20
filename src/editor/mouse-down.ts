@@ -335,10 +335,7 @@ export function onMouseDown(ec: EditorContext, e: MouseEvent): void {
     }
     pushUndo(state.history, state.rooms, state.freeTexts, state.freeStrokes);
     const expanded = expandWithLinked(state.rooms, state.selection);
-    const originals = new Map<
-      string,
-      { x: number; y: number; vertices?: Room['vertices'] }
-    >();
+    const originals = new Map<string, { x: number; y: number; vertices?: Room['vertices'] }>();
     for (const room of state.rooms) {
       if (expanded.has(room.id)) {
         originals.set(room.id, {

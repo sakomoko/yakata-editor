@@ -25,13 +25,7 @@ interface Props {
   onClose: (result: { label: string; fontSize?: number } | null) => void;
 }
 
-export default function LabelFontSizeDialog({
-  open,
-  title,
-  textFieldLabel,
-  data,
-  onClose,
-}: Props) {
+export default function LabelFontSizeDialog({ open, title, textFieldLabel, data, onClose }: Props) {
   const [label, setLabel] = useState(data.label);
   const [fontSize, setFontSize] = useState<number>(data.fontSize ?? data.autoFontSize);
   const [isCustom, setIsCustom] = useState(data.fontSize !== undefined);

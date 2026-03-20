@@ -354,10 +354,7 @@ describe('migrateIfNeeded', () => {
   });
 
   it('sets tab state pointing to the migrated project', () => {
-    storage.set(
-      'madori_data',
-      JSON.stringify({ rooms: [], freeTexts: [] }),
-    );
+    storage.set('madori_data', JSON.stringify({ rooms: [], freeTexts: [] }));
     migrateIfNeeded();
     const index = loadProjectIndex();
     const tabState = loadTabState();
@@ -633,10 +630,7 @@ describe('loadProjectData viewport edge cases', () => {
   });
 
   it('falls back to default when viewport is null', () => {
-    storage.set(
-      'yakata_project_vp2',
-      JSON.stringify({ rooms: [], freeTexts: [], viewport: null }),
-    );
+    storage.set('yakata_project_vp2', JSON.stringify({ rooms: [], freeTexts: [], viewport: null }));
     const result = loadProjectData('vp2');
     expect(result!.data.viewport).toEqual({ zoom: 1, panX: 0, panY: 0 });
   });
@@ -798,9 +792,25 @@ describe('syncWithServer', () => {
     fetchMock.mockClear();
 
     // Server has newer version with updated name and data
-    const serverMeta: ProjectMeta = { id: 'p3', name: '新しい名前', createdAt: 1000, updatedAt: 2000 };
+    const serverMeta: ProjectMeta = {
+      id: 'p3',
+      name: '新しい名前',
+      createdAt: 1000,
+      updatedAt: 2000,
+    };
     const serverData: ProjectData = {
-      rooms: [{ id: 'r1', label: 'サーバー部屋', x: 0, y: 0, w: 3, h: 3, wallObjects: [], interiorObjects: [] }],
+      rooms: [
+        {
+          id: 'r1',
+          label: 'サーバー部屋',
+          x: 0,
+          y: 0,
+          w: 3,
+          h: 3,
+          wallObjects: [],
+          interiorObjects: [],
+        },
+      ],
       freeTexts: [],
       freeStrokes: [],
       viewport: { zoom: 1, panX: 0, panY: 0 },
@@ -814,7 +824,11 @@ describe('syncWithServer', () => {
           json: () => Promise.resolve([serverMeta]),
         });
       }
-      if (typeof url === 'string' && url === '/api/projects/p3' && (!opts || opts.method !== 'PUT')) {
+      if (
+        typeof url === 'string' &&
+        url === '/api/projects/p3' &&
+        (!opts || opts.method !== 'PUT')
+      ) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ meta: serverMeta, data: serverData }),

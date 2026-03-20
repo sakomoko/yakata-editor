@@ -140,11 +140,7 @@ export function render(ec: EditorContext): void {
   updateStatus(ec);
 }
 
-function drawSnapIndicator(
-  ctx: CanvasRenderingContext2D,
-  si: SnapIndicator,
-  zoom: number,
-): void {
+function drawSnapIndicator(ctx: CanvasRenderingContext2D, si: SnapIndicator, zoom: number): void {
   ctx.lineWidth = 2 / zoom;
   if (si.type === 'vertex') {
     ctx.beginPath();
