@@ -48,9 +48,20 @@ export function popUndo(history: string[]): Snapshot | null {
 }
 
 /** undoスタックの最後のエントリを破棄する（状態は復元しない）。
- * 操作が実際には変化をもたらさなかった場合にスタックを汚さないよう呼び出す。 */
-export function cancelLastUndo(history: string[]): void {
+ * 操作が実際には変化をもたらさなかった場合にスタックを汚さないよう呼び出す。
+ * savedRedo を渡すと、saveUndoPoint でクリアされたRedoスタックを復元する。 */
+export function cancelLastUndo(
+  history: string[],
+  redoHistory?: string[],
+  savedRedo?: string[],
+): void {
   history.pop();
+  if (redoHistory && savedRedo) {
+    redoHistory.length = 0;
+    for (const entry of savedRedo) {
+      redoHistory.push(entry);
+    }
+  }
 }
 
 export function pushRedo(
@@ -71,14 +82,17 @@ export function clearRedo(redoHistory: string[]): void {
 }
 
 /** Undoスタックにpushし、Redoスタックをクリアする。
- * 新しいユーザー操作の開始時に使う。redo()内のpushUndoでは使わないこと。 */
+ * 新しいユーザー操作の開始時に使う。redo()内のpushUndoでは使わないこと。
+ * 戻り値はクリア前のRedoスタックのコピー。cancelLastUndoでの復元に使える。 */
 export function saveUndoPoint(
   history: string[],
   redoHistory: string[],
   rooms: Room[],
   freeTexts: FreeText[] = [],
   freeStrokes: FreeStroke[] = [],
-): void {
+): string[] {
+  const savedRedo = [...redoHistory];
   pushSnapshot(history, rooms, freeTexts, freeStrokes);
   clearRedo(redoHistory);
+  return savedRedo;
 }

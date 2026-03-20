@@ -91,6 +91,7 @@ function makeEc(
       activeFreeTextId: undefined,
       snapIndicator: null,
       clipboard: null,
+      savedRedo: null,
     },
     render: vi.fn(),
     commitChange: vi.fn((fn: () => void) => fn()),

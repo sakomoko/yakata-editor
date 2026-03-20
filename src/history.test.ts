@@ -94,6 +94,27 @@ describe('pushUndo / popUndo', () => {
     expect(restored!.rooms[0].label).toBe('first');
   });
 
+  it('cancelLastUndo with savedRedo should restore redo stack', () => {
+    const history: string[] = [];
+    const redoHistory: string[] = [];
+    const rooms = [createRoom(0, 0, 1, 1, 'A')];
+
+    // Redoスタックにエントリを入れる
+    pushRedo(redoHistory, rooms);
+    pushRedo(redoHistory, rooms);
+    expect(redoHistory).toHaveLength(2);
+
+    // saveUndoPoint でRedoがクリアされる（savedRedoに退避）
+    const savedRedo = saveUndoPoint(history, redoHistory, rooms);
+    expect(redoHistory).toHaveLength(0);
+    expect(savedRedo).toHaveLength(2);
+
+    // cancelLastUndo で Undo を取り消し、Redo を復元
+    cancelLastUndo(history, redoHistory, savedRedo);
+    expect(history).toHaveLength(0);
+    expect(redoHistory).toHaveLength(2);
+  });
+
   it('should handle legacy format (array of rooms)', () => {
     const history: string[] = [];
     // Simulate old format: just an array

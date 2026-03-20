@@ -64,7 +64,7 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
           ) < 2);
       if (isTiny) {
         state.freeStrokes = state.freeStrokes.filter((s) => s.id !== stroke.id);
-        cancelLastUndo(state.history);
+        cancelLastUndo(state.history, state.redoHistory, flags.savedRedo ?? undefined);
       }
     }
     state.drag = null;
@@ -165,7 +165,13 @@ export function onMouseUp(ec: EditorContext, e: MouseEvent): void {
       }
     } else if (area.w > 0 && area.h > 0) {
       // 部屋作成: 包含する部屋がなければ新規作成にフォールバック
-      saveUndoPoint(state.history, state.redoHistory, state.rooms, state.freeTexts, state.freeStrokes);
+      flags.savedRedo = saveUndoPoint(
+        state.history,
+        state.redoHistory,
+        state.rooms,
+        state.freeTexts,
+        state.freeStrokes,
+      );
       const snap = e.shiftKey ? (v: number) => v : Math.round;
       const room = createRoom(
         snap(area.x),

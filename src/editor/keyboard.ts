@@ -75,13 +75,19 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
       : forward
         ? bringForward
         : sendBackward;
-    saveUndoPoint(state.history, state.redoHistory, state.rooms, state.freeTexts, state.freeStrokes);
+    flags.savedRedo = saveUndoPoint(
+      state.history,
+      state.redoHistory,
+      state.rooms,
+      state.freeTexts,
+      state.freeStrokes,
+    );
     const changed = fn(state.rooms, roomId);
     if (changed) {
       ec.render();
       ec.callbacks.onAutoSave();
     } else {
-      cancelLastUndo(state.history);
+      cancelLastUndo(state.history, state.redoHistory, flags.savedRedo);
     }
     return;
   }
@@ -134,12 +140,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     return;
   }
 
-  if ((e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey) {
-    e.preventDefault();
-    redo(ec);
-    return;
-  }
-  if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
+  if ((e.metaKey || e.ctrlKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
     e.preventDefault();
     redo(ec);
     return;
