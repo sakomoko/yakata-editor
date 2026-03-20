@@ -17,6 +17,10 @@ const shortcuts: { category: string; items: { keys: string; description: string 
       { keys: 'ダブルクリック', description: '名前を編集' },
       { keys: 'Delete / Backspace', description: '削除' },
       { keys: mc('Z'), description: '元に戻す' },
+      { keys: `${mc('Y')} / ${mc('Shift+Z')}`, description: 'やり直し' },
+      { keys: mc('C'), description: 'コピー' },
+      { keys: mc('V'), description: 'ペースト' },
+      { keys: mc('D'), description: '複製' },
     ],
   },
   {
@@ -39,7 +43,17 @@ const shortcuts: { category: string; items: { keys: string; description: string 
   },
   {
     category: 'モード',
-    items: [{ keys: 'P', description: 'ペイントモード切替' }],
+    items: [
+      { keys: 'P', description: 'ペイントモード切替' },
+      { keys: 'A', description: 'アローモード切替' },
+    ],
+  },
+  {
+    category: 'アローモード',
+    items: [
+      { keys: 'Escape', description: '矢印描画キャンセル' },
+      { keys: 'Backspace', description: '最後の点を削除' },
+    ],
   },
   {
     category: 'ヘルプ',
