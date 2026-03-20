@@ -1,7 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { describeWallObject, describeInterior, describeProject, sideLabel } from './describe.ts';
+import {
+  describeWallObject,
+  describeInterior,
+  describeArrow,
+  describeProject,
+  sideLabel,
+} from './describe.ts';
 import type { ProjectFile } from './describe.ts';
-import type { WallObject, RoomInteriorObject } from '../types.ts';
+import type { WallObject, RoomInteriorObject, Arrow } from '../types.ts';
 
 describe('sideLabel', () => {
   it('returns correct labels', () => {
@@ -139,7 +145,7 @@ describe('describeInterior', () => {
 
 describe('describeProject', () => {
   it('describes an empty project', () => {
-    const project: ProjectFile = { rooms: [], freeTexts: [], freeStrokes: [] };
+    const project: ProjectFile = { rooms: [], freeTexts: [], freeStrokes: [], arrows: [] };
     const result = describeProject(project);
     expect(result).toContain('# プロジェクト構造');
     expect(result).toContain('## 部屋一覧 (0部屋)');
@@ -173,6 +179,7 @@ describe('describeProject', () => {
       ],
       freeTexts: [],
       freeStrokes: [],
+      arrows: [],
     };
     const result = describeProject(project);
     expect(result).toContain('## 部屋一覧 (1部屋)');
@@ -192,6 +199,7 @@ describe('describeProject', () => {
         { id: 'ft1', gx: 5, gy: 10, w: 3, h: 2, label: 'メモ', fontSize: 14, zLayer: 'front' },
       ],
       freeStrokes: [],
+      arrows: [],
     };
     const result = describeProject(project);
     expect(result).toContain('## フリーテキスト (1個)');
@@ -215,6 +223,7 @@ describe('describeProject', () => {
           opacity: 1,
         },
       ],
+      arrows: [],
     };
     const result = describeProject(project);
     expect(result).toContain('## フリーストローク (1本)');
@@ -227,6 +236,7 @@ describe('describeProject', () => {
       rooms: [{ id: 'r1', x: 0, y: 0, w: 5, h: 5, label: '' }],
       freeTexts: [],
       freeStrokes: [],
+      arrows: [],
     };
     const result = describeProject(project);
     expect(result).toContain('(名前なし)');
@@ -237,8 +247,83 @@ describe('describeProject', () => {
       rooms: [{ id: 'r1', x: 0, y: 0, w: 5, h: 5, label: 'テスト' }],
       freeTexts: [],
       freeStrokes: [],
+      arrows: [],
     };
     const result = describeProject(project);
     expect(result).toContain('1F');
+  });
+
+  it('describes arrows with label', () => {
+    const project: ProjectFile = {
+      rooms: [],
+      freeTexts: [],
+      freeStrokes: [],
+      arrows: [
+        {
+          id: 'a1',
+          points: [
+            { gx: 2, gy: 3 },
+            { gx: 5, gy: 3 },
+            { gx: 5, gy: 7 },
+          ],
+          color: '赤',
+          lineWidth: 2,
+          label: '犯人の動線',
+        },
+      ],
+    };
+    const result = describeProject(project);
+    expect(result).toContain('## 矢印 (1本)');
+    expect(result).toContain('矢印1: (2, 3) → (5, 3) → (5, 7)');
+    expect(result).toContain('[赤, 2px]');
+    expect(result).toContain('ラベル: 犯人の動線');
+  });
+
+  it('describes arrows without label', () => {
+    const project: ProjectFile = {
+      rooms: [],
+      freeTexts: [],
+      freeStrokes: [],
+      arrows: [
+        {
+          id: 'a2',
+          points: [
+            { gx: 0, gy: 0 },
+            { gx: 4, gy: 0 },
+          ],
+          color: '青',
+          lineWidth: 1,
+        },
+      ],
+    };
+    const result = describeProject(project);
+    expect(result).toContain('矢印1: (0, 0) → (4, 0) [青, 1px]');
+    expect(result).not.toContain('ラベル:');
+  });
+});
+
+describe('describeArrow', () => {
+  it('formats arrow with label', () => {
+    const arrow: Arrow = {
+      id: 'a1',
+      points: [
+        { gx: 1, gy: 2 },
+        { gx: 3, gy: 4 },
+      ],
+      color: '#ff0000',
+      lineWidth: 2,
+      label: 'テスト',
+    };
+    expect(describeArrow(arrow, 0)).toBe('矢印1: (1, 2) → (3, 4) [#ff0000, 2px] ラベル: テスト');
+  });
+
+  it('formats arrow without label', () => {
+    const arrow: Arrow = {
+      id: 'a2',
+      points: [{ gx: 0, gy: 0 }, { gx: 5, gy: 5 }],
+      color: '#0000ff',
+      lineWidth: 1,
+    };
+    expect(describeArrow(arrow, 2)).toBe('矢印3: (0, 0) → (5, 5) [#0000ff, 1px]');
   });
 });
