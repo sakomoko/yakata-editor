@@ -19,11 +19,14 @@ export function labelDisplayWidth(label: string): number {
   return Math.ceil(cols / 2) + 1;
 }
 
+/** MouseEvent のサブセット。PointerEvent も MouseEvent もこれを満たす */
+type MouseLikeEvent = Pick<MouseEvent, 'clientX' | 'clientY' | 'shiftKey'>;
+
 export function createMousePos(
   canvas: HTMLCanvasElement,
   viewport: ViewportState,
-): (e: MouseEvent) => MouseCoord {
-  return (e: MouseEvent): MouseCoord => {
+): (e: MouseLikeEvent) => MouseCoord {
+  return (e: MouseLikeEvent): MouseCoord => {
     const rect = canvas.getBoundingClientRect();
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;

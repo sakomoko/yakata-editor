@@ -26,6 +26,7 @@ import { onMouseDown } from './mouse-down.ts';
 import { onMouseMove } from './mouse-move.ts';
 import { onMouseUp } from './mouse-up.ts';
 import { onContextMenu } from './context-menu-handler.ts';
+import { initGestures } from './gesture.ts';
 
 export type { EditorAPI, RoomEditData, MarkerEditData, ContextMenuRequest };
 
@@ -94,10 +95,17 @@ export function initEditor(
   resizeCanvas();
   syncAllPairedOpenings(state.rooms);
 
-  // Event handlers bound to ec
-  const handleMouseDown = (e: MouseEvent) => onMouseDown(ec, e);
-  const handleMouseMove = (e: MouseEvent) => onMouseMove(ec, e);
-  const handleMouseUp = (e: MouseEvent) => onMouseUp(ec, e);
+  // Disable browser default touch gestures (scroll, zoom) on canvas
+  canvas.style.touchAction = 'none';
+  // Prevent iOS Safari elastic overscroll.
+  // On some iOS versions this only works on body/html; container-level is sufficient here
+  // because App.tsx renders the container as a full-viewport element.
+  container.style.overscrollBehavior = 'none';
+
+  // Single-pointer handlers bound to ec (passed to gesture layer, not registered directly)
+  const handlePointerDown = (e: PointerEvent) => onMouseDown(ec, e);
+  const handlePointerMove = (e: PointerEvent) => onMouseMove(ec, e);
+  const handlePointerUp = (e: PointerEvent) => onMouseUp(ec, e);
   const handleDblClick = (e: MouseEvent) => {
     onDblClick(ec, e).catch(console.error);
   };
@@ -106,9 +114,10 @@ export function initEditor(
   const handleKeyUp = (e: KeyboardEvent) => onKeyUp(ec, e);
   const handleWheel = (e: WheelEvent) => onWheel(ec, e);
 
-  canvas.addEventListener('mousedown', handleMouseDown);
-  canvas.addEventListener('mousemove', handleMouseMove);
-  document.addEventListener('mouseup', handleMouseUp);
+  // Gesture layer registers pointer events and delegates single-pointer events to handlers above.
+  // pointer{down,move,up} are NOT registered directly — initGestures owns them entirely.
+  const destroyGestures = initGestures(ec, handlePointerDown, handlePointerMove, handlePointerUp);
+
   canvas.addEventListener('dblclick', handleDblClick);
   canvas.addEventListener('contextmenu', handleContextMenu);
   document.addEventListener('keydown', handleKeyDown);
@@ -125,9 +134,7 @@ export function initEditor(
     exportAsPng: () => exportAsPng(ec),
     resize: resizeCanvas,
     destroy() {
-      canvas.removeEventListener('mousedown', handleMouseDown);
-      canvas.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      destroyGestures();
       canvas.removeEventListener('dblclick', handleDblClick);
       canvas.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);

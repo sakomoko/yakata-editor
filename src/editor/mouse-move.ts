@@ -67,7 +67,7 @@ function resolveDefaultCursor(ec: EditorContext, m: MouseCoord): string {
   return 'crosshair';
 }
 
-export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
+export function onMouseMove(ec: EditorContext, e: PointerEvent): void {
   const { canvas, state, viewport, flags } = ec;
 
   if (state.drag && state.drag.type === 'pan') {
@@ -85,6 +85,11 @@ export function onMouseMove(ec: EditorContext, e: MouseEvent): void {
   state.mouse = m;
 
   if (!state.drag) {
+    // Touch devices don't have hover — skip cursor updates to avoid flicker
+    if (e.pointerType === 'touch') {
+      updateStatus(ec);
+      return;
+    }
     if (flags.isPanning) {
       canvas.style.cursor = 'grab';
       updateStatus(ec);
