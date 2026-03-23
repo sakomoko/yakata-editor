@@ -24,6 +24,28 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     return;
   }
 
+  // R キーで部屋モード（ペイント・アロー解除）
+  if (
+    e.key.toLowerCase() === 'r' &&
+    !e.metaKey &&
+    !e.ctrlKey &&
+    document.activeElement === document.body
+  ) {
+    e.preventDefault();
+    if (state.paintMode) {
+      state.paintMode = false;
+      canvas.style.cursor = 'default';
+      ec.callbacks.onPaintModeChange?.(false);
+    }
+    if (state.arrowMode) {
+      state.arrowMode = false;
+      canvas.style.cursor = 'default';
+      ec.callbacks.onArrowModeChange?.(false);
+    }
+    ec.render();
+    return;
+  }
+
   // P キーでペイントモードトグル
   if (
     e.key.toLowerCase() === 'p' &&
