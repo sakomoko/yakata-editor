@@ -32,17 +32,20 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     document.activeElement === document.body
   ) {
     e.preventDefault();
+    if (!state.paintMode && !state.arrowMode) return; // 既に部屋モードなら何もしない
     if (state.paintMode) {
       state.paintMode = false;
-      canvas.style.cursor = 'default';
-      ec.callbacks.onPaintModeChange?.(false);
     }
     if (state.arrowMode) {
       state.arrowMode = false;
-      canvas.style.cursor = 'default';
-      ec.callbacks.onArrowModeChange?.(false);
     }
+    clearSelection(state.selection);
+    flags.activeInteriorObjectId = undefined;
+    flags.activeFreeTextId = undefined;
+    canvas.style.cursor = 'default';
     ec.render();
+    ec.callbacks.onPaintModeChange?.(false);
+    ec.callbacks.onArrowModeChange?.(false);
     return;
   }
 
