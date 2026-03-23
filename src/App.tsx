@@ -19,7 +19,7 @@ import UndoIcon from '@mui/icons-material/Undo';
 import BrushIcon from '@mui/icons-material/Brush';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
+import GridOnIcon from '@mui/icons-material/GridOn';
 import {
   initEditor,
   type EditorAPI,
@@ -685,7 +685,7 @@ export default function App() {
                   '&:hover': { bgcolor: '#1565c0', color: '#fff', boxShadow: 'none' },
                 }),
             }}
-            startIcon={<MeetingRoomIcon />}
+            startIcon={<GridOnIcon />}
             title="部屋モードに切替 (R)"
             onClick={() => {
               editorRef.current?.setRoomMode();

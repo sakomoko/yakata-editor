@@ -16,12 +16,14 @@ export function getEntitySnapshot(state: EditorState): EntitySnapshot {
 
 /** ペイント・アローモードを解除して部屋モード（デフォルト）に戻す */
 export function switchToRoomMode(ec: EditorContext): void {
-  const { state, canvas } = ec;
+  const { state, canvas, flags } = ec;
   if (!state.paintMode && !state.arrowMode) return;
   const wasPaint = state.paintMode;
   const wasArrow = state.arrowMode;
   state.paintMode = false;
   state.arrowMode = false;
+  flags.activeInteriorObjectId = undefined;
+  flags.activeFreeTextId = undefined;
   canvas.style.cursor = 'default';
   ec.render();
   if (wasPaint) ec.callbacks.onPaintModeChange?.(false);
