@@ -76,6 +76,7 @@ export interface EditorAPI {
     paintOpacity: number;
   };
   setArrowMode: (on: boolean) => void;
+  setRoomMode: () => void;
   setArrowColor: (color: string) => void;
   setArrowLineWidth: (width: number) => void;
   getArrowState: () => {

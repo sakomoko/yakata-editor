@@ -2,6 +2,7 @@ import type { MouseCoord, EditorState, EntitySnapshot } from '../types.ts';
 import { GRID } from '../grid.ts';
 import { screenToWorld } from '../viewport.ts';
 import type { ViewportState } from '../viewport.ts';
+import type { EditorContext } from './context.ts';
 
 /** 参照のみ収集。クローンは呼び出し側が必要に応じて行う */
 export function getEntitySnapshot(state: EditorState): EntitySnapshot {
@@ -11,6 +12,24 @@ export function getEntitySnapshot(state: EditorState): EntitySnapshot {
     freeStrokes: state.freeStrokes,
     arrows: state.arrows,
   };
+}
+
+/** ペイント・アローモードを解除して部屋モード（デフォルト）に戻す。
+ * NOTE: 他モードへの切替と異なり、activeInteriorObjectId / activeFreeTextId もクリアする
+ * （部屋モードはクリーンな初期状態として扱う）。 */
+export function switchToRoomMode(ec: EditorContext): void {
+  const { state, canvas, flags } = ec;
+  if (!state.paintMode && !state.arrowMode) return;
+  const wasPaint = state.paintMode;
+  const wasArrow = state.arrowMode;
+  state.paintMode = false;
+  state.arrowMode = false;
+  flags.activeInteriorObjectId = undefined;
+  flags.activeFreeTextId = undefined;
+  canvas.style.cursor = 'default';
+  ec.render();
+  if (wasPaint) ec.callbacks.onPaintModeChange?.(false);
+  if (wasArrow) ec.callbacks.onArrowModeChange?.(false);
 }
 
 /** CJK文字を2カラム換算した表示幅をグリッド単位で返す */

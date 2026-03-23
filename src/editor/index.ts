@@ -9,7 +9,7 @@ import type {
   MarkerEditData,
   ContextMenuRequest,
 } from './context.ts';
-import { createMousePos } from './utils.ts';
+import { createMousePos, switchToRoomMode } from './utils.ts';
 import { render } from './render.ts';
 import {
   commitChange as commitChangeFn,
@@ -190,6 +190,9 @@ export function initEditor(
       canvas.style.cursor = on ? 'crosshair' : 'default';
       ec.render();
       ec.callbacks.onArrowModeChange?.(on);
+    },
+    setRoomMode: () => {
+      switchToRoomMode(ec);
     },
     setArrowColor: (color: string) => {
       state.arrowColor = color;

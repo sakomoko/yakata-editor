@@ -19,6 +19,7 @@ import UndoIcon from '@mui/icons-material/Undo';
 import BrushIcon from '@mui/icons-material/Brush';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import CropSquareIcon from '@mui/icons-material/CropSquare';
 import {
   initEditor,
   type EditorAPI,
@@ -670,6 +671,28 @@ export default function App() {
             戻す ({modKeyCombo('Z')})
           </Button>
           <Divider orientation="vertical" flexItem sx={{ borderColor: '#555', mx: 0.5 }} />
+          <Button
+            size="small"
+            variant="contained"
+            color="inherit"
+            sx={{
+              ...toolbarButtonSx,
+              ...(!paintMode &&
+                !arrowMode && {
+                  bgcolor: '#1976d2',
+                  color: '#fff',
+                  borderColor: '#1976d2',
+                  '&:hover': { bgcolor: '#1565c0', color: '#fff', boxShadow: 'none' },
+                }),
+            }}
+            startIcon={<CropSquareIcon />}
+            title="部屋モードに切替 (R)"
+            onClick={() => {
+              editorRef.current?.setRoomMode();
+            }}
+          >
+            部屋 (R)
+          </Button>
           <Button
             size="small"
             variant="contained"

@@ -5,7 +5,7 @@ import { bringToFront, sendToBack, bringForward, sendBackward } from '../z-order
 import type { EditorContext } from './context.ts';
 import { commitChange, undo, redo, deleteSelectedEntities } from './project.ts';
 import { copySelection, pasteClipboard, duplicateSelection } from './clipboard.ts';
-import { getEntitySnapshot } from './utils.ts';
+import { getEntitySnapshot, switchToRoomMode } from './utils.ts';
 
 export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
   if (e.isComposing) return;
@@ -21,6 +21,19 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     state.drag = null;
     canvas.style.cursor = 'crosshair';
     ec.render();
+    return;
+  }
+
+  // R キーで部屋モード（ペイント・アロー解除）
+  if (
+    e.key.toLowerCase() === 'r' &&
+    !e.metaKey &&
+    !e.ctrlKey &&
+    document.activeElement === document.body
+  ) {
+    if (!state.paintMode && !state.arrowMode) return;
+    e.preventDefault();
+    switchToRoomMode(ec);
     return;
   }
 
