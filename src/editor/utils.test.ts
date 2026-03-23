@@ -58,7 +58,9 @@ describe('switchToRoomMode', () => {
 
   it('すでに部屋モード時は何もしない', () => {
     const ec = makeMockContext({ paintMode: false, arrowMode: false });
+    ec.canvas.style.cursor = 'crosshair';
     switchToRoomMode(ec);
+    expect(ec.canvas.style.cursor).toBe('crosshair');
     expect(ec.render).not.toHaveBeenCalled();
     expect(ec.callbacks.onPaintModeChange).not.toHaveBeenCalled();
     expect(ec.callbacks.onArrowModeChange).not.toHaveBeenCalled();

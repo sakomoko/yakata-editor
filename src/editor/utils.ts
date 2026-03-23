@@ -14,7 +14,9 @@ export function getEntitySnapshot(state: EditorState): EntitySnapshot {
   };
 }
 
-/** ペイント・アローモードを解除して部屋モード（デフォルト）に戻す */
+/** ペイント・アローモードを解除して部屋モード（デフォルト）に戻す。
+ * NOTE: 他モードへの切替と異なり、activeInteriorObjectId / activeFreeTextId もクリアする
+ * （部屋モードはクリーンな初期状態として扱う）。 */
 export function switchToRoomMode(ec: EditorContext): void {
   const { state, canvas, flags } = ec;
   if (!state.paintMode && !state.arrowMode) return;
