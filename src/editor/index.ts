@@ -191,17 +191,17 @@ export function initEditor(
       ec.render();
       ec.callbacks.onArrowModeChange?.(on);
     },
+    // NOTE: keyboard.ts の R キーハンドラと同じロジック。変更時は両方を同期すること。
     setRoomMode: () => {
       if (!state.paintMode && !state.arrowMode) return;
+      const wasPaint = state.paintMode;
+      const wasArrow = state.arrowMode;
       state.paintMode = false;
       state.arrowMode = false;
-      clearSelection(state.selection);
-      flags.activeInteriorObjectId = undefined;
-      flags.activeFreeTextId = undefined;
       canvas.style.cursor = 'default';
       ec.render();
-      ec.callbacks.onPaintModeChange?.(false);
-      ec.callbacks.onArrowModeChange?.(false);
+      if (wasPaint) ec.callbacks.onPaintModeChange?.(false);
+      if (wasArrow) ec.callbacks.onArrowModeChange?.(false);
     },
     setArrowColor: (color: string) => {
       state.arrowColor = color;

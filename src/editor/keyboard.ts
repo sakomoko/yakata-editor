@@ -33,19 +33,15 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
   ) {
     if (!state.paintMode && !state.arrowMode) return; // 既に部屋モードなら何もしない
     e.preventDefault();
-    if (state.paintMode) {
-      state.paintMode = false;
-    }
-    if (state.arrowMode) {
-      state.arrowMode = false;
-    }
-    clearSelection(state.selection);
-    flags.activeInteriorObjectId = undefined;
-    flags.activeFreeTextId = undefined;
+    // NOTE: P/A キーの OFF 時と同様、選択状態は維持する（clearSelection しない）
+    const wasPaint = state.paintMode;
+    const wasArrow = state.arrowMode;
+    state.paintMode = false;
+    state.arrowMode = false;
     canvas.style.cursor = 'default';
     ec.render();
-    ec.callbacks.onPaintModeChange?.(false);
-    ec.callbacks.onArrowModeChange?.(false);
+    if (wasPaint) ec.callbacks.onPaintModeChange?.(false);
+    if (wasArrow) ec.callbacks.onArrowModeChange?.(false);
     return;
   }
 
