@@ -688,8 +688,7 @@ export default function App() {
             startIcon={<MeetingRoomIcon />}
             title="部屋モードに切替 (R)"
             onClick={() => {
-              editorRef.current?.setPaintMode(false);
-              editorRef.current?.setArrowMode(false);
+              editorRef.current?.setRoomMode();
             }}
           >
             部屋 (R)

@@ -31,8 +31,8 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     !e.ctrlKey &&
     document.activeElement === document.body
   ) {
-    e.preventDefault();
     if (!state.paintMode && !state.arrowMode) return; // 既に部屋モードなら何もしない
+    e.preventDefault();
     if (state.paintMode) {
       state.paintMode = false;
     }

@@ -191,6 +191,18 @@ export function initEditor(
       ec.render();
       ec.callbacks.onArrowModeChange?.(on);
     },
+    setRoomMode: () => {
+      if (!state.paintMode && !state.arrowMode) return;
+      state.paintMode = false;
+      state.arrowMode = false;
+      clearSelection(state.selection);
+      flags.activeInteriorObjectId = undefined;
+      flags.activeFreeTextId = undefined;
+      canvas.style.cursor = 'default';
+      ec.render();
+      ec.callbacks.onPaintModeChange?.(false);
+      ec.callbacks.onArrowModeChange?.(false);
+    },
     setArrowColor: (color: string) => {
       state.arrowColor = color;
     },
