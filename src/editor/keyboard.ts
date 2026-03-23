@@ -5,7 +5,7 @@ import { bringToFront, sendToBack, bringForward, sendBackward } from '../z-order
 import type { EditorContext } from './context.ts';
 import { commitChange, undo, redo, deleteSelectedEntities } from './project.ts';
 import { copySelection, pasteClipboard, duplicateSelection } from './clipboard.ts';
-import { getEntitySnapshot } from './utils.ts';
+import { getEntitySnapshot, switchToRoomMode } from './utils.ts';
 
 export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
   if (e.isComposing) return;
@@ -31,17 +31,9 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     !e.ctrlKey &&
     document.activeElement === document.body
   ) {
-    if (!state.paintMode && !state.arrowMode) return; // 既に部屋モードなら何もしない
+    if (!state.paintMode && !state.arrowMode) return;
     e.preventDefault();
-    // NOTE: P/A キーの OFF 時と同様、選択状態は維持する（clearSelection しない）
-    const wasPaint = state.paintMode;
-    const wasArrow = state.arrowMode;
-    state.paintMode = false;
-    state.arrowMode = false;
-    canvas.style.cursor = 'default';
-    ec.render();
-    if (wasPaint) ec.callbacks.onPaintModeChange?.(false);
-    if (wasArrow) ec.callbacks.onArrowModeChange?.(false);
+    switchToRoomMode(ec);
     return;
   }
 

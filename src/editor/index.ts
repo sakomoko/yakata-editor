@@ -9,7 +9,7 @@ import type {
   MarkerEditData,
   ContextMenuRequest,
 } from './context.ts';
-import { createMousePos } from './utils.ts';
+import { createMousePos, switchToRoomMode } from './utils.ts';
 import { render } from './render.ts';
 import {
   commitChange as commitChangeFn,
@@ -191,17 +191,8 @@ export function initEditor(
       ec.render();
       ec.callbacks.onArrowModeChange?.(on);
     },
-    // NOTE: keyboard.ts の R キーハンドラと同じロジック。変更時は両方を同期すること。
     setRoomMode: () => {
-      if (!state.paintMode && !state.arrowMode) return;
-      const wasPaint = state.paintMode;
-      const wasArrow = state.arrowMode;
-      state.paintMode = false;
-      state.arrowMode = false;
-      canvas.style.cursor = 'default';
-      ec.render();
-      if (wasPaint) ec.callbacks.onPaintModeChange?.(false);
-      if (wasArrow) ec.callbacks.onArrowModeChange?.(false);
+      switchToRoomMode(ec);
     },
     setArrowColor: (color: string) => {
       state.arrowColor = color;
