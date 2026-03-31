@@ -258,7 +258,7 @@ export type DragState =
       type: 'resizeFreeText';
       freeTextId: string;
       dir: ResizeDirection;
-      orig: { gx: number; gy: number; w: number; h: number };
+      orig: { gx: number; gy: number; w: number; h: number; fontSize: number };
     }
   | { type: 'paint'; strokeId: string }
   | { type: 'moveStroke'; id: string; offsetPx: number; offsetPy: number }

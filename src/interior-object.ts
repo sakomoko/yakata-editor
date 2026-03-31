@@ -8,9 +8,11 @@ import type {
   MarkerKind,
   ResizeDirection,
 } from './types.ts';
-import { GRID, HANDLE_SIZE, HANDLE_HIT } from './grid.ts';
+import { GRID, HANDLE_SIZE, HANDLE_HIT, FONT_SIZE_MIN, FONT_SIZE_MAX } from './grid.ts';
 import { drawCameraIcon } from './camera.ts';
 import { isPolygonRoom, getRoomVertices, getQuadCentroid, pointInQuad } from './polygon.ts';
+
+export { FONT_SIZE_MIN, FONT_SIZE_MAX };
 
 const STAIRS_DEFAULT_W = 2;
 const STAIRS_DEFAULT_H = 3;
@@ -19,9 +21,6 @@ const FOLDING_STAIRS_DEFAULT_H = 3;
 const MARKER_DEFAULT_W = 2;
 const MARKER_DEFAULT_H = 1;
 const MIN_INTERIOR_SIZE = 1;
-
-export const FONT_SIZE_MIN = 4;
-export const FONT_SIZE_MAX = 80;
 
 export function createStraightStairs(
   x: number,

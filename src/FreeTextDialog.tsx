@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -16,14 +16,85 @@ interface Props {
   onClose: (result: { label: string; fontSize: number } | null) => void;
 }
 
+function useDraggablePaper() {
+  const posRef = useRef({ x: 0, y: 0 });
+  const dragRef = useRef<{
+    startX: number;
+    startY: number;
+    origX: number;
+    origY: number;
+    baseX: number;
+    baseY: number;
+    paperW: number;
+  } | null>(null);
+  const paperRef = useRef<HTMLDivElement | null>(null);
+
+  const resetPosition = useCallback(() => {
+    posRef.current = { x: 0, y: 0 };
+    if (paperRef.current) {
+      paperRef.current.style.transform = '';
+    }
+  }, []);
+
+  const onTitlePointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    const rect = paperRef.current?.getBoundingClientRect();
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      origX: posRef.current.x,
+      origY: posRef.current.y,
+      baseX: rect ? rect.left - posRef.current.x : 0,
+      baseY: rect ? rect.top - posRef.current.y : 0,
+      paperW: rect ? rect.width : 0,
+    };
+  }, []);
+
+  const onTitlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragRef.current || !paperRef.current) return;
+    const drag = dragRef.current;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    let newX = drag.origX + dx;
+    let newY = drag.origY + dy;
+    // ビューポート境界クランプ: ダイアログの一部が常に画面内に残るよう制限
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    newX = Math.min(Math.max(newX, -(drag.baseX + drag.paperW - 60)), vw - drag.baseX - 60);
+    newY = Math.min(Math.max(newY, -drag.baseY), vh - drag.baseY - 40);
+    posRef.current = { x: newX, y: newY };
+    paperRef.current.style.transform = `translate(${newX}px, ${newY}px)`;
+  }, []);
+
+  const onTitlePointerEnd = useCallback(() => {
+    dragRef.current = null;
+  }, []);
+
+  return {
+    paperRef,
+    resetPosition,
+    onTitlePointerDown,
+    onTitlePointerMove,
+    onTitlePointerEnd,
+  };
+}
+
 export default function FreeTextDialog({ open, data, onClose }: Props) {
   const [label, setLabel] = useState(data.label);
   const [fontSize, setFontSize] = useState(data.fontSize);
+  const { paperRef, resetPosition, onTitlePointerDown, onTitlePointerMove, onTitlePointerEnd } =
+    useDraggablePaper();
 
   useEffect(() => {
     setLabel(data.label);
     setFontSize(data.fontSize);
   }, [data]);
+
+  // ダイアログが開くたびに位置をリセット
+  useEffect(() => {
+    if (open) resetPosition();
+  }, [open, resetPosition]);
 
   const handleSliderChange = (_: Event, value: number | number[]) => {
     const newSize = value as number;
@@ -43,9 +114,20 @@ export default function FreeTextDialog({ open, data, onClose }: Props) {
     <Dialog
       open={open}
       onClose={handleCancel}
-      PaperProps={{ sx: { bgcolor: '#2a2a2a', color: '#ccc', minWidth: 320 } }}
+      PaperProps={{
+        ref: paperRef,
+        sx: { bgcolor: '#2a2a2a', color: '#ccc', minWidth: 320 },
+      }}
     >
-      <DialogTitle sx={{ fontSize: 14, color: '#eee', pb: 1 }}>テキストの設定</DialogTitle>
+      <DialogTitle
+        sx={{ fontSize: 14, color: '#eee', pb: 1, cursor: 'move', userSelect: 'none' }}
+        onPointerDown={onTitlePointerDown}
+        onPointerMove={onTitlePointerMove}
+        onPointerUp={onTitlePointerEnd}
+        onPointerCancel={onTitlePointerEnd}
+      >
+        テキストの設定
+      </DialogTitle>
       <DialogContent>
         <TextField
           autoFocus
