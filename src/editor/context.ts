@@ -4,6 +4,7 @@ import type {
   Arrow,
   FreeText,
   FreeStroke,
+  StickyNote,
   FreeTextEditData,
   GridPoint,
   MouseCoord,
@@ -50,6 +51,7 @@ export interface EditorAPI {
     freeTexts: FreeText[];
     freeStrokes?: FreeStroke[];
     arrows?: Arrow[];
+    stickyNotes?: StickyNote[];
   }) => void;
   saveProject: () => Promise<void>;
   exportAsPng: () => void;
@@ -60,6 +62,7 @@ export interface EditorAPI {
     freeTexts: FreeText[];
     freeStrokes: FreeStroke[];
     arrows: Arrow[];
+    stickyNotes: StickyNote[];
     history: string[];
     redoHistory: string[];
   };
@@ -97,6 +100,7 @@ export interface EditorContext {
     isPanning: boolean;
     activeInteriorObjectId: string | undefined;
     activeFreeTextId: string | undefined;
+    activeStickyNoteId: string | undefined;
     snapIndicator: SnapIndicator | null;
     clipboard: ClipboardData | null;
     /** saveUndoPoint でクリアされる前のRedoスタックの退避。cancelLastUndoでの復元に使う。 */

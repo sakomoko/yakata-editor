@@ -1,5 +1,5 @@
 import { drawGrid } from '../grid.ts';
-import { findFreeTextById, findInteriorObjectById } from '../lookup.ts';
+import { findFreeTextById, findInteriorObjectById, findStickyNoteById } from '../lookup.ts';
 import {
   drawRoom,
   drawCreationPreview,
@@ -11,6 +11,8 @@ import { drawOutwardDoorsOverlay } from '../wall-object.ts';
 import { drawCameraFovOverlay, drawCameraHandles } from '../camera.ts';
 import { drawFreeText, drawFreeTextHandles } from '../free-text.ts';
 import { drawFreeStroke, drawFreeStrokeBounds } from '../free-stroke.ts';
+import { drawStickyNote, drawStickyNoteHandles } from '../sticky-note.ts';
+import { updateStickyNoteOverlays } from './sticky-note-overlay.ts';
 import { drawArrow, drawArrowHandles, drawDragArrowPreview } from '../arrow.ts';
 import { drawLinkGroupIndicators } from '../link.ts';
 import type { SnapIndicator } from '../snap.ts';
@@ -117,6 +119,23 @@ export function render(ec: EditorContext): void {
     }
   }
 
+  // Sticky notes (always front layer, above free text)
+  for (const note of state.stickyNotes) {
+    drawStickyNote(
+      ctx,
+      note,
+      state.selection.has(note.id),
+      note.id === flags.activeStickyNoteId,
+      viewport.zoom,
+    );
+  }
+  if (flags.activeStickyNoteId) {
+    const activeNote = findStickyNoteById(state.stickyNotes, flags.activeStickyNoteId);
+    if (activeNote) {
+      drawStickyNoteHandles(ctx, activeNote, viewport.zoom);
+    }
+  }
+
   // Arrows
   for (const arrow of state.arrows) {
     drawArrow(ctx, arrow, viewport.zoom);
@@ -158,6 +177,10 @@ export function render(ec: EditorContext): void {
   }
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+  // 付箋のテキストはHTMLオーバーレイで描画（Canvas テキストより高品質）
+  updateStickyNoteOverlays(ec);
+
   updateStatus(ec);
 }
 

@@ -203,13 +203,14 @@ export default function App() {
     const editor = editorRef.current;
     const activeId = tabStateRef.current.activeTabId;
     if (!editor || !activeId) return;
-    const { rooms, freeTexts, freeStrokes, arrows, history } = editor.getState();
+    const { rooms, freeTexts, freeStrokes, arrows, stickyNotes, history } = editor.getState();
     const viewport = editor.getViewport();
     saveProjectData(activeId, {
       rooms,
       freeTexts,
       freeStrokes,
       arrows,
+      stickyNotes,
       viewport,
       history,
     } satisfies ProjectData);
@@ -244,6 +245,7 @@ export default function App() {
           freeTexts: [],
           freeStrokes: [],
           arrows: [],
+          stickyNotes: [],
           viewport: { zoom: 1, panX: 0, panY: 0 },
           history: [],
         },

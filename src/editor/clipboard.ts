@@ -22,7 +22,7 @@ interface BoundingBox {
 }
 
 function computeBoundingBox(entities: EntitySnapshot): BoundingBox {
-  const { rooms, freeTexts, freeStrokes, arrows } = entities;
+  const { rooms, freeTexts, freeStrokes, arrows, stickyNotes } = entities;
   let minGx = Infinity;
   let minGy = Infinity;
   let maxGx = -Infinity;
@@ -71,6 +71,13 @@ function computeBoundingBox(entities: EntitySnapshot): BoundingBox {
     }
   }
 
+  for (const n of stickyNotes) {
+    minGx = Math.min(minGx, n.gx);
+    minGy = Math.min(minGy, n.gy);
+    maxGx = Math.max(maxGx, n.gx + n.w);
+    maxGy = Math.max(maxGy, n.gy + n.h);
+  }
+
   return { minGx, minGy, maxGx, maxGy };
 }
 
@@ -95,16 +102,24 @@ export function copySelection(ec: EditorContext): void {
   const freeTexts = state.freeTexts.filter((ft) => state.selection.has(ft.id));
   const freeStrokes = state.freeStrokes.filter((fs) => state.selection.has(fs.id));
   const arrows = state.arrows.filter((a) => state.selection.has(a.id));
+  const stickyNotes = state.stickyNotes.filter((n) => state.selection.has(n.id));
 
   if (
     rooms.length === 0 &&
     freeTexts.length === 0 &&
     freeStrokes.length === 0 &&
-    arrows.length === 0
+    arrows.length === 0 &&
+    stickyNotes.length === 0
   )
     return;
 
-  const cloned: EntitySnapshot = structuredClone({ rooms, freeTexts, freeStrokes, arrows });
+  const cloned: EntitySnapshot = structuredClone({
+    rooms,
+    freeTexts,
+    freeStrokes,
+    arrows,
+    stickyNotes,
+  });
 
   for (const r of cloned.rooms) {
     cleanRoomForClipboard(r);
@@ -122,7 +137,7 @@ export function copySelection(ec: EditorContext): void {
 }
 
 function regenerateIds(entities: EntitySnapshot): void {
-  const { rooms, freeTexts, freeStrokes, arrows } = entities;
+  const { rooms, freeTexts, freeStrokes, arrows, stickyNotes } = entities;
   for (const r of rooms) {
     r.id = crypto.randomUUID();
     if (r.wallObjects) {
@@ -145,6 +160,9 @@ function regenerateIds(entities: EntitySnapshot): void {
   for (const a of arrows) {
     a.id = crypto.randomUUID();
   }
+  for (const n of stickyNotes) {
+    n.id = crypto.randomUUID();
+  }
 }
 
 function flipSideHorizontal(side: WallSide): WallSide {
@@ -165,7 +183,7 @@ function normalizeAngle(a: number): number {
 }
 
 function applyMirrorHorizontal(entities: EntitySnapshot, centerGx: number): void {
-  const { rooms, freeTexts, freeStrokes, arrows } = entities;
+  const { rooms, freeTexts, freeStrokes, arrows, stickyNotes } = entities;
   const centerPx = centerGx * GRID;
 
   for (const room of rooms) {
@@ -248,10 +266,14 @@ function applyMirrorHorizontal(entities: EntitySnapshot, centerGx: number): void
       p.gx = 2 * centerGx - p.gx;
     }
   }
+
+  for (const n of stickyNotes) {
+    n.gx = 2 * centerGx - n.gx - n.w;
+  }
 }
 
 function applyMirrorVertical(entities: EntitySnapshot, centerGy: number): void {
-  const { rooms, freeTexts, freeStrokes, arrows } = entities;
+  const { rooms, freeTexts, freeStrokes, arrows, stickyNotes } = entities;
   const centerPy = centerGy * GRID;
 
   for (const room of rooms) {
@@ -328,10 +350,14 @@ function applyMirrorVertical(entities: EntitySnapshot, centerGy: number): void {
       p.gy = 2 * centerGy - p.gy;
     }
   }
+
+  for (const n of stickyNotes) {
+    n.gy = 2 * centerGy - n.gy - n.h;
+  }
 }
 
 function applyOffset(entities: EntitySnapshot, dx: number, dy: number): void {
-  const { rooms, freeTexts, freeStrokes, arrows } = entities;
+  const { rooms, freeTexts, freeStrokes, arrows, stickyNotes } = entities;
   for (const room of rooms) {
     room.x += dx;
     room.y += dy;
@@ -358,6 +384,10 @@ function applyOffset(entities: EntitySnapshot, dx: number, dy: number): void {
       p.gy += dy;
     }
   }
+  for (const n of stickyNotes) {
+    n.gx += dx;
+    n.gy += dy;
+  }
 }
 
 export function pasteClipboard(
@@ -369,8 +399,14 @@ export function pasteClipboard(
   const clipboard = flags.clipboard;
   if (!clipboard) return;
 
-  const { rooms, freeTexts, freeStrokes, arrows } = clipboard;
-  const cloned: EntitySnapshot = structuredClone({ rooms, freeTexts, freeStrokes, arrows });
+  const { rooms, freeTexts, freeStrokes, arrows, stickyNotes } = clipboard;
+  const cloned: EntitySnapshot = structuredClone({
+    rooms,
+    freeTexts,
+    freeStrokes,
+    arrows,
+    stickyNotes,
+  });
 
   // Apply mirror before offset (mirror around clipboard center)
   if (mirror === 'horizontal') {
@@ -397,6 +433,7 @@ export function pasteClipboard(
     state.freeTexts.push(...cloned.freeTexts);
     state.freeStrokes.push(...cloned.freeStrokes);
     state.arrows.push(...cloned.arrows);
+    state.stickyNotes.push(...cloned.stickyNotes);
     syncAllPairedOpenings(state.rooms);
 
     state.selection.clear();
@@ -404,6 +441,7 @@ export function pasteClipboard(
     for (const ft of cloned.freeTexts) state.selection.add(ft.id);
     for (const fs of cloned.freeStrokes) state.selection.add(fs.id);
     for (const a of cloned.arrows) state.selection.add(a.id);
+    for (const n of cloned.stickyNotes) state.selection.add(n.id);
   });
 }
 

@@ -135,12 +135,14 @@ export function yakataApiPlugin(): Plugin {
                 freeTexts: obj.freeTexts,
                 freeStrokes: obj.freeStrokes,
                 arrows: obj.arrows,
+                stickyNotes: obj.stickyNotes,
               });
               const data = {
                 rooms: validated.rooms,
                 freeTexts: validated.freeTexts,
                 freeStrokes: validated.freeStrokes,
                 arrows: validated.arrows,
+                stickyNotes: validated.stickyNotes,
                 viewport: parseViewport(obj.viewport),
                 history: Array.isArray(obj.history)
                   ? (obj.history as unknown[]).filter((h): h is string => typeof h === 'string')

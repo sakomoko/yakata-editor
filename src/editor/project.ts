@@ -1,4 +1,4 @@
-import type { Room, FreeText, FreeStroke, Arrow, EntitySnapshot } from '../types.ts';
+import type { Room, FreeText, FreeStroke, Arrow, StickyNote, EntitySnapshot } from '../types.ts';
 import { GRID } from '../grid.ts';
 import { popUndo, pushRedo, popRedo, pushUndo, saveUndoPoint } from '../history.ts';
 import { clearSelection } from '../selection.ts';
@@ -26,6 +26,7 @@ export function deleteSelectedEntities(ec: EditorContext): void {
     state.freeTexts = state.freeTexts.filter((f) => !state.selection.has(f.id));
     state.freeStrokes = state.freeStrokes.filter((s) => !state.selection.has(s.id));
     state.arrows = state.arrows.filter((a) => !state.selection.has(a.id));
+    state.stickyNotes = state.stickyNotes.filter((n) => !state.selection.has(n.id));
     state.rooms = state.rooms.filter((r) => !state.selection.has(r.id));
     cleanupSingletonGroups(state.rooms);
     syncAllPairedOpenings(state.rooms);
@@ -57,10 +58,12 @@ function applySnapshot(ec: EditorContext, restored: EntitySnapshot): void {
   ec.state.freeTexts = restored.freeTexts;
   ec.state.freeStrokes = restored.freeStrokes;
   ec.state.arrows = restored.arrows;
+  ec.state.stickyNotes = restored.stickyNotes;
   ec.state.drag = null;
   clearSelection(ec.state.selection);
   ec.flags.activeInteriorObjectId = undefined;
   ec.flags.activeFreeTextId = undefined;
+  ec.flags.activeStickyNoteId = undefined;
   ec.render();
   ec.callbacks.onAutoSave();
 }
@@ -85,7 +88,8 @@ export function newProject(ec: EditorContext): void {
     (ec.state.rooms.length ||
       ec.state.freeTexts.length ||
       ec.state.freeStrokes.length ||
-      ec.state.arrows.length) &&
+      ec.state.arrows.length ||
+      ec.state.stickyNotes.length) &&
     !confirm('現在の間取り図をクリアしますか？')
   )
     return;
@@ -94,10 +98,12 @@ export function newProject(ec: EditorContext): void {
     ec.state.freeTexts = [];
     ec.state.freeStrokes = [];
     ec.state.arrows = [];
+    ec.state.stickyNotes = [];
     clearSelection(ec.state.selection);
   });
   ec.flags.activeInteriorObjectId = undefined;
   ec.flags.activeFreeTextId = undefined;
+  ec.flags.activeStickyNoteId = undefined;
 }
 
 export function loadProjectData(
@@ -107,6 +113,7 @@ export function loadProjectData(
     freeTexts: FreeText[];
     freeStrokes?: FreeStroke[];
     arrows?: Arrow[];
+    stickyNotes?: StickyNote[];
   },
 ): void {
   commitChange(ec, () => {
@@ -114,11 +121,13 @@ export function loadProjectData(
     ec.state.freeTexts = data.freeTexts;
     ec.state.freeStrokes = data.freeStrokes ?? [];
     ec.state.arrows = data.arrows ?? [];
+    ec.state.stickyNotes = data.stickyNotes ?? [];
     clearSelection(ec.state.selection);
     syncAllPairedOpenings(ec.state.rooms);
   });
   ec.flags.activeInteriorObjectId = undefined;
   ec.flags.activeFreeTextId = undefined;
+  ec.flags.activeStickyNoteId = undefined;
 }
 
 export async function saveProject(ec: EditorContext): Promise<void> {
@@ -130,7 +139,9 @@ export function exportAsPng(ec: EditorContext): void {
   const prevSelection = new Set(state.selection);
   clearSelection(state.selection);
   const savedActiveFreeTextId = flags.activeFreeTextId;
+  const savedActiveStickyNoteId = flags.activeStickyNoteId;
   flags.activeFreeTextId = undefined;
+  flags.activeStickyNoteId = undefined;
 
   const savedViewport = { ...viewport };
   const savedW = canvas.width;
@@ -180,6 +191,17 @@ export function exportAsPng(ec: EditorContext): void {
       if (abMaxY > maxY) maxY = abMaxY;
     }
 
+    for (const note of state.stickyNotes) {
+      const nX = note.gx * GRID;
+      const nY = note.gy * GRID;
+      const nR = nX + note.w * GRID;
+      const nB = nY + note.h * GRID;
+      if (nX < minX) minX = nX;
+      if (nY < minY) minY = nY;
+      if (nR > maxX) maxX = nR;
+      if (nB > maxY) maxY = nB;
+    }
+
     // rooms も FreeText もない場合のフォールバック
     if (minX === Infinity) {
       minX = 0;
@@ -211,6 +233,7 @@ export function exportAsPng(ec: EditorContext): void {
     Object.assign(viewport, savedViewport);
     for (const id of prevSelection) state.selection.add(id);
     flags.activeFreeTextId = savedActiveFreeTextId;
+    flags.activeStickyNoteId = savedActiveStickyNoteId;
     ec.render();
   }
 }

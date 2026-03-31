@@ -87,6 +87,22 @@ Canvas上でのマウス操作 → editor/ のイベントハンドラ → state
 
 これを怠るとシリアライズは成功するがロード時にフィルタで除外され、リロードでデータが消失する。
 
+### 新しいトップレベルエンティティ追加時の注意: データパイプライン全箇所の同期
+
+`EntitySnapshot` に新しい配列フィールド（例: `stickyNotes`）を追加した場合、**以下の全箇所**にフィールドを追加しないとリロードでデータが消失する:
+
+1. **型定義** (`types.ts`) — `EntitySnapshot`, `EditorState`, `Project`, `ProjectData` の4つ
+2. **永続化** (`persistence.ts`) — `ensureXxxIds()` バリデーション関数の追加、`parseStorageData` への組み込み
+3. **履歴** (`history.ts`) — `popSnapshot` の復元オブジェクト
+4. **エディタ** — `editor/utils.ts` (`getEntitySnapshot`), `editor/index.ts` (state初期化・`getState()`・`loadProjectState`), `editor/project.ts` (`applySnapshot`・`deleteSelectedEntities`・`newProject`・`loadProjectData`・`exportAsPng`)
+5. **クリップボード** (`editor/clipboard.ts`) — `computeBoundingBox`, `copySelection`, `regenerateIds`, `applyMirrorHorizontal/Vertical`, `applyOffset`, `pasteClipboard`
+6. **App.tsx** — `saveCurrentProject` のデストラクチャリングと保存オブジェクト、`loadProjectIntoEditor` のフォールバック
+7. **localStorage ストア** (`project-store.ts`) — `loadProjectData` の `parseStorageData` 呼び出しと返却オブジェクト、`createNewProject` のデフォルトデータ
+8. **サーバーAPI** (`server/api-plugin.ts`) — PUT ハンドラの `parseStorageData` 呼び出しと保存データ構築
+9. **サーバーFS ストア** (`server/project-store-fs.ts`) — `loadProjectData` の `parseStorageData` 呼び出しと返却オブジェクト、`createNewProject`
+
+特に **6〜9 は見落としやすい**。`ProjectData` の型で optional (`?`) にしていると TypeScript がエラーを出さないため、コンパイルは通るがランタイムでデータが消える。
+
 ## Code Style
 
 - Strict TypeScript (noUnusedLocals, noUnusedParameters有効)

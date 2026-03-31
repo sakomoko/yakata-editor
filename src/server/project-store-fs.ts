@@ -76,6 +76,7 @@ export function loadProjectData(id: string): LoadProjectResult | null {
       freeTexts: obj.freeTexts,
       freeStrokes: obj.freeStrokes,
       arrows: obj.arrows,
+      stickyNotes: obj.stickyNotes,
     });
     const viewport = parseViewport(obj.viewport);
     const history: string[] = Array.isArray(obj.history)
@@ -88,6 +89,7 @@ export function loadProjectData(id: string): LoadProjectResult | null {
         freeTexts: storageData.freeTexts,
         freeStrokes: storageData.freeStrokes,
         arrows: storageData.arrows,
+        stickyNotes: storageData.stickyNotes,
         viewport,
         history,
       },
@@ -124,6 +126,7 @@ export function createNewProject(name?: string): { meta: ProjectMeta; data: Proj
     freeTexts: [],
     freeStrokes: [],
     arrows: [],
+    stickyNotes: [],
     viewport: { zoom: 1, panX: 0, panY: 0 },
     history: [],
   };

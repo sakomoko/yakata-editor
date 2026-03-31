@@ -8,6 +8,7 @@ import type {
   FreeText,
   FreeStroke,
   Arrow,
+  StickyNote,
 } from '../types.ts';
 import { parseStorageData } from '../persistence.ts';
 import { findAdjacentRoomsOnWall } from '../adjacency.ts';
@@ -22,6 +23,7 @@ export interface ProjectFile {
   freeTexts: FreeText[];
   freeStrokes: FreeStroke[];
   arrows: Arrow[];
+  stickyNotes: StickyNote[];
 }
 
 function loadProject(filePath: string): ProjectFile {
@@ -45,6 +47,7 @@ function loadProject(filePath: string): ProjectFile {
     freeTexts: data.freeTexts,
     freeStrokes: data.freeStrokes,
     arrows: data.arrows,
+    stickyNotes: data.stickyNotes,
   };
 }
 
@@ -97,7 +100,7 @@ export function describeArrow(arrow: Arrow, index: number): string {
 /** @internal Exported for testing */
 export function describeProject(project: ProjectFile): string {
   const lines: string[] = [];
-  const { rooms, freeTexts, freeStrokes, arrows } = project;
+  const { rooms, freeTexts, freeStrokes, arrows, stickyNotes } = project;
 
   lines.push('# プロジェクト構造');
   lines.push('');
@@ -178,6 +181,17 @@ export function describeProject(project: ProjectFile): string {
     lines.push(`## 矢印 (${arrows.length}本)`);
     for (const [i, arrow] of arrows.entries()) {
       lines.push(`- ${describeArrow(arrow, i)}`);
+    }
+  }
+
+  if (stickyNotes.length > 0) {
+    lines.push('');
+    lines.push(`## 付箋 (${stickyNotes.length}個)`);
+    for (const note of stickyNotes) {
+      const preview = note.label.split('\n')[0].slice(0, 30);
+      lines.push(
+        `- [${note.color}] "${preview}" at (${note.gx}, ${note.gy}) サイズ: ${note.w}×${note.h}`,
+      );
     }
   }
 

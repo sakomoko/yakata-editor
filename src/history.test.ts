@@ -17,7 +17,7 @@ function snap(
   freeStrokes: EntitySnapshot['freeStrokes'] = [],
   arrows: EntitySnapshot['arrows'] = [],
 ): EntitySnapshot {
-  return { rooms, freeTexts, freeStrokes, arrows };
+  return { rooms, freeTexts, freeStrokes, arrows, stickyNotes: [] };
 }
 
 describe('pushUndo / popUndo', () => {
@@ -49,7 +49,7 @@ describe('pushUndo / popUndo', () => {
         zLayer: 'front' as const,
       },
     ];
-    pushUndo(history, { rooms, freeTexts, freeStrokes: [], arrows: [] });
+    pushUndo(history, { rooms, freeTexts, freeStrokes: [], arrows: [], stickyNotes: [] });
 
     const restored = popUndo(history);
     expect(restored).not.toBeNull();
