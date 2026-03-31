@@ -1,6 +1,5 @@
 import type { FreeText, ResizeDirection } from './types.ts';
-import { GRID, HANDLE_SIZE, HANDLE_HIT } from './grid.ts';
-import { FONT_SIZE_MIN, FONT_SIZE_MAX } from './interior-object.ts';
+import { GRID, HANDLE_SIZE, HANDLE_HIT, FONT_SIZE_MIN, FONT_SIZE_MAX } from './grid.ts';
 
 const MIN_SIZE = 1;
 const DEFAULT_FONT_SIZE = 14;

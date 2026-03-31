@@ -3,6 +3,8 @@ export const WALL = 2;
 export const WALL_SEL = 2.5;
 export const HANDLE_SIZE = 8;
 export const HANDLE_HIT = 7;
+export const FONT_SIZE_MIN = 4;
+export const FONT_SIZE_MAX = 80;
 
 export function drawGrid(
   ctx: CanvasRenderingContext2D,
