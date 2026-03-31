@@ -2,6 +2,8 @@ import type {
   WallObject,
   CameraColorPreset,
   FreeText,
+  StickyNote,
+  StickyNoteColor,
   Room,
   RoomInteriorObject,
   MouseCoord,
@@ -13,6 +15,7 @@ import {
   findInteriorObjectById,
   findRoomById,
   findRoomIndexById,
+  findStickyNoteById,
   findWallObjectById,
 } from '../lookup.ts';
 import { hitRoom, isInsideRoom } from '../room.ts';
@@ -33,6 +36,7 @@ import {
 } from '../interior-object.ts';
 import { createSecurityCamera } from '../camera.ts';
 import { hitFreeText, createFreeText } from '../free-text.ts';
+import { hitStickyNote, createStickyNote } from '../sticky-note.ts';
 import { hitFreeStrokeInList, STROKE_HIT_TOLERANCE_PX } from '../free-stroke.ts';
 import { hitArrowInList, hitArrowPoint, ARROW_COLOR_PRESETS, ARROW_LINE_WIDTHS } from '../arrow.ts';
 import { findArrowById, findFreeStrokeById } from '../lookup.ts';
@@ -51,6 +55,7 @@ import { commitChange, applyRoomEdit, withFontSizePreview, deleteRoom } from './
 import { labelDisplayWidth } from './utils.ts';
 import { editMarkerViaDialog } from './marker-edit.ts';
 import { copySelection, pasteClipboard } from './clipboard.ts';
+import { startInlineEdit } from './inline-edit.ts';
 
 const CARDINAL_DIRECTIONS: { label: string; dir: 'n' | 'e' | 's' | 'w' }[] = [
   { label: '↑ 上向き', dir: 'n' },
@@ -116,6 +121,56 @@ function buildFreeTextMenu(ec: EditorContext, ftHit: FreeText): ContextMenuItem[
         state.freeTexts = state.freeTexts.filter((f) => f.id !== ftId);
       });
       flags.activeFreeTextId = undefined;
+    },
+  });
+  return items;
+}
+
+function buildStickyNoteMenu(ec: EditorContext, noteHit: StickyNote): ContextMenuItem[] {
+  const { state, flags } = ec;
+  const noteId = noteHit.id;
+  flags.activeStickyNoteId = noteId;
+  selectSingle(state.selection, noteId);
+
+  const items: ContextMenuItem[] = [];
+  items.push({
+    label: 'テキストを変更',
+    action: () => {
+      const note = findStickyNoteById(state.stickyNotes, noteId);
+      if (!note) return;
+      startInlineEdit(ec, note);
+    },
+  });
+  items.push({ separator: true });
+
+  const colorPresets: { label: string; key: StickyNoteColor }[] = [
+    { label: '黄', key: 'yellow' },
+    { label: '桃', key: 'pink' },
+    { label: '緑', key: 'green' },
+    { label: '青', key: 'blue' },
+  ];
+  for (const preset of colorPresets) {
+    items.push({
+      label: `色: ${preset.label}`,
+      disabled: noteHit.color === preset.key,
+      action: () => {
+        const note = findStickyNoteById(state.stickyNotes, noteId);
+        if (!note) return;
+        commitChange(ec, () => {
+          note.color = preset.key;
+        });
+      },
+    });
+  }
+
+  items.push({ separator: true });
+  items.push({
+    label: '付箋を削除',
+    action: () => {
+      commitChange(ec, () => {
+        state.stickyNotes = state.stickyNotes.filter((n) => n.id !== noteId);
+      });
+      flags.activeStickyNoteId = undefined;
     },
   });
   return items;
@@ -553,6 +608,20 @@ function buildEmptyAreaMenu(ec: EditorContext, m: MouseCoord): ContextMenuItem[]
       ec.render();
     },
   });
+  items.push({
+    label: '付箋を配置',
+    action: () => {
+      const note = createStickyNote(m.gx, m.gy, '');
+      commitChange(ec, () => {
+        state.stickyNotes.push(note);
+      });
+      flags.activeStickyNoteId = note.id;
+      selectSingle(state.selection, note.id);
+      ec.render();
+      // 配置後すぐにインライン編集を開始
+      startInlineEdit(ec, note);
+    },
+  });
   items.push({ separator: true });
   items.push({
     label: '貼り付け',
@@ -743,6 +812,15 @@ export function onContextMenu(ec: EditorContext, e: MouseEvent): void {
   if (strokeHit) {
     selectSingle(state.selection, strokeHit.id);
     const items = buildFreeStrokeMenu(ec, strokeHit.id);
+    callbacks.onContextMenu({ screenX: e.clientX, screenY: e.clientY, items });
+    ec.render();
+    return;
+  }
+
+  // StickyNote (above FreeText)
+  const noteHit = hitStickyNote(state.stickyNotes, m.px, m.py);
+  if (noteHit) {
+    const items = buildStickyNoteMenu(ec, noteHit);
     callbacks.onContextMenu({ screenX: e.clientX, screenY: e.clientY, items });
     ec.render();
     return;

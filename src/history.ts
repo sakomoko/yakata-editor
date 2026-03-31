@@ -1,4 +1,4 @@
-import type { Room, FreeText, FreeStroke, Arrow, EntitySnapshot } from './types.ts';
+import type { Room, FreeText, FreeStroke, Arrow, StickyNote, EntitySnapshot } from './types.ts';
 
 const MAX_HISTORY = 50;
 
@@ -12,7 +12,7 @@ function popSnapshot(stack: string[]): EntitySnapshot | null {
   const raw: unknown = JSON.parse(stack.pop()!);
   // 後方互換: 旧形式は配列（rooms only）
   if (Array.isArray(raw)) {
-    return { rooms: raw as Room[], freeTexts: [], freeStrokes: [], arrows: [] };
+    return { rooms: raw as Room[], freeTexts: [], freeStrokes: [], arrows: [], stickyNotes: [] };
   }
   const obj = raw as Record<string, unknown>;
   return {
@@ -20,6 +20,7 @@ function popSnapshot(stack: string[]): EntitySnapshot | null {
     freeTexts: (obj.freeTexts as FreeText[]) ?? [],
     freeStrokes: (obj.freeStrokes as FreeStroke[]) ?? [],
     arrows: (obj.arrows as Arrow[]) ?? [],
+    stickyNotes: (obj.stickyNotes as StickyNote[]) ?? [],
   };
 }
 

@@ -45,6 +45,13 @@ import {
   scaleFontSize,
 } from '../free-text.ts';
 import {
+  hitStickyNote,
+  hitStickyNoteHandle,
+  computeStickyNoteResize,
+  scaleStickyNoteFontSize,
+} from '../sticky-note.ts';
+import { findStickyNoteById } from '../lookup.ts';
+import {
   hitFreeStrokeInList,
   constrainToLine,
   moveStroke as moveStrokeFn,
@@ -67,6 +74,7 @@ function resolveDefaultCursor(ec: EditorContext, m: MouseCoord): string {
     return 'grab';
   if (hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom, true)) return 'grab';
   if (hitInteriorObjectInRooms(state.rooms, m.px, m.py)) return 'grab';
+  if (hitStickyNote(state.stickyNotes, m.px, m.py)) return 'grab';
   if (hitFreeText(state.freeTexts, m.px, m.py)) return 'grab';
   if (hitRoom(state.rooms, m.px, m.py)) return 'move';
   return 'crosshair';
@@ -112,6 +120,18 @@ export function onMouseMove(ec: EditorContext, e: PointerEvent): void {
           const ftDir = hitFreeTextHandle(activeFt, m.px, m.py, viewport.zoom);
           if (ftDir) {
             canvas.style.cursor = ftDir + '-resize';
+            updateStatus(ec);
+            return;
+          }
+        }
+      }
+      // StickyNote handle hover
+      if (flags.activeStickyNoteId) {
+        const activeNote = findStickyNoteById(state.stickyNotes, flags.activeStickyNoteId);
+        if (activeNote) {
+          const noteDir = hitStickyNoteHandle(activeNote, m.px, m.py, viewport.zoom);
+          if (noteDir) {
+            canvas.style.cursor = noteDir + '-resize';
             updateStatus(ec);
             return;
           }
@@ -423,6 +443,26 @@ export function onMouseMove(ec: EditorContext, e: PointerEvent): void {
       ft.w = Math.max(1, snap(result.w));
       ft.h = Math.max(1, snap(result.h));
       ft.fontSize = scaleFontSize(drag.orig.fontSize, drag.orig.h, ft.h);
+    }
+  } else if (state.drag.type === 'moveStickyNote') {
+    const drag = state.drag;
+    const note = findStickyNoteById(state.stickyNotes, drag.stickyNoteId);
+    if (note) {
+      const snap = e.shiftKey ? (v: number) => v : Math.round;
+      note.gx = snap(m.gx - drag.offsetGx);
+      note.gy = snap(m.gy - drag.offsetGy);
+    }
+  } else if (state.drag.type === 'resizeStickyNote') {
+    const drag = state.drag;
+    const note = findStickyNoteById(state.stickyNotes, drag.stickyNoteId);
+    if (note) {
+      const result = computeStickyNoteResize(drag.dir, drag.orig, m.gx, m.gy);
+      const snap = e.shiftKey ? (v: number) => v : Math.round;
+      note.gx = snap(result.gx);
+      note.gy = snap(result.gy);
+      note.w = Math.max(1, snap(result.w));
+      note.h = Math.max(1, snap(result.h));
+      note.fontSize = scaleStickyNoteFontSize(drag.orig.fontSize, drag.orig.h, note.h);
     }
   } else if (state.drag.type === 'paint') {
     const stroke = findFreeStrokeById(state.freeStrokes, state.drag.strokeId);

@@ -15,6 +15,7 @@ import {
 } from '../interior-object.ts';
 import { createRoom, hitRoom, findRoomsInArea, normalizeArea } from '../room.ts';
 import { findFreeTextsInArea } from '../free-text.ts';
+import { findStickyNotesInArea } from '../sticky-note.ts';
 import { simplifyPoints } from '../free-stroke.ts';
 import { syncPairedOpening, syncAllPairedOpenings } from '../adjacency.ts';
 import type { EditorContext } from './context.ts';
@@ -171,7 +172,9 @@ export function onMouseUp(ec: EditorContext, e: PointerEvent): void {
     state.drag.type === 'adjustCameraFovAngle' ||
     state.drag.type === 'adjustCameraFovRange' ||
     state.drag.type === 'moveFreeText' ||
-    state.drag.type === 'resizeFreeText'
+    state.drag.type === 'resizeFreeText' ||
+    state.drag.type === 'moveStickyNote' ||
+    state.drag.type === 'resizeStickyNote'
   ) {
     state.drag = null;
     canvas.style.cursor = state.paintMode ? 'crosshair' : 'default';
@@ -187,9 +190,11 @@ export function onMouseUp(ec: EditorContext, e: PointerEvent): void {
     const area = normalizeArea(state.drag.start, m);
     const contained = findRoomsInArea(state.rooms, area);
     const containedFt = findFreeTextsInArea(state.freeTexts, area);
-    if (contained.length > 0 || containedFt.length > 0) {
-      // 範囲選択: 包含された部屋・FreeTextを選択
+    const containedNotes = findStickyNotesInArea(state.stickyNotes, area);
+    if (contained.length > 0 || containedFt.length > 0 || containedNotes.length > 0) {
+      // 範囲選択: 包含された部屋・FreeText・StickyNoteを選択
       flags.activeFreeTextId = undefined;
+      flags.activeStickyNoteId = undefined;
       flags.activeInteriorObjectId = undefined;
       if (!e.shiftKey) {
         clearSelection(state.selection);
@@ -199,6 +204,9 @@ export function onMouseUp(ec: EditorContext, e: PointerEvent): void {
       }
       for (const ft of containedFt) {
         state.selection.add(ft.id);
+      }
+      for (const note of containedNotes) {
+        state.selection.add(note.id);
       }
     } else if (area.w > 0 && area.h > 0) {
       // 部屋作成: 包含する部屋がなければ新規作成にフォールバック

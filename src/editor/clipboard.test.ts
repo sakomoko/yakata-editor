@@ -17,7 +17,7 @@ function ents(
   freeStrokes: FreeStroke[] = [],
   arrows: Arrow[] = [],
 ): EntitySnapshot {
-  return { rooms, freeTexts, freeStrokes, arrows };
+  return { rooms, freeTexts, freeStrokes, arrows, stickyNotes: [] };
 }
 
 function makeRoom(overrides: Partial<Room> = {}): Room {
@@ -75,6 +75,7 @@ function makeEc(
       freeTexts,
       freeStrokes,
       arrows: [],
+      stickyNotes: [],
       selection,
       history: [],
       redoHistory: [],
@@ -102,6 +103,7 @@ function makeEc(
       isPanning: false,
       activeInteriorObjectId: undefined,
       activeFreeTextId: undefined,
+      activeStickyNoteId: undefined,
       snapIndicator: null,
       clipboard: null,
       savedRedo: null,

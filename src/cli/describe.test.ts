@@ -145,7 +145,7 @@ describe('describeInterior', () => {
 
 describe('describeProject', () => {
   it('describes an empty project', () => {
-    const project: ProjectFile = { rooms: [], freeTexts: [], freeStrokes: [], arrows: [] };
+    const project: ProjectFile = { rooms: [], freeTexts: [], freeStrokes: [], arrows: [], stickyNotes: [] };
     const result = describeProject(project);
     expect(result).toContain('# プロジェクト構造');
     expect(result).toContain('## 部屋一覧 (0部屋)');
@@ -180,6 +180,7 @@ describe('describeProject', () => {
       freeTexts: [],
       freeStrokes: [],
       arrows: [],
+      stickyNotes: [],
     };
     const result = describeProject(project);
     expect(result).toContain('## 部屋一覧 (1部屋)');
@@ -200,6 +201,7 @@ describe('describeProject', () => {
       ],
       freeStrokes: [],
       arrows: [],
+      stickyNotes: [],
     };
     const result = describeProject(project);
     expect(result).toContain('## フリーテキスト (1個)');
@@ -224,6 +226,7 @@ describe('describeProject', () => {
         },
       ],
       arrows: [],
+      stickyNotes: [],
     };
     const result = describeProject(project);
     expect(result).toContain('## フリーストローク (1本)');
@@ -237,6 +240,7 @@ describe('describeProject', () => {
       freeTexts: [],
       freeStrokes: [],
       arrows: [],
+      stickyNotes: [],
     };
     const result = describeProject(project);
     expect(result).toContain('(名前なし)');
@@ -248,6 +252,7 @@ describe('describeProject', () => {
       freeTexts: [],
       freeStrokes: [],
       arrows: [],
+      stickyNotes: [],
     };
     const result = describeProject(project);
     expect(result).toContain('1F');
@@ -271,6 +276,7 @@ describe('describeProject', () => {
           label: '犯人の動線',
         },
       ],
+      stickyNotes: [],
     };
     const result = describeProject(project);
     expect(result).toContain('## 矢印 (1本)');
@@ -295,6 +301,7 @@ describe('describeProject', () => {
           lineWidth: 1,
         },
       ],
+      stickyNotes: [],
     };
     const result = describeProject(project);
     expect(result).toContain('矢印1: (0, 0) → (4, 0) [#0055cc, 1px]');

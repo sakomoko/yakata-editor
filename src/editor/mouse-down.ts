@@ -1,5 +1,5 @@
-import type { FreeText, GroupScaleOriginal, Room } from '../types.ts';
-import { findFreeTextById, findRoomById } from '../lookup.ts';
+import type { FreeText, StickyNote, GroupScaleOriginal, Room } from '../types.ts';
+import { findFreeTextById, findRoomById, findStickyNoteById } from '../lookup.ts';
 import { GRID } from '../grid.ts';
 import {
   hitHandle,
@@ -14,15 +14,25 @@ import { hitWallObjectInRooms, hitWallObjectEdgeInRooms } from '../wall-object.t
 import { hitInteriorObjectInRooms, hitInteriorObjectHandleInRooms } from '../interior-object.ts';
 import { hitCameraHandleInRooms } from '../camera.ts';
 import { hitFreeText, hitFreeTextHandle } from '../free-text.ts';
+import {
+  hitStickyNote,
+  hitStickyNoteHandle,
+  hitStickyNoteCheckbox,
+  toggleStickyNoteCheckbox,
+} from '../sticky-note.ts';
 import { createFreeStroke, hitFreeStrokeInList, STROKE_HIT_TOLERANCE_PX } from '../free-stroke.ts';
 import { hitArrowInList, hitArrowPoint } from '../arrow.ts';
 import { expandWithLinked } from '../link.ts';
 import { hitVertexHandle, edgeResizeCursor } from '../polygon.ts';
 import type { EditorContext } from './context.ts';
 import { getEntitySnapshot } from './utils.ts';
+import { isInlineEditing } from './inline-edit.ts';
 
 export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
   const { canvas, state, viewport, flags } = ec;
+
+  // インライン編集中は外側クリック（onOutsideClick）で自動確定されるため、ここでは何もしない
+  if (isInlineEditing()) return;
 
   // Prevent browser from synthesizing mouse events from touch
   if (e.pointerType === 'touch') {
@@ -132,6 +142,32 @@ export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
           },
         };
         canvas.style.cursor = ftHandleDir + '-resize';
+        ec.render();
+        return;
+      }
+    }
+  }
+
+  // Check StickyNote handle hit (resize) — only for active StickyNote
+  if (flags.activeStickyNoteId) {
+    const activeNote = findStickyNoteById(state.stickyNotes, flags.activeStickyNoteId);
+    if (activeNote) {
+      const noteHandleDir = hitStickyNoteHandle(activeNote, m.px, m.py, viewport.zoom);
+      if (noteHandleDir) {
+        flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
+        state.drag = {
+          type: 'resizeStickyNote',
+          stickyNoteId: activeNote.id,
+          dir: noteHandleDir,
+          orig: {
+            gx: activeNote.gx,
+            gy: activeNote.gy,
+            w: activeNote.w,
+            h: activeNote.h,
+            fontSize: activeNote.fontSize,
+          },
+        };
+        canvas.style.cursor = noteHandleDir + '-resize';
         ec.render();
         return;
       }
@@ -380,6 +416,42 @@ export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
     }
   }
 
+  function startStickyNoteDrag(note: StickyNote): void {
+    flags.activeStickyNoteId = note.id;
+    if (shift) {
+      toggleSelection(state.selection, note.id);
+    } else {
+      selectSingle(state.selection, note.id);
+    }
+    flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
+    state.drag = {
+      type: 'moveStickyNote',
+      stickyNoteId: note.id,
+      offsetGx: m.gx - note.gx,
+      offsetGy: m.gy - note.gy,
+    };
+    canvas.style.cursor = 'grabbing';
+    ec.render();
+  }
+
+  // Check StickyNote hit (topmost layer — above front FreeText)
+  const noteHit = hitStickyNote(state.stickyNotes, m.px, m.py);
+  if (noteHit) {
+    // Check if a checkbox was clicked
+    const cbLine = hitStickyNoteCheckbox(noteHit, m.px, m.py);
+    if (cbLine >= 0) {
+      ec.commitChange(() => {
+        noteHit.label = toggleStickyNoteCheckbox(noteHit, cbLine);
+      });
+      flags.activeStickyNoteId = noteHit.id;
+      selectSingle(state.selection, noteHit.id);
+      ec.render();
+      return;
+    }
+    startStickyNoteDrag(noteHit);
+    return;
+  }
+
   // Check front-layer FreeText hit
   const frontFtHit = hitFreeText(state.freeTexts, m.px, m.py, 'front');
   if (frontFtHit) {
@@ -388,6 +460,7 @@ export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
   }
 
   flags.activeFreeTextId = undefined;
+  flags.activeStickyNoteId = undefined;
   const r = hitRoom(state.rooms, m.px, m.py);
   if (r) {
     if (shift) {

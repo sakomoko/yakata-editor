@@ -2,6 +2,8 @@ import { findFreeTextById, findArrowById } from '../lookup.ts';
 import { hitRoom } from '../room.ts';
 import { hitInteriorObjectInRooms } from '../interior-object.ts';
 import { hitFreeText } from '../free-text.ts';
+import { hitStickyNote } from '../sticky-note.ts';
+import { startInlineEdit } from './inline-edit.ts';
 import { hitArrowInList, hitArrowPoint, hitArrowSegment } from '../arrow.ts';
 import { GRID } from '../grid.ts';
 import { selectSingle } from '../selection.ts';
@@ -65,6 +67,13 @@ export async function onDblClick(ec: EditorContext, e: MouseEvent): Promise<void
       }
       return;
     }
+  }
+
+  // StickyNote double-click → inline edit
+  const noteHit = hitStickyNote(ec.state.stickyNotes, m.px, m.py);
+  if (noteHit) {
+    startInlineEdit(ec, noteHit);
+    return;
   }
 
   // FreeText double-click → edit (front layer first, then back)

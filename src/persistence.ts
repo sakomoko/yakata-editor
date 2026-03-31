@@ -5,6 +5,8 @@ import type {
   GridPoint,
   FreeText,
   FreeStroke,
+  StickyNote,
+  StickyNoteColor,
   WallObject,
   WallWindow,
   WallDoor,
@@ -251,6 +253,41 @@ export function ensureFreeTextIds(objects: unknown[]): FreeText[] {
     });
 }
 
+const VALID_STICKY_NOTE_COLORS = new Set(['yellow', 'pink', 'green', 'blue']);
+
+/** @internal Exported for testing */
+export function ensureStickyNoteIds(objects: unknown[]): StickyNote[] {
+  return objects
+    .filter((o) => {
+      const obj = o as Record<string, unknown>;
+      return (
+        typeof obj.gx === 'number' &&
+        typeof obj.gy === 'number' &&
+        typeof obj.w === 'number' &&
+        typeof obj.h === 'number' &&
+        typeof obj.label === 'string'
+      );
+    })
+    .map((o): StickyNote => {
+      const obj = o as Record<string, unknown>;
+      return {
+        id: typeof obj.id === 'string' ? obj.id : crypto.randomUUID(),
+        gx: obj.gx as number,
+        gy: obj.gy as number,
+        w: obj.w as number,
+        h: obj.h as number,
+        label: obj.label as string,
+        fontSize:
+          typeof obj.fontSize === 'number'
+            ? Math.max(FONT_SIZE_MIN, Math.min(FONT_SIZE_MAX, obj.fontSize))
+            : 12,
+        color: VALID_STICKY_NOTE_COLORS.has(obj.color as string)
+          ? (obj.color as StickyNoteColor)
+          : 'yellow',
+      };
+    });
+}
+
 const VALID_HEX_COLOR = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 
 /** @internal Exported for testing */
@@ -394,7 +431,7 @@ const WARNING_UNRECOGNIZED_FORMAT =
 export function parseStorageData(parsed: unknown): StorageData {
   // 旧形式: 配列（rooms only）
   if (Array.isArray(parsed)) {
-    return { rooms: ensureIds(parsed), freeTexts: [], freeStrokes: [], arrows: [] };
+    return { rooms: ensureIds(parsed), freeTexts: [], freeStrokes: [], arrows: [], stickyNotes: [] };
   }
   // 新形式: { rooms, freeTexts, freeStrokes, arrows }
   if (parsed && typeof parsed === 'object') {
@@ -405,6 +442,7 @@ export function parseStorageData(parsed: unknown): StorageData {
         freeTexts: [],
         freeStrokes: [],
         arrows: [],
+        stickyNotes: [],
         warning: WARNING_UNRECOGNIZED_FORMAT,
       };
     }
@@ -413,6 +451,7 @@ export function parseStorageData(parsed: unknown): StorageData {
       freeTexts: Array.isArray(obj.freeTexts) ? ensureFreeTextIds(obj.freeTexts) : [],
       freeStrokes: Array.isArray(obj.freeStrokes) ? ensureFreeStrokeIds(obj.freeStrokes) : [],
       arrows: Array.isArray(obj.arrows) ? ensureArrowIds(obj.arrows) : [],
+      stickyNotes: Array.isArray(obj.stickyNotes) ? ensureStickyNoteIds(obj.stickyNotes) : [],
     };
   }
   return {
@@ -420,6 +459,7 @@ export function parseStorageData(parsed: unknown): StorageData {
     freeTexts: [],
     freeStrokes: [],
     arrows: [],
+    stickyNotes: [],
     warning: WARNING_UNRECOGNIZED_FORMAT,
   };
 }

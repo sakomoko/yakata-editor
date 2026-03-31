@@ -112,6 +112,19 @@ export interface FreeText {
   zLayer: 'front' | 'back';
 }
 
+export type StickyNoteColor = 'yellow' | 'pink' | 'green' | 'blue';
+
+export interface StickyNote {
+  id: string;
+  gx: number;
+  gy: number;
+  w: number;
+  h: number;
+  label: string;
+  fontSize: number;
+  color: StickyNoteColor;
+}
+
 export interface FreeStroke {
   id: string;
   /** ピクセル座標の点列（ワールド座標系） */
@@ -136,6 +149,7 @@ export interface EntitySnapshot {
   freeTexts: FreeText[];
   freeStrokes: FreeStroke[];
   arrows: Arrow[];
+  stickyNotes: StickyNote[];
 }
 
 export interface FreeTextEditData {
@@ -152,6 +166,7 @@ export interface Project {
   freeTexts?: FreeText[];
   freeStrokes?: FreeStroke[];
   arrows?: Arrow[];
+  stickyNotes?: StickyNote[];
 }
 
 export interface MouseCoord {
@@ -305,6 +320,18 @@ export type DragState =
       type: 'drawArrow';
       startPoint: GridPoint;
     }
+  | {
+      type: 'moveStickyNote';
+      stickyNoteId: string;
+      offsetGx: number;
+      offsetGy: number;
+    }
+  | {
+      type: 'resizeStickyNote';
+      stickyNoteId: string;
+      dir: ResizeDirection;
+      orig: { gx: number; gy: number; w: number; h: number; fontSize: number };
+    }
   | null;
 
 export interface EditorState {
@@ -312,6 +339,7 @@ export interface EditorState {
   freeTexts: FreeText[];
   freeStrokes: FreeStroke[];
   arrows: Arrow[];
+  stickyNotes: StickyNote[];
   selection: Set<string>;
   history: string[];
   redoHistory: string[];
@@ -338,6 +366,7 @@ export interface ProjectData {
   freeTexts: FreeText[];
   freeStrokes: FreeStroke[];
   arrows?: Arrow[];
+  stickyNotes?: StickyNote[];
   viewport: { zoom: number; panX: number; panY: number };
   history: string[];
   redoHistory?: string[];

@@ -11,6 +11,7 @@ export function getEntitySnapshot(state: EditorState): EntitySnapshot {
     freeTexts: state.freeTexts,
     freeStrokes: state.freeStrokes,
     arrows: state.arrows,
+    stickyNotes: state.stickyNotes,
   };
 }
 
@@ -26,6 +27,7 @@ export function switchToRoomMode(ec: EditorContext): void {
   state.arrowMode = false;
   flags.activeInteriorObjectId = undefined;
   flags.activeFreeTextId = undefined;
+  flags.activeStickyNoteId = undefined;
   canvas.style.cursor = 'default';
   ec.render();
   if (wasPaint) ec.callbacks.onPaintModeChange?.(false);

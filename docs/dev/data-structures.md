@@ -164,6 +164,35 @@ interface FreeStroke {
 
 グリッドスナップなし。描画時の `lineWidth` はズームレベルで割ることで、画面上の見た目の太さを一定に保つ。ヒット判定は各線分への最短距離で判定し、`lineWidth / 2` を許容距離に加算。
 
+## StickyNote
+
+間取り図上に配置する付箋。マークダウン構文対応のチェックリスト用途を想定。テキストはHTMLオーバーレイでネイティブレンダリングされる。
+
+```typescript
+type StickyNoteColor = 'yellow' | 'pink' | 'green' | 'blue';
+
+interface StickyNote {
+  id: string;              // UUID
+  gx: number;              // グリッド座標 X
+  gy: number;              // グリッド座標 Y
+  w: number;               // 幅（グリッド単位）
+  h: number;               // 高さ（グリッド単位）
+  label: string;           // テキスト内容（マークダウン構文対応）
+  fontSize: number;        // フォントサイズ（ピクセル）
+  color: StickyNoteColor;  // 付箋の色プリセット
+}
+```
+
+| プロパティ | 説明 |
+|-----------|------|
+| `gx`, `gy` | 配置位置（グリッド座標） |
+| `w`, `h` | サイズ（グリッド単位） |
+| `label` | テキスト内容。`# 見出し`、`- [ ] チェックボックス`、`- [x] 完了`、`- 箇条書き`、通常テキストを記述可能 |
+| `fontSize` | フォントサイズ（4〜80px、デフォルト12px） |
+| `color` | 付箋の色（`'yellow'`/`'pink'`/`'green'`/`'blue'`）。Canvas上の背景色と枠線色、HTMLオーバーレイの表示に使用 |
+
+デフォルトサイズは5×5グリッド。常に最前面レイヤー（部屋・FreeTextの上、矢印・ストロークの下）に描画。Canvas上で背景・枠線を描画し、テキスト部分はHTMLオーバーレイでレンダリングする2層構成。
+
 ## GridPoint
 
 グリッド座標の点を表す型。四角形の頂点など、グリッド座標での位置指定に使用。
@@ -252,6 +281,8 @@ type DragState =
 | `resizeInteriorObject` | 部屋内オブジェクトのハンドルをドラッグ | オブジェクトのサイズを変更（`snapToGrid`で階段は最小1×1グリッドスナップ、マーカー・カメラは最小0.25グリッドフリー） |
 | `moveFreeText` | 自由配置テキストをドラッグ | FreeTextを移動（グリッドスナップ） |
 | `resizeFreeText` | FreeTextの四隅ハンドルをドラッグ | FreeTextのサイズを変更（最小1×1グリッド） |
+| `moveStickyNote` | 付箋をドラッグ | 付箋を移動（グリッドスナップ） |
+| `resizeStickyNote` | 付箋の四隅ハンドルをドラッグ | 付箋のサイズを変更（フォントサイズが高さに連動） |
 | `rotateCameraAngle` | カメラの回転ハンドルをドラッグ | カメラの向き（angle）を変更 |
 | `adjustCameraFovAngle` | カメラの広がりハンドルをドラッグ | 視野の半角（fovAngle）を調整 |
 | `adjustCameraFovRange` | カメラの距離ハンドルをドラッグ | 視野の到達距離（fovRange）を調整 |
@@ -273,7 +304,9 @@ interface EditorState {
   rooms: Room[];           // 全部屋データ
   freeTexts: FreeText[];   // 自由配置テキストデータ
   freeStrokes: FreeStroke[]; // フリーペイントストロークデータ
-  selection: Set<string>;  // 選択中の部屋/FreeText/FreeStrokeのID
+  arrows: Arrow[];         // 矢印データ
+  stickyNotes: StickyNote[]; // 付箋データ
+  selection: Set<string>;  // 選択中の部屋/FreeText/FreeStroke/Arrow/StickyNoteのID
   history: string[];       // Undoスナップショット（JSON文字列、最大50件）
   redoHistory: string[];   // Redoスナップショット（JSON文字列、最大50件）
   drag: DragState;         // 現在のドラッグ操作

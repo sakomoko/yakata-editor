@@ -6,9 +6,11 @@ import type { EditorContext } from './context.ts';
 import { commitChange, undo, redo, deleteSelectedEntities } from './project.ts';
 import { copySelection, pasteClipboard, duplicateSelection } from './clipboard.ts';
 import { getEntitySnapshot, switchToRoomMode } from './utils.ts';
+import { isInlineEditing } from './inline-edit.ts';
 
 export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
   if (e.isComposing) return;
+  if (isInlineEditing()) return;
 
   const { canvas, state, viewport, flags } = ec;
 
@@ -137,7 +139,17 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
   }
 
   if ((e.key === 'Delete' || e.key === 'Backspace') && document.activeElement === document.body) {
-    // Delete active FreeText first
+    // Delete active StickyNote first
+    if (flags.activeStickyNoteId) {
+      e.preventDefault();
+      const activeId = flags.activeStickyNoteId;
+      commitChange(ec, () => {
+        state.stickyNotes = state.stickyNotes.filter((n) => n.id !== activeId);
+      });
+      flags.activeStickyNoteId = undefined;
+      return;
+    }
+    // Delete active FreeText
     if (flags.activeFreeTextId) {
       e.preventDefault();
       const activeId = flags.activeFreeTextId;

@@ -27,6 +27,8 @@ import { onMouseMove } from './mouse-move.ts';
 import { onMouseUp } from './mouse-up.ts';
 import { onContextMenu } from './context-menu-handler.ts';
 import { initGestures } from './gesture.ts';
+import { destroyStickyNoteOverlays } from './sticky-note-overlay.ts';
+import { cancelInlineEdit } from './inline-edit.ts';
 
 export type { EditorAPI, RoomEditData, MarkerEditData, ContextMenuRequest };
 
@@ -43,6 +45,7 @@ export function initEditor(
     freeTexts: initialData?.freeTexts ?? [],
     freeStrokes: initialData?.freeStrokes ?? [],
     arrows: initialData?.arrows ?? [],
+    stickyNotes: initialData?.stickyNotes ?? [],
     selection: new Set(),
     history: initialData?.history ?? [],
     redoHistory: initialData?.redoHistory ?? [],
@@ -64,6 +67,7 @@ export function initEditor(
     isPanning: false,
     activeInteriorObjectId: undefined,
     activeFreeTextId: undefined,
+    activeStickyNoteId: undefined,
     snapIndicator: null,
     clipboard: null,
     savedRedo: null,
@@ -135,6 +139,8 @@ export function initEditor(
     resize: resizeCanvas,
     destroy() {
       destroyGestures();
+      cancelInlineEdit();
+      destroyStickyNoteOverlays();
       canvas.removeEventListener('dblclick', handleDblClick);
       canvas.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
@@ -146,6 +152,7 @@ export function initEditor(
       freeTexts: state.freeTexts,
       freeStrokes: state.freeStrokes,
       arrows: state.arrows,
+      stickyNotes: state.stickyNotes,
       history: state.history,
       redoHistory: state.redoHistory,
     }),
@@ -157,6 +164,7 @@ export function initEditor(
         clearSelection(state.selection);
         flags.activeInteriorObjectId = undefined;
         flags.activeFreeTextId = undefined;
+        flags.activeStickyNoteId = undefined;
         ec.callbacks.onArrowModeChange?.(false);
       }
       canvas.style.cursor = on ? 'crosshair' : 'default';
@@ -185,6 +193,7 @@ export function initEditor(
         clearSelection(state.selection);
         flags.activeInteriorObjectId = undefined;
         flags.activeFreeTextId = undefined;
+        flags.activeStickyNoteId = undefined;
         ec.callbacks.onPaintModeChange?.(false);
       }
       canvas.style.cursor = on ? 'crosshair' : 'default';
@@ -206,10 +215,13 @@ export function initEditor(
       arrowLineWidth: state.arrowLineWidth,
     }),
     loadProjectState: (data: ProjectData) => {
+      cancelInlineEdit();
+      destroyStickyNoteOverlays();
       state.rooms = data.rooms;
       state.freeTexts = data.freeTexts;
       state.freeStrokes = data.freeStrokes;
       state.arrows = data.arrows ?? [];
+      state.stickyNotes = data.stickyNotes ?? [];
       state.history = data.history;
       state.redoHistory = data.redoHistory ?? [];
       state.drag = null;
@@ -219,6 +231,7 @@ export function initEditor(
       flags.isPanning = false;
       flags.activeInteriorObjectId = undefined;
       flags.activeFreeTextId = undefined;
+      flags.activeStickyNoteId = undefined;
       flags.snapIndicator = null;
       flags.drawArrowPreview = null;
       viewport.zoom = data.viewport.zoom;
