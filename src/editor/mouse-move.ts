@@ -30,6 +30,7 @@ import {
   computeInteriorObjectMoveUnclamped,
   computeInteriorObjectResize,
   clampAllInteriorObjects,
+  FONT_SIZE_MIN,
 } from '../interior-object.ts';
 import {
   findCameraInRoom,
@@ -417,6 +418,7 @@ export function onMouseMove(ec: EditorContext, e: PointerEvent): void {
       ft.gy = snap(result.gy);
       ft.w = Math.max(1, snap(result.w));
       ft.h = Math.max(1, snap(result.h));
+      ft.fontSize = Math.max(FONT_SIZE_MIN, Math.round(drag.orig.fontSize * (ft.h / drag.orig.h)));
     }
   } else if (state.drag.type === 'paint') {
     const stroke = findFreeStrokeById(state.freeStrokes, state.drag.strokeId);

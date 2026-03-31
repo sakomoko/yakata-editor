@@ -123,7 +123,7 @@ export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
           type: 'resizeFreeText',
           freeTextId: activeFt.id,
           dir: ftHandleDir,
-          orig: { gx: activeFt.gx, gy: activeFt.gy, w: activeFt.w, h: activeFt.h },
+          orig: { gx: activeFt.gx, gy: activeFt.gy, w: activeFt.w, h: activeFt.h, fontSize: activeFt.fontSize },
         };
         canvas.style.cursor = ftHandleDir + '-resize';
         ec.render();
