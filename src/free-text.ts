@@ -1,5 +1,6 @@
 import type { FreeText, ResizeDirection } from './types.ts';
 import { GRID, HANDLE_SIZE, HANDLE_HIT } from './grid.ts';
+import { FONT_SIZE_MIN, FONT_SIZE_MAX } from './interior-object.ts';
 
 const MIN_SIZE = 1;
 const DEFAULT_FONT_SIZE = 14;
@@ -175,4 +176,16 @@ export function computeFreeTextResize(
   }
 
   return { gx: newGx, gy: newGy, w: newW, h: newH };
+}
+
+/**
+ * リサイズ時のフォントサイズを高さ比例でスケーリングする。
+ * origH が 0 以下の場合は origFontSize をそのまま返す。
+ */
+export function scaleFontSize(origFontSize: number, origH: number, newH: number): number {
+  if (origH <= 0) return origFontSize;
+  return Math.min(
+    FONT_SIZE_MAX,
+    Math.max(FONT_SIZE_MIN, Math.round(origFontSize * (newH / origH))),
+  );
 }

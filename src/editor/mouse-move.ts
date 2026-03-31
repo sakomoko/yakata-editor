@@ -30,8 +30,6 @@ import {
   computeInteriorObjectMoveUnclamped,
   computeInteriorObjectResize,
   clampAllInteriorObjects,
-  FONT_SIZE_MIN,
-  FONT_SIZE_MAX,
 } from '../interior-object.ts';
 import {
   findCameraInRoom,
@@ -40,7 +38,12 @@ import {
   computeCameraFovRange,
   hitCameraHandleInRooms,
 } from '../camera.ts';
-import { hitFreeText, hitFreeTextHandle, computeFreeTextResize } from '../free-text.ts';
+import {
+  hitFreeText,
+  hitFreeTextHandle,
+  computeFreeTextResize,
+  scaleFontSize,
+} from '../free-text.ts';
 import {
   hitFreeStrokeInList,
   constrainToLine,
@@ -419,10 +422,7 @@ export function onMouseMove(ec: EditorContext, e: PointerEvent): void {
       ft.gy = snap(result.gy);
       ft.w = Math.max(1, snap(result.w));
       ft.h = Math.max(1, snap(result.h));
-      ft.fontSize = Math.min(
-        FONT_SIZE_MAX,
-        Math.max(FONT_SIZE_MIN, Math.round(drag.orig.fontSize * (ft.h / drag.orig.h))),
-      );
+      ft.fontSize = scaleFontSize(drag.orig.fontSize, drag.orig.h, ft.h);
     }
   } else if (state.drag.type === 'paint') {
     const stroke = findFreeStrokeById(state.freeStrokes, state.drag.strokeId);

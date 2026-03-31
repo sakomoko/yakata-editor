@@ -5,6 +5,7 @@ import {
   hitFreeTextHandle,
   findFreeTextsInArea,
   computeFreeTextResize,
+  scaleFontSize,
 } from './free-text.ts';
 import { GRID } from './grid.ts';
 
@@ -132,5 +133,40 @@ describe('computeFreeTextResize', () => {
     expect(result.gy).toBe(orig.gy + orig.h - 1);
     expect(result.w).toBe(1);
     expect(result.h).toBe(1);
+  });
+});
+
+describe('scaleFontSize', () => {
+  it('should scale font size proportionally to height', () => {
+    // 高さが2倍ならフォントサイズも2倍
+    expect(scaleFontSize(14, 3, 6)).toBe(28);
+  });
+
+  it('should scale down proportionally', () => {
+    // 高さが半分ならフォントサイズも半分
+    expect(scaleFontSize(20, 4, 2)).toBe(10);
+  });
+
+  it('should clamp to FONT_SIZE_MIN (4)', () => {
+    // 極端に小さくなるケース
+    expect(scaleFontSize(14, 10, 1)).toBe(4);
+  });
+
+  it('should clamp to FONT_SIZE_MAX (80)', () => {
+    // 極端に大きくなるケース
+    expect(scaleFontSize(14, 1, 100)).toBe(80);
+  });
+
+  it('should return origFontSize when origH is 0', () => {
+    expect(scaleFontSize(14, 0, 5)).toBe(14);
+  });
+
+  it('should return origFontSize when origH is negative', () => {
+    expect(scaleFontSize(14, -1, 5)).toBe(14);
+  });
+
+  it('should round to nearest integer', () => {
+    // 14 * (5 / 3) = 23.333... → 23
+    expect(scaleFontSize(14, 3, 5)).toBe(23);
   });
 });
