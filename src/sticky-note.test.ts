@@ -120,6 +120,21 @@ describe('hitStickyNoteCheckbox', () => {
     // First line is heading, clicking at its Y position
     expect(hitStickyNoteCheckbox(note, 6, 8)).toBe(-1);
   });
+
+  it('returns line index when clicking checkbox area', () => {
+    // Line 0 is heading (fontSize=12): curY advances by Math.round(12*1.3)*1.3 = 20.8
+    // Line 1 is checkbox: cbSize=12*0.85=10.2, lineHeight=12*1.3=15.6
+    // cbX=4, cbY=4+20.8+(15.6-10.2)/2 = 27.5
+    // Clicking at (10, 32) should be inside the checkbox hit area
+    expect(hitStickyNoteCheckbox(note, 10, 32)).toBe(1);
+  });
+
+  it('returns -1 when clicking normal text line', () => {
+    // Line 2 is normal text, not a checkbox
+    // curY after heading + checkbox line = 4 + 20.8 + 15.6 = 40.4
+    // Clicking at center of normal text line
+    expect(hitStickyNoteCheckbox(note, 10, 48)).toBe(-1);
+  });
 });
 
 describe('computeStickyNoteResize', () => {

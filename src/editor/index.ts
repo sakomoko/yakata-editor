@@ -139,6 +139,7 @@ export function initEditor(
     resize: resizeCanvas,
     destroy() {
       destroyGestures();
+      cancelInlineEdit();
       destroyStickyNoteOverlays();
       canvas.removeEventListener('dblclick', handleDblClick);
       canvas.removeEventListener('contextmenu', handleContextMenu);

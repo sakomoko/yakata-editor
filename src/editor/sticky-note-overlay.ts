@@ -9,6 +9,10 @@ const overlayMap = new Map<string, HTMLDivElement>();
 /** 全付箋オーバーレイを現在の状態に合わせて更新する。render() の最後に呼ぶ。 */
 export function updateStickyNoteOverlays(ec: EditorContext): void {
   const { state, viewport, canvas } = ec;
+
+  // 付箋もオーバーレイも無ければ何もしない（getBoundingClientRect の不要な呼び出しを避ける）
+  if (state.stickyNotes.length === 0 && overlayMap.size === 0) return;
+
   const canvasRect = canvas.getBoundingClientRect();
 
   const activeIds = new Set(state.stickyNotes.map((n) => n.id));

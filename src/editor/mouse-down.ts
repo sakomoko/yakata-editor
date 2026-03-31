@@ -31,7 +31,7 @@ import { isInlineEditing } from './inline-edit.ts';
 export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
   const { canvas, state, viewport, flags } = ec;
 
-  // インライン編集中はblurで自動確定されるため、ここでは何もしない
+  // インライン編集中は外側クリック（onOutsideClick）で自動確定されるため、ここでは何もしない
   if (isInlineEditing()) return;
 
   // Prevent browser from synthesizing mouse events from touch
