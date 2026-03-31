@@ -6,14 +6,19 @@ import { commitChange } from './project.ts';
 
 let activeContainer: HTMLDivElement | null = null;
 let activeCleanup: (() => void) | null = null;
+let activeRestore: (() => void) | null = null;
 
 /** インライン編集中かどうか */
 export function isInlineEditing(): boolean {
   return activeContainer !== null;
 }
 
-/** インライン編集を強制終了（キャンセル扱い） */
+/** インライン編集を強制終了（キャンセル扱い。プレビュー値を元に戻す） */
 export function cancelInlineEdit(): void {
+  if (activeRestore) {
+    activeRestore();
+    activeRestore = null;
+  }
   if (activeCleanup) {
     activeCleanup();
     activeCleanup = null;
@@ -193,6 +198,7 @@ export function startInlineEdit(ec: EditorContext, note: StickyNote): void {
     container.remove();
     activeContainer = null;
     activeCleanup = null;
+    activeRestore = null;
     document.removeEventListener('mousedown', onOutsideClick, true);
 
     const target = ec.state.stickyNotes.find((n) => n.id === noteId);
@@ -232,6 +238,14 @@ export function startInlineEdit(ec: EditorContext, note: StickyNote): void {
   // cancelInlineEdit から呼べるようにクリーンアップ関数を登録
   activeCleanup = () => {
     document.removeEventListener('mousedown', onOutsideClick, true);
+  };
+  // cancelInlineEdit でプレビュー値を復元するための関数
+  activeRestore = () => {
+    const target = ec.state.stickyNotes.find((n) => n.id === noteId);
+    if (target) {
+      target.fontSize = origFontSize;
+      target.color = origColor;
+    }
   };
 
   textarea.addEventListener('keydown', (e) => {
