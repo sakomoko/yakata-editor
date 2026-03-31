@@ -79,7 +79,8 @@ Canvas 再描画 + App.tsx → project-store.ts → localStorage 保存
 
 ### サーバーサイド（開発時のみ）
 
-- **server/api-plugin.ts** — Viteプラグイン。`configureServer` フックでREST APIミドルウェアを登録。`GET/POST/PUT/DELETE /api/projects` エンドポイントを提供
+- **server/api-plugin.ts** — Viteプラグイン。`configureServer` フックでREST APIミドルウェアを登録。ルーティング・リクエスト解析を担当し、ハンドラロジックは `ssrLoadModule` で `api-handler.ts` を動的ロード（HMR対応）
+- **server/api-handler.ts** — REST APIハンドラ本体。`handleApi()` で `GET/POST/PUT/DELETE /api/projects` を処理。`ssrLoadModule` 経由で読み込まれるためファイル変更が即時反映される
 - **server/project-store-fs.ts** — ファイルベースのプロジェクトストレージ。`data/index.json`（メタデータ）と `data/projects/{id}.json`（プロジェクトデータ）をatomic write（一時ファイル→rename）で読み書き。`persistence.ts` のバリデーション関数を再利用
 
 ### CLIツール
@@ -116,7 +117,7 @@ main.ts
   └─ style.css
 
 server/api-plugin.ts (Viteプラグイン)
-  └─ server/project-store-fs.ts → persistence.ts, viewport.ts
+  └─ [ssrLoadModule] server/api-handler.ts → persistence.ts, shared/project-utils.ts, server/project-store-fs.ts
 
 cli/describe.ts → persistence.ts, adjacency.ts
 cli/validate.ts → persistence.ts

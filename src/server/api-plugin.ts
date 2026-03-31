@@ -2,17 +2,8 @@
 import type { Plugin, ViteDevServer } from 'vite';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import * as path from 'node:path';
-import { parseStorageData } from '../persistence.ts';
-import { isValidProjectMeta, UUID_RE, parseViewport } from '../shared/project-utils.ts';
-import {
-  setDataDir,
-  loadProjectIndex,
-  saveProjectIndex,
-  loadProjectData,
-  saveProjectData,
-  deleteProject,
-  createNewProject,
-} from './project-store-fs.ts';
+import { UUID_RE } from '../shared/project-utils.ts';
+import { setDataDir } from './project-store-fs.ts';
 
 const MAX_BODY_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -65,7 +56,6 @@ export function yakataApiPlugin(): Plugin {
           try {
             const pathPart = url.replace(/\?.*$/, '');
             const segments = pathPart.split('/').filter(Boolean);
-            // segments: ['api', 'projects'] or ['api', 'projects', ':id']
             const projectId = segments.length >= 3 ? segments[2] : null;
 
             if (projectId && !UUID_RE.test(projectId)) {
@@ -73,95 +63,23 @@ export function yakataApiPlugin(): Plugin {
               return;
             }
 
-            if (method === 'GET' && !projectId) {
-              const index = loadProjectIndex();
-              sendJson(res, 200, index);
-              return;
-            }
+            const body =
+              method === 'POST' || method === 'PUT' ? await readBody(req) : null;
 
-            if (method === 'PUT' && !projectId) {
-              const body = await readBody(req);
-              const parsed = JSON.parse(body) as unknown;
-              if (!Array.isArray(parsed) || !parsed.every(isValidProjectMeta)) {
-                sendJson(res, 400, { error: 'Expected array of ProjectMeta' });
-                return;
-              }
-              saveProjectIndex(parsed);
-              sendJson(res, 200, { ok: true });
-              return;
-            }
+            // ssrLoadModule で毎リクエスト最新のハンドラを読み込む（HMR対応）
+            const handlerModule = await server.ssrLoadModule(
+              '/src/server/api-handler.ts',
+            );
+            const { handleApi } = handlerModule as {
+              handleApi: (
+                method: string,
+                projectId: string | null,
+                body: string | null,
+              ) => Promise<{ status: number; body: unknown }>;
+            };
 
-            if (method === 'POST' && !projectId) {
-              const body = await readBody(req);
-              const parsed = body.trim() ? (JSON.parse(body) as Record<string, unknown>) : {};
-              const name = typeof parsed.name === 'string' ? parsed.name : undefined;
-              const result = createNewProject(name);
-              sendJson(res, 201, result);
-              return;
-            }
-
-            if (method === 'GET' && projectId) {
-              const index = loadProjectIndex();
-              const meta = index.find((m) => m.id === projectId);
-              if (!meta) {
-                sendJson(res, 404, { error: 'Not found' });
-                return;
-              }
-              const result = loadProjectData(projectId);
-              if (!result) {
-                sendJson(res, 404, { error: 'Data not found' });
-                return;
-              }
-              sendJson(res, 200, { meta, data: result.data });
-              return;
-            }
-
-            if (method === 'PUT' && projectId) {
-              const index = loadProjectIndex();
-              const meta = index.find((m) => m.id === projectId);
-              if (!meta) {
-                sendJson(res, 404, { error: 'Project not found' });
-                return;
-              }
-              const body = await readBody(req);
-              const parsed = JSON.parse(body) as unknown;
-              const obj = parsed as Record<string, unknown>;
-              if (!parsed || typeof parsed !== 'object' || !Array.isArray(obj.rooms)) {
-                sendJson(res, 400, { error: 'Invalid project data: rooms array required' });
-                return;
-              }
-              const validated = parseStorageData({
-                rooms: obj.rooms,
-                freeTexts: obj.freeTexts,
-                freeStrokes: obj.freeStrokes,
-                arrows: obj.arrows,
-                stickyNotes: obj.stickyNotes,
-              });
-              const data = {
-                rooms: validated.rooms,
-                freeTexts: validated.freeTexts,
-                freeStrokes: validated.freeStrokes,
-                arrows: validated.arrows,
-                stickyNotes: validated.stickyNotes,
-                viewport: parseViewport(obj.viewport),
-                history: Array.isArray(obj.history)
-                  ? (obj.history as unknown[]).filter((h): h is string => typeof h === 'string')
-                  : [],
-              };
-              saveProjectData(projectId, data);
-              meta.updatedAt = Date.now();
-              saveProjectIndex(index);
-              sendJson(res, 200, { ok: true });
-              return;
-            }
-
-            if (method === 'DELETE' && projectId) {
-              deleteProject(projectId);
-              sendJson(res, 200, { ok: true });
-              return;
-            }
-
-            sendJson(res, 405, { error: 'Method not allowed' });
+            const result = await handleApi(method, projectId, body);
+            sendJson(res, result.status, result.body);
           } catch (e) {
             const message = e instanceof Error ? e.message : 'Internal error';
             sendJson(res, 500, { error: message });

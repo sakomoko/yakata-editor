@@ -63,9 +63,10 @@ Canvas上でのマウス操作 → editor/ のイベントハンドラ → state
 - **TabBar.tsx** — タブバーコンポーネント（タブ切り替え・追加・閉じ・リネーム）
 - **ProjectListModal.tsx** — プロジェクト一覧モーダル（開く・削除）
 - **main.ts** — エントリポイント。DOM初期化、`initEditor()`呼出、ツールバーボタンのイベント接続
-- **server/** — 開発サーバー用モジュール（本番ビルドには含まれない）。**注意: `server/` 配下のファイルはViteのHMR対象外。変更後は開発サーバーの再起動が必要。**
-  - **server/api-plugin.ts** — ViteプラグインでREST API(`/api/projects`)を提供
-  - **server/project-store-fs.ts** — ファイルベースのプロジェクトストレージ(`data/`ディレクトリ)
+- **server/** — 開発サーバー用モジュール（本番ビルドには含まれない）
+  - **server/api-plugin.ts** — Viteプラグイン。ルーティング・リクエスト解析を担当し、ハンドラロジックは `ssrLoadModule` で動的ロード（HMR対応）
+  - **server/api-handler.ts** — APIハンドラ本体。`handleApi()` でリクエストを処理。`ssrLoadModule` 経由で読み込まれるためファイル変更が即時反映される
+  - **server/project-store-fs.ts** — ファイルベースのプロジェクトストレージ(`data/`ディレクトリ)。`api-handler.ts` からimportされるため `ssrLoadModule` 経由でHMR対応。ただし `api-plugin.ts` からも `setDataDir` が静的importされているため、このエクスポートを変更した場合は再起動が必要
 - **cli/** — CLIツール
   - **cli/describe.ts** — 間取り構造の人間/AI可読出力（`npx tsx src/cli/describe.ts`）
   - **cli/validate.ts** — プロジェクトJSONのバリデーション（`npx tsx src/cli/validate.ts`）
