@@ -63,7 +63,7 @@ Canvas上でのマウス操作 → editor/ のイベントハンドラ → state
 - **TabBar.tsx** — タブバーコンポーネント（タブ切り替え・追加・閉じ・リネーム）
 - **ProjectListModal.tsx** — プロジェクト一覧モーダル（開く・削除）
 - **main.ts** — エントリポイント。DOM初期化、`initEditor()`呼出、ツールバーボタンのイベント接続
-- **server/** — 開発サーバー用モジュール（本番ビルドには含まれない）
+- **server/** — 開発サーバー用モジュール（本番ビルドには含まれない）。**注意: `server/` 配下のファイルはViteのHMR対象外。変更後は開発サーバーの再起動が必要。**
   - **server/api-plugin.ts** — ViteプラグインでREST API(`/api/projects`)を提供
   - **server/project-store-fs.ts** — ファイルベースのプロジェクトストレージ(`data/`ディレクトリ)
 - **cli/** — CLIツール
