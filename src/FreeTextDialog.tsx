@@ -42,20 +42,30 @@ function useDraggablePaper() {
   }, []);
 
   const onTitlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!dragRef.current) return;
+    if (!dragRef.current || !paperRef.current) return;
     const dx = e.clientX - dragRef.current.startX;
     const dy = e.clientY - dragRef.current.startY;
-    posRef.current = { x: dragRef.current.origX + dx, y: dragRef.current.origY + dy };
-    if (paperRef.current) {
-      paperRef.current.style.transform = `translate(${posRef.current.x}px, ${posRef.current.y}px)`;
-    }
+    let newX = dragRef.current.origX + dx;
+    let newY = dragRef.current.origY + dy;
+    // ビューポート境界クランプ: ダイアログの一部が常に画面内に残るよう制限
+    const rect = paperRef.current.getBoundingClientRect();
+    const baseX = rect.left - posRef.current.x;
+    const baseY = rect.top - posRef.current.y;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    newX = Math.min(Math.max(newX, -(baseX + rect.width - 60)), vw - baseX - 60);
+    newY = Math.min(Math.max(newY, -baseY), vh - baseY - 40);
+    posRef.current = { x: newX, y: newY };
+    paperRef.current.style.transform = `translate(${newX}px, ${newY}px)`;
   }, []);
 
   const onTitlePointerUp = useCallback(() => {
     dragRef.current = null;
   }, []);
 
-  const onTitlePointerCancel = onTitlePointerUp;
+  const onTitlePointerCancel = useCallback(() => {
+    dragRef.current = null;
+  }, []);
 
   return {
     paperRef,
