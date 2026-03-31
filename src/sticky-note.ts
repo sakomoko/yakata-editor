@@ -116,7 +116,7 @@ export function hitStickyNote(
   px: number,
   py: number,
 ): StickyNote | null {
-  return hitBox(stickyNotes, px, py) as StickyNote | null;
+  return hitBox(stickyNotes, px, py);
 }
 
 export function hitStickyNoteHandle(
@@ -198,4 +198,103 @@ export function scaleStickyNoteFontSize(
   newH: number,
 ): number {
   return scaleProportionalFontSize(origFontSize, origH, newH);
+}
+
+/**
+ * Canvas上に付箋のテキストを描画する（PNGエクスポート用）。
+ * 通常の表示ではHTMLオーバーレイが使用されるが、PNGエクスポート時は
+ * Canvasに直接描画する必要がある。
+ */
+export function drawStickyNoteText(
+  ctx: CanvasRenderingContext2D,
+  note: StickyNote,
+  zoom: number,
+): void {
+  const rect = boxPixelRect(note);
+  const colors = STICKY_NOTE_COLORS[note.color];
+  const lines = note.label.split('\n');
+  const lineHeight = note.fontSize * 1.3;
+  const padding = LINE_PADDING;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(rect.x, rect.y, rect.w, rect.h);
+  ctx.clip();
+
+  let curY = rect.y + padding;
+
+  for (const line of lines) {
+    const parsed = parseStickyNoteLine(line);
+
+    switch (parsed.type) {
+      case 'heading': {
+        const headingSize = Math.round(note.fontSize * 1.3);
+        ctx.font = `bold ${headingSize}px ${STICKY_NOTE_FONT_FAMILY}`;
+        ctx.fillStyle = '#333';
+        ctx.textBaseline = 'top';
+        ctx.fillText(parsed.text, rect.x + padding, curY, rect.w - padding * 2);
+        curY += headingSize * 1.3;
+        break;
+      }
+      case 'checkbox': {
+        const cbSize = note.fontSize * CHECKBOX_SIZE_RATIO;
+        const cbX = rect.x + CHECKBOX_LEFT_PADDING;
+        const cbY = curY + (lineHeight - cbSize) / 2;
+
+        // Draw checkbox
+        if (parsed.checked) {
+          ctx.fillStyle = colors.border;
+          ctx.fillRect(cbX, cbY, cbSize, cbSize);
+          // Checkmark
+          ctx.fillStyle = '#fff';
+          ctx.font = `${cbSize * 0.7}px ${STICKY_NOTE_FONT_FAMILY}`;
+          ctx.textBaseline = 'middle';
+          ctx.textAlign = 'center';
+          ctx.fillText('✓', cbX + cbSize / 2, cbY + cbSize / 2);
+          ctx.textAlign = 'left';
+        } else {
+          ctx.strokeStyle = '#555';
+          ctx.lineWidth = 1 / zoom;
+          ctx.strokeRect(cbX, cbY, cbSize, cbSize);
+        }
+
+        // Draw text
+        ctx.font = `${note.fontSize}px ${STICKY_NOTE_FONT_FAMILY}`;
+        ctx.fillStyle = parsed.checked ? '#888' : '#333';
+        ctx.textBaseline = 'top';
+        const textX = cbX + cbSize + note.fontSize * 0.3;
+        ctx.fillText(parsed.text, textX, curY, rect.w - (textX - rect.x) - padding);
+        curY += lineHeight;
+        break;
+      }
+      case 'bullet': {
+        const dotSize = Math.round(note.fontSize * 0.3);
+        const dotX = rect.x + CHECKBOX_LEFT_PADDING + dotSize / 2;
+        const dotY = curY + lineHeight / 2;
+
+        ctx.fillStyle = '#555';
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, dotSize / 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.font = `${note.fontSize}px ${STICKY_NOTE_FONT_FAMILY}`;
+        ctx.fillStyle = '#333';
+        ctx.textBaseline = 'top';
+        const bulletTextX = rect.x + CHECKBOX_LEFT_PADDING + dotSize + note.fontSize * 0.3;
+        ctx.fillText(parsed.text, bulletTextX, curY, rect.w - (bulletTextX - rect.x) - padding);
+        curY += lineHeight;
+        break;
+      }
+      case 'text': {
+        ctx.font = `${note.fontSize}px ${STICKY_NOTE_FONT_FAMILY}`;
+        ctx.fillStyle = '#333';
+        ctx.textBaseline = 'top';
+        ctx.fillText(parsed.text, rect.x + padding, curY, rect.w - padding * 2);
+        curY += lineHeight;
+        break;
+      }
+    }
+  }
+
+  ctx.restore();
 }

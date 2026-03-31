@@ -6,6 +6,7 @@ import { cleanupSingletonGroups } from '../link.ts';
 import { exportPng, saveAsJson } from '../persistence.ts';
 import { getStrokeBounds } from '../free-stroke.ts';
 import { getArrowBounds } from '../arrow.ts';
+import { drawStickyNoteText } from '../sticky-note.ts';
 import { computeRoomsBoundingBox, calcAutoFontSize } from '../room.ts';
 import { syncAllPairedOpenings } from '../adjacency.ts';
 import { findRoomById } from '../lookup.ts';
@@ -226,6 +227,25 @@ export function exportAsPng(ec: EditorContext): void {
     canvas.height = Math.max(1, Math.round(exportBbox.h * exportScale));
 
     ec.render();
+
+    // PNGエクスポート時、付箋テキストをCanvas上に描画する。
+    // 通常はHTMLオーバーレイで表示されるが、Canvas→PNG変換ではDOMが含まれないため。
+    const exportCtx = canvas.getContext('2d');
+    if (exportCtx && state.stickyNotes.length > 0) {
+      exportCtx.setTransform(
+        viewport.zoom,
+        0,
+        0,
+        viewport.zoom,
+        -viewport.panX * viewport.zoom,
+        -viewport.panY * viewport.zoom,
+      );
+      for (const note of state.stickyNotes) {
+        drawStickyNoteText(exportCtx, note, viewport.zoom);
+      }
+      exportCtx.setTransform(1, 0, 0, 1, 0, 0);
+    }
+
     exportPng(canvas);
   } finally {
     canvas.width = savedW;

@@ -58,7 +58,7 @@ export function hitBoxHandle(
   return null;
 }
 
-export function hitBox(boxes: GridBox[], px: number, py: number): GridBox | null {
+export function hitBox<T extends GridBox>(boxes: T[], px: number, py: number): T | null {
   for (let i = boxes.length - 1; i >= 0; i--) {
     const box = boxes[i];
     const rect = boxPixelRect(box);
