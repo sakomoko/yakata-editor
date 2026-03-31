@@ -15,11 +15,11 @@ export interface ApiResult {
   body: unknown;
 }
 
-export function handleApi(
+export async function handleApi(
   method: string,
   projectId: string | null,
   body: string | null,
-): ApiResult {
+): Promise<ApiResult> {
   if (method === 'GET' && !projectId) {
     return { status: 200, body: loadProjectIndex() };
   }

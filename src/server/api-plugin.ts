@@ -75,10 +75,10 @@ export function yakataApiPlugin(): Plugin {
                 method: string,
                 projectId: string | null,
                 body: string | null,
-              ) => { status: number; body: unknown };
+              ) => Promise<{ status: number; body: unknown }>;
             };
 
-            const result = handleApi(method, projectId, body);
+            const result = await handleApi(method, projectId, body);
             sendJson(res, result.status, result.body);
           } catch (e) {
             const message = e instanceof Error ? e.message : 'Internal error';
