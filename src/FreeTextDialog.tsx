@@ -57,14 +57,27 @@ function useDraggablePaper() {
 
   const onTitlePointerCancel = onTitlePointerUp;
 
-  return { paperRef, resetPosition, onTitlePointerDown, onTitlePointerMove, onTitlePointerUp, onTitlePointerCancel };
+  return {
+    paperRef,
+    resetPosition,
+    onTitlePointerDown,
+    onTitlePointerMove,
+    onTitlePointerUp,
+    onTitlePointerCancel,
+  };
 }
 
 export default function FreeTextDialog({ open, data, onClose }: Props) {
   const [label, setLabel] = useState(data.label);
   const [fontSize, setFontSize] = useState(data.fontSize);
-  const { paperRef, resetPosition, onTitlePointerDown, onTitlePointerMove, onTitlePointerUp, onTitlePointerCancel } =
-    useDraggablePaper();
+  const {
+    paperRef,
+    resetPosition,
+    onTitlePointerDown,
+    onTitlePointerMove,
+    onTitlePointerUp,
+    onTitlePointerCancel,
+  } = useDraggablePaper();
 
   useEffect(() => {
     setLabel(data.label);
