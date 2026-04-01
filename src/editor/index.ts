@@ -28,6 +28,7 @@ import { onMouseUp } from './mouse-up.ts';
 import { onContextMenu } from './context-menu-handler.ts';
 import { initGestures } from './gesture.ts';
 import { destroyStickyNoteOverlays } from './sticky-note-overlay.ts';
+import { destroyFreeTextOverlays } from './free-text-overlay.ts';
 import { cancelInlineEdit } from './inline-edit.ts';
 
 export type { EditorAPI, RoomEditData, MarkerEditData, ContextMenuRequest };
@@ -140,6 +141,7 @@ export function initEditor(
     destroy() {
       destroyGestures();
       cancelInlineEdit();
+      destroyFreeTextOverlays();
       destroyStickyNoteOverlays();
       canvas.removeEventListener('dblclick', handleDblClick);
       canvas.removeEventListener('contextmenu', handleContextMenu);
@@ -216,6 +218,7 @@ export function initEditor(
     }),
     loadProjectState: (data: ProjectData) => {
       cancelInlineEdit();
+      destroyFreeTextOverlays();
       destroyStickyNoteOverlays();
       state.rooms = data.rooms;
       state.freeTexts = data.freeTexts;

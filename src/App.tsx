@@ -28,7 +28,7 @@ import {
   type ContextMenuRequest,
 } from './editor/index.ts';
 import { loadFromFile } from './persistence.ts';
-import type { ProjectMeta, ProjectData, TabState, FreeTextEditData } from './types.ts';
+import type { ProjectMeta, ProjectData, TabState } from './types.ts';
 import {
   migrateIfNeeded,
   loadProjectIndex,
@@ -45,7 +45,6 @@ import {
 } from './project-store.ts';
 import RoomDialog from './RoomDialog.tsx';
 import MarkerDialog from './MarkerDialog.tsx';
-import FreeTextDialog from './FreeTextDialog.tsx';
 import ContextMenu from './ContextMenu.tsx';
 import type { ContextMenuItem } from './context-menu.ts';
 import TabBar from './TabBar.tsx';
@@ -101,17 +100,11 @@ export default function App() {
   const markerEditResolveRef = useRef<
     ((v: { label: string; fontSize?: number } | null) => void) | null
   >(null);
-  const freeTextEditResolveRef = useRef<
-    ((v: { label: string; fontSize: number } | null) => void) | null
-  >(null);
-
   const [status, setStatus] = useState('準備完了');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogData, setDialogData] = useState<RoomEditData | null>(null);
   const [markerDialogOpen, setMarkerDialogOpen] = useState(false);
   const [markerDialogData, setMarkerDialogData] = useState<MarkerEditData | null>(null);
-  const [freeTextDialogOpen, setFreeTextDialogOpen] = useState(false);
-  const [freeTextDialogData, setFreeTextDialogData] = useState<FreeTextEditData | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(
     null,
   );
@@ -170,26 +163,6 @@ export default function App() {
       setMarkerDialogOpen(false);
       markerEditResolveRef.current?.(result);
       markerEditResolveRef.current = null;
-    },
-    [],
-  );
-
-  const handleFreeTextEdit = useCallback(
-    (data: FreeTextEditData): Promise<{ label: string; fontSize: number } | null> => {
-      setFreeTextDialogData(data);
-      setFreeTextDialogOpen(true);
-      return new Promise((resolve) => {
-        freeTextEditResolveRef.current = resolve;
-      });
-    },
-    [],
-  );
-
-  const handleFreeTextDialogClose = useCallback(
-    (result: { label: string; fontSize: number } | null) => {
-      setFreeTextDialogOpen(false);
-      freeTextEditResolveRef.current?.(result);
-      freeTextEditResolveRef.current = null;
     },
     [],
   );
@@ -352,7 +325,6 @@ export default function App() {
         onStatusChange: setStatus,
         onRoomEdit: handleRoomEdit,
         onMarkerEdit: handleMarkerEdit,
-        onFreeTextEdit: handleFreeTextEdit,
         onContextMenu: handleContextMenu,
         // editorRef は init 完了後にセットされるが、コールバックはユーザー操作時のみ呼ばれるので問題ない
         onAutoSave: () => {
@@ -375,7 +347,7 @@ export default function App() {
       window.removeEventListener('resize', onResize);
       api.destroy();
     };
-  }, [handleRoomEdit, handleMarkerEdit, handleFreeTextEdit, handleContextMenu]);
+  }, [handleRoomEdit, handleMarkerEdit, handleContextMenu]);
 
   // --- Tab handlers ---
 
@@ -865,15 +837,6 @@ export default function App() {
           open={markerDialogOpen}
           data={markerDialogData}
           onClose={handleMarkerDialogClose}
-        />
-      )}
-
-      {/* FreeText dialog */}
-      {freeTextDialogData && (
-        <FreeTextDialog
-          open={freeTextDialogOpen}
-          data={freeTextDialogData}
-          onClose={handleFreeTextDialogClose}
         />
       )}
 

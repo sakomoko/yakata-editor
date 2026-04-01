@@ -51,9 +51,22 @@ export function drawFreeText(
     ctx.restore();
   }
 
-  ctx.save();
+}
 
-  // Clip text to bounding box to prevent overflow
+/** PNG export用: Canvas上にword-wrapしたテキストを描画する */
+export function drawFreeTextForExport(
+  ctx: CanvasRenderingContext2D,
+  ft: FreeText,
+): void {
+  const px = ft.gx * GRID;
+  const py = ft.gy * GRID;
+  const pw = ft.w * GRID;
+  const ph = ft.h * GRID;
+  const padding = 2;
+  const maxWidth = pw - padding * 2;
+  const lineHeight = ft.fontSize * 1.2;
+
+  ctx.save();
   ctx.beginPath();
   ctx.rect(px, py, pw, ph);
   ctx.clip();
@@ -63,15 +76,54 @@ export function drawFreeText(
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
 
-  const padding = 2;
   const lines = ft.label.split('\n');
   let curY = py + padding;
+
   for (const line of lines) {
-    ctx.fillText(line, px + padding, curY, pw - padding * 2);
-    curY += ft.fontSize * 1.2;
+    if (line === '') {
+      curY += lineHeight;
+      continue;
+    }
+    // word-wrap: 文字単位で折り返し
+    const wrappedLines = wrapText(ctx, line, maxWidth);
+    for (const wl of wrappedLines) {
+      ctx.fillText(wl, px + padding, curY, maxWidth);
+      curY += lineHeight;
+    }
   }
 
   ctx.restore();
+}
+
+/** テキストを指定幅で折り返す（文字単位） */
+function wrapText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+): string[] {
+  if (maxWidth <= 0) return [text];
+  const result: string[] = [];
+  let remaining = text;
+
+  while (remaining.length > 0) {
+    if (ctx.measureText(remaining).width <= maxWidth) {
+      result.push(remaining);
+      break;
+    }
+    // 収まる最大文字数を二分探索で探す
+    let lo = 1,
+      hi = remaining.length;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (ctx.measureText(remaining.slice(0, mid)).width <= maxWidth) lo = mid;
+      else hi = mid - 1;
+    }
+    const breakAt = lo;
+    result.push(remaining.slice(0, breakAt));
+    remaining = remaining.slice(breakAt);
+  }
+
+  return result;
 }
 
 export function drawFreeTextHandles(

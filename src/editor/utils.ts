@@ -4,6 +4,14 @@ import { screenToWorld } from '../viewport.ts';
 import type { ViewportState } from '../viewport.ts';
 import type { EditorContext } from './context.ts';
 
+export function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 /** 参照のみ収集。クローンは呼び出し側が必要に応じて行う */
 export function getEntitySnapshot(state: EditorState): EntitySnapshot {
   return {
