@@ -148,7 +148,10 @@ function startInlineEditBase(config: InlineEditConfig): void {
     const target = config.findTarget();
     if (!target) return;
 
-    if (save && config.hasChanged(newLabel, currentFontSize)) {
+    // 新規作成時に空テキストで確定した場合はキャンセル扱いにする
+    const isEmptyNewEntity = save && config.onCancel && newLabel.trim() === '';
+
+    if (save && !isEmptyNewEntity && config.hasChanged(newLabel, currentFontSize)) {
       // undo用にまず元の値に戻してからcommitChangeで新しい値を設定
       config.restoreOriginals();
       commitChange(ec, () => {
@@ -156,7 +159,7 @@ function startInlineEditBase(config: InlineEditConfig): void {
       });
     } else {
       config.restorePreview();
-      if (config.onCancel) {
+      if (config.onCancel && (!save || isEmptyNewEntity)) {
         config.onCancel();
       }
       ec.render();
