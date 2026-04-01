@@ -48,10 +48,11 @@ Canvas 再描画 + App.tsx → project-store.ts → localStorage 保存
   - **editor/dblclick.ts** — `onDblClick()` ダブルクリックイベント処理
   - **editor/clipboard.ts** — `copySelection()`, `pasteClipboard()`, `duplicateSelection()` コピー＆ペースト・ミラー変換処理。`ClipboardData` を `flags.clipboard` に保持（Undo対象外）
   - **editor/marker-edit.ts** — `editMarkerViaDialog()` マーカー編集ダイアログの共通処理（dblclick/context-menuから利用）
-  - **editor/inline-edit.ts** — 付箋のインライン編集。Canvas上にtextarea+ツールバー（フォントサイズスライダー・色選択）をオーバーレイ。外側クリックで確定、Escapeでキャンセル
+  - **editor/inline-edit.ts** — FreeText・付箋のインライン編集。Canvas上にtextarea+ツールバー（フォントサイズスライダー、付箋は色選択も）をオーバーレイ。共通ロジックは`startInlineEditBase`に集約。外側クリックで確定、Escapeでキャンセル
+  - **editor/free-text-overlay.ts** — FreeTextのHTMLオーバーレイ描画。`render()` 後にFreeTextごとのHTML要素を更新。CSS `word-wrap: break-word` でボックス幅に合わせた自動折り返し。zLayerに応じたz-index制御
   - **editor/sticky-note-overlay.ts** — 付箋テキストのHTMLオーバーレイ描画。`render()` 後に付箋ごとのHTML要素を更新。マークダウン（チェックボックス・見出し・箇条書き）をHTMLでレンダリング。`pointer-events: none` でCanvas側のマウスイベントを妨げない
   - **editor/gesture.ts** — `initGestures()` マルチタッチジェスチャー認識（ピンチズーム・2本指パン・長押しコンテキストメニュー）。Pointer Eventsのリスナー登録を一元管理し、シングルポインタイベントをハンドラに委譲
-  - **editor/utils.ts** — `labelDisplayWidth()`, `createMousePos()`, `getEntitySnapshot()` ユーティリティ
+  - **editor/utils.ts** — `labelDisplayWidth()`, `createMousePos()`, `getEntitySnapshot()`, `escapeHtml()` ユーティリティ
 - **types.ts** — 全型定義（`Room`, `FreeText`, `FreeStroke`, `Arrow`, `StickyNote`, `WallObject`, `RoomInteriorObject`, `Project`, `EditorState`, `DragState`, `MouseCoord`, `Handle`, `GroupHandle`, `GroupScaleOriginal`, `GridPoint`, `CornerDirection`, `ProjectMeta`, `ProjectData`, `TabState`, `EntitySnapshot`）
 
 ### 機能モジュール
@@ -60,7 +61,7 @@ Canvas 再描画 + App.tsx → project-store.ts → localStorage 保存
 - **polygon.ts** — 四角形（非直角）部屋のユーティリティ。点の包含判定（`pointInQuad`）、重心計算（`quadCentroid`）、AABB更新（`updateRoomBBFromVertices`）、辺の端点取得（`quadEdgeEndpoints`）、辺の長さ計算（`quadEdgeLength`）、頂点ハンドル計算（`getVertexHandles`）、頂点ハンドルのヒット判定（`hitVertexHandle`）。25テスト追加
 - **room.ts** — 部屋の生成（`createRoom`）、Canvas描画（`drawRoom`）、ヒット判定（`hitRoom`, `hitHandle`）、リサイズハンドル計算（`getHandles`）、矩形包含判定（`findRoomsInArea`）、ドラッグ矩形の正規化（`normalizeArea`）、範囲選択プレビュー描画（`drawAreaSelectPreview`）、グループBB計算（`computeGroupBoundingBox`）・ハンドル（`getGroupHandles`, `hitGroupHandle`）・アンカー計算（`getAnchorForDir`）・スケーリング（`computeGroupScale`, `applyGroupScale`）・BB描画（`drawGroupBoundingBox`）。四角形部屋の描画・ヒット判定分岐あり（`vertices`設定時は`polygon.ts`の関数を使用）
 - **box-utils.ts** — グリッド座標ベースのボックス型エンティティ（FreeText, StickyNote）共通ユーティリティ。ピクセル矩形変換（`boxPixelRect`）、コーナー計算（`boxCorners`）、ハンドル描画・ヒット判定（`drawBoxHandles`, `hitBoxHandle`）、ボックスヒット判定（`hitBox`）、範囲検索（`findBoxesInArea`）、リサイズ計算（`computeBoxResize`）、フォントサイズスケーリング（`scaleProportionalFontSize`）
-- **free-text.ts** — 自由配置テキスト（FreeText）の生成（`createFreeText`）、描画（`drawFreeText`, `drawFreeTextHandles`）、ヒット判定（`hitFreeText`, `hitFreeTextHandle`）、範囲検索（`findFreeTextsInArea`）、リサイズ計算（`computeFreeTextResize`）。部屋に紐付かず、グリッド座標で自由配置。front/backの2レイヤーで描画順を制御。ボックス共通ロジックは`box-utils.ts`に委譲
+- **free-text.ts** — 自由配置テキスト（FreeText）の生成（`createFreeText`）、選択枠描画（`drawFreeText`）、ハンドル描画（`drawFreeTextHandles`）、PNGエクスポート用テキスト描画（`drawFreeTextForExport` — `measureText`ベースの折り返し）、ヒット判定（`hitFreeText`, `hitFreeTextHandle`）、範囲検索（`findFreeTextsInArea`）、リサイズ計算（`computeFreeTextResize`）。テキスト表示はHTMLオーバーレイ（`editor/free-text-overlay.ts`）で実行。部屋に紐付かず、グリッド座標で自由配置。front/backの2レイヤーで描画順を制御。ボックス共通ロジックは`box-utils.ts`に委譲
 - **sticky-note.ts** — 付箋（StickyNote）の生成（`createStickyNote`）、Canvas背景描画（`drawStickyNote`, `drawStickyNoteHandles`）、ヒット判定（`hitStickyNote`, `hitStickyNoteHandle`, `hitStickyNoteCheckbox`）、チェックボックストグル（`toggleStickyNoteCheckbox`）、マークダウン行パーサ（`parseStickyNoteLine`）。テキスト描画はHTMLオーバーレイ（`editor/sticky-note-overlay.ts`）で実行。4色プリセット、フォントファミリー定数を提供
 - **free-stroke.ts** — フリーペイントストローク（FreeStroke）の生成（`createFreeStroke`）、描画（`drawFreeStroke`, `drawFreeStrokeBounds`）、ヒット判定（`hitFreeStroke`, `hitFreeStrokeInList`）、バウンディングボックス計算（`getStrokeBounds`）、移動（`moveStroke`）、点列間引き（`simplifyPoints` — Douglas-Peuckerアルゴリズム）、直線制約（`constrainToLine` — 8方向スナップ）。ピクセル座標（ワールド座標系）で自由描画、常に最前面レイヤーに描画
 - **interior-object.ts** — 部屋内オブジェクト（階段・マーカー）の生成（`createStraightStairs`, `createFoldingStairs`, `createMarker`）、描画（`drawInteriorObjects`）、ヒット判定（`hitInteriorObject`, `hitInteriorObjectInRooms`）、ハンドルヒット判定（`hitInteriorObjectHandle`, `hitInteriorObjectHandleInRooms`）、クランプ処理（`clampInteriorObject`, `clampAllInteriorObjects`）、移動/リサイズ計算（`computeInteriorObjectMove`, `computeInteriorObjectResize`）。マーカーは死体（チョークアウトライン）・ピン（アイコン+ラベル）・テキスト（ラベルのみ）の3種類で、ラベルのフォントサイズはリサイズに追従。カメラの描画は `camera.ts` に委譲
@@ -110,7 +111,7 @@ main.ts
   │   ├─ project-store.ts → persistence.ts (parseStorageData), viewport.ts
   │   ├─ TabBar.tsx → @mui/material (Tabs, Tab, IconButton), ContextMenu.tsx, context-menu.ts
   │   ├─ ProjectListModal.tsx
-  │   ├─ RoomDialog.tsx, MarkerDialog.tsx, FreeTextDialog.tsx → LabelFontSizeDialog.tsx
+  │   ├─ RoomDialog.tsx, MarkerDialog.tsx → LabelFontSizeDialog.tsx
   │   ├─ ContextMenu.tsx → context-menu.ts
   │   ├─ ShortcutHelpDialog.tsx → platform.ts
   │   └─ persistence.ts
