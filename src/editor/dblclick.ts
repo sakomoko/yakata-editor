@@ -1,14 +1,14 @@
-import { findFreeTextById, findArrowById } from '../lookup.ts';
+import { findArrowById } from '../lookup.ts';
 import { hitRoom } from '../room.ts';
 import { hitInteriorObjectInRooms } from '../interior-object.ts';
 import { hitFreeText } from '../free-text.ts';
 import { hitStickyNote } from '../sticky-note.ts';
-import { startInlineEdit } from './inline-edit.ts';
+import { startInlineEdit, startFreeTextInlineEdit } from './inline-edit.ts';
 import { hitArrowInList, hitArrowPoint, hitArrowSegment } from '../arrow.ts';
 import { GRID } from '../grid.ts';
 import { selectSingle } from '../selection.ts';
 import type { EditorContext } from './context.ts';
-import { applyRoomEdit, withFontSizePreview, commitChange } from './project.ts';
+import { applyRoomEdit, commitChange } from './project.ts';
 import { editMarkerViaDialog } from './marker-edit.ts';
 
 export async function onDblClick(ec: EditorContext, e: MouseEvent): Promise<void> {
@@ -76,36 +76,12 @@ export async function onDblClick(ec: EditorContext, e: MouseEvent): Promise<void
     return;
   }
 
-  // FreeText double-click → edit (front layer first, then back)
+  // FreeText double-click → inline edit (front layer first, then back)
   const ftHit =
     hitFreeText(ec.state.freeTexts, m.px, m.py, 'front') ||
     hitFreeText(ec.state.freeTexts, m.px, m.py, 'back');
   if (ftHit) {
-    const ftId = ftHit.id;
-    const findFt = () => findFreeTextById(ec.state.freeTexts, ftId);
-    await withFontSizePreview(
-      ec,
-      () => findFt()?.fontSize,
-      (fs) => {
-        const ft = findFt();
-        if (ft && fs !== undefined) ft.fontSize = fs;
-      },
-      (onPreview) =>
-        ec.callbacks
-          .onFreeTextEdit({
-            label: ftHit.label,
-            fontSize: ftHit.fontSize,
-            onFontSizePreview: onPreview,
-          })
-          .then((r) => (r && r.label ? r : null)),
-      (result) => {
-        const ft = findFt();
-        if (ft) {
-          ft.label = result.label;
-          ft.fontSize = result.fontSize;
-        }
-      },
-    );
+    startFreeTextInlineEdit(ec, ftHit);
     return;
   }
 

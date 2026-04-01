@@ -7,6 +7,7 @@ import { exportPng, saveAsJson } from '../persistence.ts';
 import { getStrokeBounds } from '../free-stroke.ts';
 import { getArrowBounds } from '../arrow.ts';
 import { drawStickyNoteText } from '../sticky-note.ts';
+import { drawFreeTextForExport } from '../free-text.ts';
 import { computeRoomsBoundingBox, calcAutoFontSize } from '../room.ts';
 import { syncAllPairedOpenings } from '../adjacency.ts';
 import { findRoomById } from '../lookup.ts';
@@ -228,10 +229,10 @@ export function exportAsPng(ec: EditorContext): void {
 
     ec.render();
 
-    // PNGエクスポート時、付箋テキストをCanvas上に描画する。
+    // PNGエクスポート時、テキストをCanvas上に描画する。
     // 通常はHTMLオーバーレイで表示されるが、Canvas→PNG変換ではDOMが含まれないため。
     const exportCtx = canvas.getContext('2d');
-    if (exportCtx && state.stickyNotes.length > 0) {
+    if (exportCtx && (state.freeTexts.length > 0 || state.stickyNotes.length > 0)) {
       exportCtx.setTransform(
         viewport.zoom,
         0,
@@ -240,6 +241,9 @@ export function exportAsPng(ec: EditorContext): void {
         -viewport.panX * viewport.zoom,
         -viewport.panY * viewport.zoom,
       );
+      for (const ft of state.freeTexts) {
+        drawFreeTextForExport(exportCtx, ft, viewport.zoom);
+      }
       for (const note of state.stickyNotes) {
         drawStickyNoteText(exportCtx, note, viewport.zoom);
       }

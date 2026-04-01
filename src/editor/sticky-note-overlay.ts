@@ -2,6 +2,7 @@ import { GRID } from '../grid.ts';
 import { STICKY_NOTE_COLORS, STICKY_NOTE_FONT_FAMILY, parseStickyNoteLine } from '../sticky-note.ts';
 import type { StickyNote } from '../types.ts';
 import type { EditorContext } from './context.ts';
+import { escapeHtml } from './utils.ts';
 
 /** 付箋ID → overlay div のマップ */
 const overlayMap = new Map<string, HTMLDivElement>();
@@ -85,14 +86,6 @@ export function destroyStickyNoteOverlays(): void {
     el.remove();
   }
   overlayMap.clear();
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }
 
 function renderMarkdown(

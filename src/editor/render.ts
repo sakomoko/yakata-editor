@@ -13,6 +13,7 @@ import { drawFreeText, drawFreeTextHandles } from '../free-text.ts';
 import { drawFreeStroke, drawFreeStrokeBounds } from '../free-stroke.ts';
 import { drawStickyNote, drawStickyNoteHandles } from '../sticky-note.ts';
 import { updateStickyNoteOverlays } from './sticky-note-overlay.ts';
+import { updateFreeTextOverlays } from './free-text-overlay.ts';
 import { drawArrow, drawArrowHandles, drawDragArrowPreview } from '../arrow.ts';
 import { drawLinkGroupIndicators } from '../link.ts';
 import type { SnapIndicator } from '../snap.ts';
@@ -178,7 +179,8 @@ export function render(ec: EditorContext): void {
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-  // 付箋のテキストはHTMLオーバーレイで描画（Canvas テキストより高品質）
+  // テキストはHTMLオーバーレイで描画（Canvas テキストより高品質）
+  updateFreeTextOverlays(ec);
   updateStickyNoteOverlays(ec);
 
   updateStatus(ec);

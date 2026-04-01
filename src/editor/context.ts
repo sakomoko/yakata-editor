@@ -5,7 +5,6 @@ import type {
   FreeText,
   FreeStroke,
   StickyNote,
-  FreeTextEditData,
   GridPoint,
   MouseCoord,
   ProjectData,
@@ -35,7 +34,6 @@ export interface EditorCallbacks {
   onStatusChange: (text: string) => void;
   onRoomEdit: (data: RoomEditData) => Promise<{ label: string; fontSize?: number } | null>;
   onMarkerEdit: (data: MarkerEditData) => Promise<{ label: string; fontSize?: number } | null>;
-  onFreeTextEdit: (data: FreeTextEditData) => Promise<{ label: string; fontSize: number } | null>;
   onContextMenu: (request: ContextMenuRequest) => void;
   onAutoSave: () => void;
   onViewportChange: () => void;

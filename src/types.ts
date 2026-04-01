@@ -152,12 +152,6 @@ export interface EntitySnapshot {
   stickyNotes: StickyNote[];
 }
 
-export interface FreeTextEditData {
-  label: string;
-  fontSize: number;
-  onFontSizePreview?: (fontSize: number | undefined) => void;
-}
-
 export interface Project {
   version: number;
   name: string;
