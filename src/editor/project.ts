@@ -242,7 +242,7 @@ export function exportAsPng(ec: EditorContext): void {
         -viewport.panY * viewport.zoom,
       );
       for (const ft of state.freeTexts) {
-        drawFreeTextForExport(exportCtx, ft, viewport.zoom);
+        drawFreeTextForExport(exportCtx, ft);
       }
       for (const note of state.stickyNotes) {
         drawStickyNoteText(exportCtx, note, viewport.zoom);

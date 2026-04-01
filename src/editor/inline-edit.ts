@@ -60,10 +60,10 @@ interface InlineEditConfig {
   restorePreview: () => void;
   /** 変更があったか判定 */
   hasChanged: (newLabel: string, newFontSize: number) => boolean;
-  /** undo用に元の値に戻す */
-  restoreOriginals: (target: { label: string; fontSize: number }) => void;
-  /** 新しい値を適用 */
-  applyNewValues: (target: { label: string; fontSize: number }, newLabel: string, newFontSize: number) => void;
+  /** undo用に元の値に戻す（クロージャで完結） */
+  restoreOriginals: () => void;
+  /** 新しい値を適用（クロージャで完結） */
+  applyNewValues: (newLabel: string, newFontSize: number) => void;
   /** キャンセル時のコールバック（新規作成時の削除処理など） */
   onCancel?: () => void;
 }
@@ -150,9 +150,9 @@ function startInlineEditBase(config: InlineEditConfig): void {
 
     if (save && config.hasChanged(newLabel, currentFontSize)) {
       // undo用にまず元の値に戻してからcommitChangeで新しい値を設定
-      config.restoreOriginals(target);
+      config.restoreOriginals();
       commitChange(ec, () => {
-        config.applyNewValues(target, newLabel, currentFontSize);
+        config.applyNewValues(newLabel, currentFontSize);
       });
     } else {
       config.restorePreview();
@@ -319,18 +319,19 @@ export function startInlineEdit(
     },
     hasChanged: (newLabel, newFontSize) =>
       newLabel !== origLabel || newFontSize !== origFontSize || currentColor !== origColor,
-    restoreOriginals: (target) => {
+    restoreOriginals: () => {
+      const target = ec.state.stickyNotes.find((n) => n.id === noteId);
+      if (!target) return;
       target.label = origLabel;
       target.fontSize = origFontSize;
-      // color はクロージャで直接操作（型キャストを回避）
-      const noteTarget = ec.state.stickyNotes.find((n) => n.id === noteId);
-      if (noteTarget) noteTarget.color = origColor;
+      target.color = origColor;
     },
-    applyNewValues: (target, newLabel, newFontSize) => {
+    applyNewValues: (newLabel, newFontSize) => {
+      const target = ec.state.stickyNotes.find((n) => n.id === noteId);
+      if (!target) return;
       target.label = newLabel;
       target.fontSize = newFontSize;
-      const noteTarget = ec.state.stickyNotes.find((n) => n.id === noteId);
-      if (noteTarget) noteTarget.color = currentColor;
+      target.color = currentColor;
     },
     onCancel: options?.onCancel,
   });
@@ -408,11 +409,15 @@ export function startFreeTextInlineEdit(
     },
     hasChanged: (newLabel, newFontSize) =>
       newLabel !== origLabel || newFontSize !== origFontSize,
-    restoreOriginals: (target) => {
+    restoreOriginals: () => {
+      const target = ec.state.freeTexts.find((f) => f.id === ftId);
+      if (!target) return;
       target.label = origLabel;
       target.fontSize = origFontSize;
     },
-    applyNewValues: (target, newLabel, newFontSize) => {
+    applyNewValues: (newLabel, newFontSize) => {
+      const target = ec.state.freeTexts.find((f) => f.id === ftId);
+      if (!target) return;
       target.label = newLabel;
       target.fontSize = newFontSize;
     },

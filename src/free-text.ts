@@ -57,7 +57,6 @@ export function drawFreeText(
 export function drawFreeTextForExport(
   ctx: CanvasRenderingContext2D,
   ft: FreeText,
-  _zoom: number,
 ): void {
   const px = ft.gx * GRID;
   const py = ft.gy * GRID;
