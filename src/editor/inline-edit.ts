@@ -35,7 +35,6 @@ export function cancelInlineEdit(): void {
 
 interface InlineEditConfig {
   ec: EditorContext;
-  entityId: string;
   label: string;
   fontSize: number;
   /** グリッド座標 */
@@ -45,8 +44,8 @@ interface InlineEditConfig {
   h: number;
   /** コンテナの最小幅 (screen px) */
   minWidth: number;
-  /** textarea の CSS */
-  textareaCss: string;
+  /** textarea の CSS を生成する関数 */
+  textareaCss: (height: number, fontSize: number) => string;
   /** toolbar の CSS */
   toolbarCss: string;
   /** スライダーのアクセントカラー */
@@ -65,6 +64,8 @@ interface InlineEditConfig {
   restoreOriginals: (target: { label: string; fontSize: number }) => void;
   /** 新しい値を適用 */
   applyNewValues: (target: { label: string; fontSize: number }, newLabel: string, newFontSize: number) => void;
+  /** キャンセル時のコールバック（新規作成時の削除処理など） */
+  onCancel?: () => void;
 }
 
 function startInlineEditBase(config: InlineEditConfig): void {
@@ -99,10 +100,7 @@ function startInlineEditBase(config: InlineEditConfig): void {
   // --- Textarea ---
   const textarea = document.createElement('textarea');
   textarea.value = config.label;
-  textarea.style.cssText = config.textareaCss
-    .replace('__WIDTH__', '100%')
-    .replace('__HEIGHT__', `${screenH}px`)
-    .replace('__FONT_SIZE__', `${currentFontSize * viewport.zoom}px`);
+  textarea.style.cssText = config.textareaCss(screenH, currentFontSize * viewport.zoom);
 
   // --- Toolbar ---
   const toolbar = document.createElement('div');
@@ -158,6 +156,9 @@ function startInlineEditBase(config: InlineEditConfig): void {
       });
     } else {
       config.restorePreview();
+      if (config.onCancel) {
+        config.onCancel();
+      }
       ec.render();
     }
   }
@@ -202,7 +203,11 @@ function startInlineEditBase(config: InlineEditConfig): void {
  * オーバーレイしてインライン編集を開始する。
  * 外側クリックで確定、Escapeでキャンセル。
  */
-export function startInlineEdit(ec: EditorContext, note: StickyNote): void {
+export function startInlineEdit(
+  ec: EditorContext,
+  note: StickyNote,
+  options?: { onCancel?: () => void },
+): void {
   const noteId = note.id;
   const origLabel = note.label;
   const origFontSize = note.fontSize;
@@ -212,7 +217,6 @@ export function startInlineEdit(ec: EditorContext, note: StickyNote): void {
 
   startInlineEditBase({
     ec,
-    entityId: noteId,
     label: note.label,
     fontSize: note.fontSize,
     gx: note.gx,
@@ -220,16 +224,16 @@ export function startInlineEdit(ec: EditorContext, note: StickyNote): void {
     w: note.w,
     h: note.h,
     minWidth: 180,
-    textareaCss: `
+    textareaCss: (height, fontSize) => `
       display: block;
-      width: __WIDTH__;
-      height: __HEIGHT__;
+      width: 100%;
+      height: ${height}px;
       background: ${colors.bg};
       border: 2px solid ${colors.border};
       border-bottom: none;
       border-radius: 4px 4px 0 0;
       color: #333;
-      font-size: __FONT_SIZE__;
+      font-size: ${fontSize}px;
       font-family: ${STICKY_NOTE_FONT_FAMILY};
       line-height: 1.3;
       padding: 4px;
@@ -318,13 +322,17 @@ export function startInlineEdit(ec: EditorContext, note: StickyNote): void {
     restoreOriginals: (target) => {
       target.label = origLabel;
       target.fontSize = origFontSize;
-      (target as StickyNote).color = origColor;
+      // color はクロージャで直接操作（型キャストを回避）
+      const noteTarget = ec.state.stickyNotes.find((n) => n.id === noteId);
+      if (noteTarget) noteTarget.color = origColor;
     },
     applyNewValues: (target, newLabel, newFontSize) => {
       target.label = newLabel;
       target.fontSize = newFontSize;
-      (target as StickyNote).color = currentColor;
+      const noteTarget = ec.state.stickyNotes.find((n) => n.id === noteId);
+      if (noteTarget) noteTarget.color = currentColor;
     },
+    onCancel: options?.onCancel,
   });
 }
 
@@ -337,14 +345,17 @@ export function startInlineEdit(ec: EditorContext, note: StickyNote): void {
  * オーバーレイしてインライン編集を開始する。
  * 外側クリックで確定、Escapeでキャンセル。
  */
-export function startFreeTextInlineEdit(ec: EditorContext, ft: FreeText): void {
+export function startFreeTextInlineEdit(
+  ec: EditorContext,
+  ft: FreeText,
+  options?: { onCancel?: () => void },
+): void {
   const ftId = ft.id;
   const origLabel = ft.label;
   const origFontSize = ft.fontSize;
 
   startInlineEditBase({
     ec,
-    entityId: ftId,
     label: ft.label,
     fontSize: ft.fontSize,
     gx: ft.gx,
@@ -352,16 +363,16 @@ export function startFreeTextInlineEdit(ec: EditorContext, ft: FreeText): void {
     w: ft.w,
     h: ft.h,
     minWidth: 140,
-    textareaCss: `
+    textareaCss: (height, fontSize) => `
       display: block;
-      width: __WIDTH__;
-      height: __HEIGHT__;
+      width: 100%;
+      height: ${height}px;
       background: #fff;
       border: 2px solid #2196F3;
       border-bottom: none;
       border-radius: 4px 4px 0 0;
       color: #000;
-      font-size: __FONT_SIZE__;
+      font-size: ${fontSize}px;
       font-family: sans-serif;
       line-height: 1.2;
       padding: 2px;
@@ -405,5 +416,6 @@ export function startFreeTextInlineEdit(ec: EditorContext, ft: FreeText): void {
       target.label = newLabel;
       target.fontSize = newFontSize;
     },
+    onCancel: options?.onCancel,
   });
 }

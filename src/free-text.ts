@@ -111,14 +111,15 @@ function wrapText(
       result.push(remaining);
       break;
     }
-    // 収まる最大文字数を探す
-    let breakAt = remaining.length;
-    for (let i = 1; i <= remaining.length; i++) {
-      if (ctx.measureText(remaining.slice(0, i)).width > maxWidth) {
-        breakAt = Math.max(1, i - 1);
-        break;
-      }
+    // 収まる最大文字数を二分探索で探す
+    let lo = 1,
+      hi = remaining.length;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (ctx.measureText(remaining.slice(0, mid)).width <= maxWidth) lo = mid;
+      else hi = mid - 1;
     }
+    const breakAt = lo;
     result.push(remaining.slice(0, breakAt));
     remaining = remaining.slice(breakAt);
   }

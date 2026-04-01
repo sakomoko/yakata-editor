@@ -581,7 +581,15 @@ function buildEmptyAreaMenu(ec: EditorContext, m: MouseCoord): ContextMenuItem[]
       flags.activeFreeTextId = ft.id;
       selectSingle(state.selection, ft.id);
       ec.render();
-      startFreeTextInlineEdit(ec, ft);
+      startFreeTextInlineEdit(ec, ft, {
+        onCancel: () => {
+          // キャンセル時は空のFreeTextを削除（undoで戻せるようcommitChangeを使用）
+          commitChange(ec, () => {
+            state.freeTexts = state.freeTexts.filter((f) => f.id !== ft.id);
+          });
+          flags.activeFreeTextId = undefined;
+        },
+      });
     },
   });
   items.push({
@@ -595,7 +603,15 @@ function buildEmptyAreaMenu(ec: EditorContext, m: MouseCoord): ContextMenuItem[]
       selectSingle(state.selection, note.id);
       ec.render();
       // 配置後すぐにインライン編集を開始
-      startInlineEdit(ec, note);
+      startInlineEdit(ec, note, {
+        onCancel: () => {
+          // キャンセル時は空の付箋を削除
+          commitChange(ec, () => {
+            state.stickyNotes = state.stickyNotes.filter((n) => n.id !== note.id);
+          });
+          flags.activeStickyNoteId = undefined;
+        },
+      });
     },
   });
   items.push({ separator: true });
