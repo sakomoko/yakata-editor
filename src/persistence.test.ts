@@ -484,6 +484,14 @@ describe('sanitizeFilename', () => {
     expect(sanitizeFilename('test\x00name\x1f')).toBe('test_name_');
   });
 
+  it('DEL文字(0x7F)をアンダースコアに置換する', () => {
+    expect(sanitizeFilename('test\x7fname')).toBe('test_name');
+  });
+
+  it('先頭・末尾のスペースをトリムする', () => {
+    expect(sanitizeFilename('  テスト館  ')).toBe('テスト館');
+  });
+
   it('空文字はそのまま返す', () => {
     expect(sanitizeFilename('')).toBe('');
   });
