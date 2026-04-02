@@ -464,6 +464,12 @@ export function parseStorageData(parsed: unknown): StorageData {
   };
 }
 
+/** ファイル名に使えない文字・制御文字を除去し、既に.json拡張子がついていれば除去する */
+export function sanitizeFilename(name: string): string {
+  const sanitized = name.replace(/[/\\:*?"<>|\x00-\x1f]/g, '_');
+  return sanitized.endsWith('.json') ? sanitized.slice(0, -5) : sanitized;
+}
+
 export async function saveAsJson(
   entities: EntitySnapshot,
   suggestedFilename = '間取り図.json',

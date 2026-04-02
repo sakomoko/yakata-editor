@@ -27,7 +27,7 @@ import {
   type MarkerEditData,
   type ContextMenuRequest,
 } from './editor/index.ts';
-import { loadFromFile } from './persistence.ts';
+import { loadFromFile, sanitizeFilename } from './persistence.ts';
 import type { ProjectMeta, ProjectData, TabState } from './types.ts';
 import {
   migrateIfNeeded,
@@ -76,12 +76,6 @@ function createDebouncedTouchUpdatedAt(delayMs: number): (id: string) => void {
 }
 
 const debouncedTouchUpdatedAt = createDebouncedTouchUpdatedAt(2000);
-
-/** ファイル名に使えない文字を除去し、既に.json拡張子がついていれば除去する */
-function sanitizeFilename(name: string): string {
-  const sanitized = name.replace(/[/\\:*?"<>|]/g, '_');
-  return sanitized.endsWith('.json') ? sanitized.slice(0, -5) : sanitized;
-}
 
 /** debounce付きの関数生成ユーティリティ */
 function createDebouncedFn(fn: () => void, delayMs: number): () => void {
