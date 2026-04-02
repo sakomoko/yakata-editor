@@ -31,12 +31,13 @@ export default function TabBar({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  // Escape key sets this to true so that the blur-triggered commitRename skips saving
   const isCancellingRef = useRef(false);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
 
   useEffect(() => {
-    isCancellingRef.current = false;
     if (editingId && inputRef.current) {
+      isCancellingRef.current = false;
       inputRef.current.focus();
       inputRef.current.select();
     }
@@ -47,13 +48,13 @@ export default function TabBar({
     setEditValue(name);
   }, []);
 
-  const commitRename = () => {
+  const commitRename = useCallback(() => {
     if (!isCancellingRef.current && editingId && editValue.trim()) {
       onTabRename(editingId, editValue.trim());
     }
     isCancellingRef.current = false;
     setEditingId(null);
-  };
+  }, [editingId, editValue, onTabRename]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent, tabId: string) => {
     e.preventDefault();
@@ -112,7 +113,6 @@ export default function TabBar({
           <MuiTab
             key={tab.id}
             value={tab.id}
-            data-tab-id={tab.id}
             onDoubleClick={() => handleDoubleClick(tab.id, tab.name)}
             onContextMenu={(e) => handleContextMenu(e, tab.id)}
             label={
