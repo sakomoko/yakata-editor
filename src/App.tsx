@@ -609,7 +609,14 @@ export default function App() {
             color="inherit"
             sx={toolbarButtonSx}
             startIcon={<SaveIcon />}
-            onClick={() => editorRef.current?.saveProject().catch(console.error)}
+            onClick={() => {
+              const name = projectIndex.find(
+                (m) => m.id === tabStateRef.current.activeTabId,
+              )?.name;
+              editorRef.current
+                ?.saveProject(name ? `${name}.json` : undefined)
+                .catch(console.error);
+            }}
           >
             保存
           </Button>

@@ -51,7 +51,7 @@ export interface EditorAPI {
     arrows?: Arrow[];
     stickyNotes?: StickyNote[];
   }) => void;
-  saveProject: () => Promise<void>;
+  saveProject: (suggestedFilename?: string) => Promise<void>;
   exportAsPng: () => void;
   resize: () => void;
   destroy: () => void;

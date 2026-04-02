@@ -464,14 +464,17 @@ export function parseStorageData(parsed: unknown): StorageData {
   };
 }
 
-export async function saveAsJson(entities: EntitySnapshot): Promise<void> {
+export async function saveAsJson(
+  entities: EntitySnapshot,
+  suggestedFilename = '間取り図.json',
+): Promise<void> {
   const json = JSON.stringify(entities, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
 
   if (typeof window.showSaveFilePicker === 'function') {
     try {
       const handle = await window.showSaveFilePicker({
-        suggestedName: '間取り図.json',
+        suggestedName: suggestedFilename,
         types: [
           {
             description: 'JSON ファイル',
@@ -493,7 +496,7 @@ export async function saveAsJson(entities: EntitySnapshot): Promise<void> {
   }
 
   // フォールバック: ファイル名を入力してダウンロード
-  const filename = prompt('ファイル名を入力してください', '間取り図.json');
+  const filename = prompt('ファイル名を入力してください', suggestedFilename);
   if (!filename) return;
   triggerDownload(URL.createObjectURL(blob), filename);
 }
