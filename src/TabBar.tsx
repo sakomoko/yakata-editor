@@ -31,13 +31,13 @@ export default function TabBar({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
-  // Escape key sets this to true so that the blur-triggered commitRename skips saving
-  const isCancellingRef = useRef(false);
+  // Guards against blur-triggered double commit (set by Escape cancel or after successful commit)
+  const skipCommitRef = useRef(false);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
 
   useEffect(() => {
     if (editingId && inputRef.current) {
-      isCancellingRef.current = false;
+      skipCommitRef.current = false;
       inputRef.current.focus();
       inputRef.current.select();
     }
@@ -49,10 +49,10 @@ export default function TabBar({
   }, []);
 
   const commitRename = useCallback(() => {
-    if (!isCancellingRef.current && editingId && editValue.trim()) {
+    if (!skipCommitRef.current && editingId && editValue.trim()) {
       onTabRename(editingId, editValue.trim());
+      skipCommitRef.current = true; // prevent blur-triggered double commit after Enter
     }
-    isCancellingRef.current = false;
     setEditingId(null);
   }, [editingId, editValue, onTabRename]);
 
@@ -120,6 +120,7 @@ export default function TabBar({
                 <input
                   ref={inputRef}
                   value={editValue}
+                  aria-label="タブ名を編集"
                   onChange={(e) => setEditValue(e.target.value)}
                   onBlur={commitRename}
                   onKeyDown={(e) => {
@@ -127,7 +128,7 @@ export default function TabBar({
                     if (e.nativeEvent.isComposing) return;
                     if (e.key === 'Enter') commitRename();
                     if (e.key === 'Escape') {
-                      isCancellingRef.current = true;
+                      skipCommitRef.current = true;
                       setEditingId(null);
                     }
                   }}
