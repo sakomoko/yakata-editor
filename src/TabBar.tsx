@@ -31,9 +31,11 @@ export default function TabBar({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const isCancellingRef = useRef(false);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
 
   useEffect(() => {
+    isCancellingRef.current = false;
     if (editingId && inputRef.current) {
       inputRef.current.focus();
       inputRef.current.select();
@@ -46,9 +48,10 @@ export default function TabBar({
   }, []);
 
   const commitRename = () => {
-    if (editingId && editValue.trim()) {
+    if (!isCancellingRef.current && editingId && editValue.trim()) {
       onTabRename(editingId, editValue.trim());
     }
+    isCancellingRef.current = false;
     setEditingId(null);
   };
 
@@ -120,10 +123,13 @@ export default function TabBar({
                   onChange={(e) => setEditValue(e.target.value)}
                   onBlur={commitRename}
                   onKeyDown={(e) => {
+                    e.stopPropagation();
                     if (e.nativeEvent.isComposing) return;
                     if (e.key === 'Enter') commitRename();
-                    if (e.key === 'Escape') setEditingId(null);
-                    e.stopPropagation();
+                    if (e.key === 'Escape') {
+                      isCancellingRef.current = true;
+                      setEditingId(null);
+                    }
                   }}
                   onClick={(e) => e.stopPropagation()}
                   style={{
