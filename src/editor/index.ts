@@ -135,7 +135,7 @@ export function initEditor(
     undo: () => undo(ec),
     newProject: () => newProject(ec),
     loadProject: (data) => loadProjectData(ec, data),
-    saveProject: () => saveProject(ec),
+    saveProject: (suggestedFilename?: string) => saveProject(ec, suggestedFilename),
     exportAsPng: () => exportAsPng(ec),
     resize: resizeCanvas,
     destroy() {

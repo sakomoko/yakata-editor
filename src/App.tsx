@@ -27,7 +27,7 @@ import {
   type MarkerEditData,
   type ContextMenuRequest,
 } from './editor/index.ts';
-import { loadFromFile } from './persistence.ts';
+import { loadFromFile, sanitizeFilename } from './persistence.ts';
 import type { ProjectMeta, ProjectData, TabState } from './types.ts';
 import {
   migrateIfNeeded,
@@ -609,7 +609,13 @@ export default function App() {
             color="inherit"
             sx={toolbarButtonSx}
             startIcon={<SaveIcon />}
-            onClick={() => editorRef.current?.saveProject().catch(console.error)}
+            onClick={() => {
+              const name = projectIndex.find(
+                (m) => m.id === tabStateRef.current.activeTabId,
+              )?.name;
+              const filename = name ? `${sanitizeFilename(name)}.json` : undefined;
+              editorRef.current?.saveProject(filename).catch(console.error);
+            }}
           >
             保存
           </Button>

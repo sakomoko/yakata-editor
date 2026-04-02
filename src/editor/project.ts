@@ -132,8 +132,8 @@ export function loadProjectData(
   ec.flags.activeStickyNoteId = undefined;
 }
 
-export async function saveProject(ec: EditorContext): Promise<void> {
-  await saveAsJson(getEntitySnapshot(ec.state));
+export async function saveProject(ec: EditorContext, suggestedFilename?: string): Promise<void> {
+  await saveAsJson(getEntitySnapshot(ec.state), suggestedFilename);
 }
 
 export function exportAsPng(ec: EditorContext): void {

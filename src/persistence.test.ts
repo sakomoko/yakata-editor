@@ -4,6 +4,7 @@ import {
   ensureInteriorObjectIds,
   ensureFreeTextIds,
   parseStorageData,
+  sanitizeFilename,
 } from './persistence.ts';
 import type {
   WallDoor,
@@ -451,5 +452,47 @@ describe('parseStorageData', () => {
     const result = parseStorageData(null);
     expect(result.rooms).toHaveLength(0);
     expect(result.warning).toBeTruthy();
+  });
+});
+
+describe('sanitizeFilename', () => {
+  it('通常の名前はそのまま返す', () => {
+    expect(sanitizeFilename('テスト館')).toBe('テスト館');
+  });
+
+  it('スラッシュをアンダースコアに置換する', () => {
+    expect(sanitizeFilename('探偵事務所/地下室')).toBe('探偵事務所_地下室');
+  });
+
+  it('バックスラッシュをアンダースコアに置換する', () => {
+    expect(sanitizeFilename('path\\to\\file')).toBe('path_to_file');
+  });
+
+  it('Windows禁止文字をすべてアンダースコアに置換する', () => {
+    expect(sanitizeFilename('a:b*c?d"e<f>g|h')).toBe('a_b_c_d_e_f_g_h');
+  });
+
+  it('.json拡張子が付いていれば除去する', () => {
+    expect(sanitizeFilename('計画.json')).toBe('計画');
+  });
+
+  it('.json以外の拡張子はそのまま残す', () => {
+    expect(sanitizeFilename('計画.txt')).toBe('計画.txt');
+  });
+
+  it('制御文字をアンダースコアに置換する', () => {
+    expect(sanitizeFilename('test\x00name\x1f')).toBe('test_name_');
+  });
+
+  it('DEL文字(0x7F)をアンダースコアに置換する', () => {
+    expect(sanitizeFilename('test\x7fname')).toBe('test_name');
+  });
+
+  it('先頭・末尾のスペースをトリムする', () => {
+    expect(sanitizeFilename('  テスト館  ')).toBe('テスト館');
+  });
+
+  it('空文字はそのまま返す', () => {
+    expect(sanitizeFilename('')).toBe('');
   });
 });
