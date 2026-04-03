@@ -35,6 +35,7 @@ function tryStartArrowHitDrag(
   shift: boolean,
 ): boolean {
   const { canvas, state, flags } = ec;
+  // ヒット判定はスナップ前の生座標で行う（m.gx はグリッド/サブグリッドにスナップ済みのため）
   const arrowGx = m.px / GRID;
   const arrowGy = m.py / GRID;
   // 選択済み矢印のポイントハンドルを優先チェック
@@ -123,6 +124,7 @@ export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
     if (tryStartArrowHitDrag(ec, m, shift)) return;
     flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
     state.drag = { type: 'drawArrow', startPoint: { gx: m.gx, gy: m.gy } };
+    // mousedown 時点で始点にプレビューを設定し、即座に視覚フィードバックを提供
     flags.drawArrowPreview = { gx: m.gx, gy: m.gy };
     canvas.style.cursor = 'crosshair';
     ec.render();
