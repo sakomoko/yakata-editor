@@ -28,6 +28,52 @@ import type { EditorContext } from './context.ts';
 import { getEntitySnapshot } from './utils.ts';
 import { isInlineEditing } from './inline-edit.ts';
 
+/** 既存矢印のポイントハンドル or セグメントへのヒットを判定し、ドラッグを開始する。ヒットした場合 true を返す */
+function tryStartArrowHitDrag(
+  ec: EditorContext,
+  m: { px: number; py: number; gx: number; gy: number },
+  shift: boolean,
+): boolean {
+  const { canvas, state, flags } = ec;
+  const arrowGx = m.px / GRID;
+  const arrowGy = m.py / GRID;
+  // 選択済み矢印のポイントハンドルを優先チェック
+  for (const arrow of state.arrows) {
+    if (!state.selection.has(arrow.id)) continue;
+    const ptIdx = hitArrowPoint(arrow, arrowGx, arrowGy);
+    if (ptIdx !== undefined) {
+      flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
+      state.drag = { type: 'moveArrowPoint', arrowId: arrow.id, pointIndex: ptIdx };
+      flags.activeFreeTextId = undefined;
+      canvas.style.cursor = 'grabbing';
+      ec.render();
+      return true;
+    }
+  }
+  // セグメントヒット → 選択して移動
+  const arrowHit = hitArrowInList(state.arrows, arrowGx, arrowGy);
+  if (arrowHit) {
+    if (shift) {
+      toggleSelection(state.selection, arrowHit.id);
+    } else {
+      selectSingle(state.selection, arrowHit.id);
+    }
+    flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
+    state.drag = {
+      type: 'moveArrow',
+      arrowId: arrowHit.id,
+      startGx: m.gx,
+      startGy: m.gy,
+      origPoints: arrowHit.points.map((p) => ({ gx: p.gx, gy: p.gy })),
+    };
+    flags.activeFreeTextId = undefined;
+    canvas.style.cursor = 'grabbing';
+    ec.render();
+    return true;
+  }
+  return false;
+}
+
 export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
   const { canvas, state, viewport, flags } = ec;
 
@@ -72,11 +118,11 @@ export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
     return;
   }
 
-  // Arrow mode: start drag to draw arrow
+  // Arrow mode: 既存矢印ヒット → 選択/移動、空白 → 新規描画
   if (state.arrowMode && e.button === 0) {
+    if (tryStartArrowHitDrag(ec, m, shift)) return;
     flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
     state.drag = { type: 'drawArrow', startPoint: { gx: m.gx, gy: m.gy } };
-    // mousedown 時点で始点にプレビューを設定し、即座に視覚フィードバックを提供
     flags.drawArrowPreview = { gx: m.gx, gy: m.gy };
     canvas.style.cursor = 'crosshair';
     ec.render();
@@ -373,48 +419,7 @@ export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
   }
 
   // Check arrow hit (select/move) — 矢印はFreeStrokeより背面に描画される
-  {
-    const arrowGx = m.px / GRID;
-    const arrowGy = m.py / GRID;
-    // First check if we hit a point handle on a selected arrow
-    for (const arrow of state.arrows) {
-      if (!state.selection.has(arrow.id)) continue;
-      const ptIdx = hitArrowPoint(arrow, arrowGx, arrowGy);
-      if (ptIdx !== undefined) {
-        flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
-        state.drag = {
-          type: 'moveArrowPoint',
-          arrowId: arrow.id,
-          pointIndex: ptIdx,
-        };
-        flags.activeFreeTextId = undefined;
-        canvas.style.cursor = 'grabbing';
-        ec.render();
-        return;
-      }
-    }
-    // Then check segment hit
-    const arrowHit = hitArrowInList(state.arrows, arrowGx, arrowGy);
-    if (arrowHit) {
-      if (shift) {
-        toggleSelection(state.selection, arrowHit.id);
-      } else {
-        selectSingle(state.selection, arrowHit.id);
-      }
-      flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
-      state.drag = {
-        type: 'moveArrow',
-        arrowId: arrowHit.id,
-        startGx: m.gx,
-        startGy: m.gy,
-        origPoints: arrowHit.points.map((p) => ({ gx: p.gx, gy: p.gy })),
-      };
-      flags.activeFreeTextId = undefined;
-      canvas.style.cursor = 'grabbing';
-      ec.render();
-      return;
-    }
-  }
+  if (tryStartArrowHitDrag(ec, m, shift)) return;
 
   function startStickyNoteDrag(note: StickyNote): void {
     flags.activeStickyNoteId = note.id;

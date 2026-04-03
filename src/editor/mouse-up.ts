@@ -111,7 +111,8 @@ export function onMouseUp(ec: EditorContext, e: PointerEvent): void {
     // commitChange の二重保存を避ける必要がある。moveArrow/paint 等と同じパターン。
     const arrow = createArrow([startPoint, endPoint], state.arrowColor, state.arrowLineWidth);
     state.arrows.push(arrow);
-    selectSingle(state.selection, arrow.id);
+    // 矢印モード中は選択しない（ハンドルが出ると未確定に見えるため）
+    clearSelection(state.selection);
     flags.savedRedo = null;
     state.drag = null;
     canvas.style.cursor = 'crosshair';
