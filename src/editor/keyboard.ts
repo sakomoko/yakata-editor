@@ -7,12 +7,14 @@ import { commitChange, undo, redo, deleteSelectedEntities } from './project.ts';
 import { copySelection, pasteClipboard, duplicateSelection } from './clipboard.ts';
 import { getEntitySnapshot, switchToRoomMode } from './utils.ts';
 import { isInlineEditing } from './inline-edit.ts';
+import { isTextInput } from '../dom-utils.ts';
 
 export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
   if (e.isComposing) return;
   if (isInlineEditing()) return;
 
   const { canvas, state, viewport, flags } = ec;
+  const textInputFocused = isTextInput(document.activeElement);
 
   // Escape: 矢印ドラッグ中のキャンセル
   if (e.key === 'Escape' && state.drag?.type === 'drawArrow') {
@@ -31,7 +33,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     e.key.toLowerCase() === 'r' &&
     !e.metaKey &&
     !e.ctrlKey &&
-    document.activeElement === document.body
+    !textInputFocused
   ) {
     if (!state.paintMode && !state.arrowMode) return;
     e.preventDefault();
@@ -44,7 +46,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     e.key.toLowerCase() === 'p' &&
     !e.metaKey &&
     !e.ctrlKey &&
-    document.activeElement === document.body
+    !textInputFocused
   ) {
     e.preventDefault();
     state.paintMode = !state.paintMode;
@@ -66,7 +68,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     e.key.toLowerCase() === 'a' &&
     !e.metaKey &&
     !e.ctrlKey &&
-    document.activeElement === document.body
+    !textInputFocused
   ) {
     e.preventDefault();
     state.arrowMode = !state.arrowMode;
@@ -83,7 +85,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     return;
   }
 
-  if (e.code === 'Space' && !flags.isPanning && document.activeElement === document.body) {
+  if (e.code === 'Space' && !flags.isPanning && !textInputFocused) {
     e.preventDefault();
     flags.isPanning = true;
     canvas.style.cursor = 'grab';
@@ -138,7 +140,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     return;
   }
 
-  if ((e.key === 'Delete' || e.key === 'Backspace') && document.activeElement === document.body) {
+  if ((e.key === 'Delete' || e.key === 'Backspace') && !textInputFocused) {
     // Delete active StickyNote first
     if (flags.activeStickyNoteId) {
       e.preventDefault();
