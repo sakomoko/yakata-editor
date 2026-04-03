@@ -7,7 +7,7 @@
 
 ### Fixed
 
-- キーボードショートカット（R/P/A/Space/Delete）がUIボタンにフォーカスがあると動作しない問題を修正
+- キーボードショートカット（R/P/A/Space/Delete/Backspace）がUIボタンにフォーカスがあると動作しない問題を修正
 
 ### Added
 
