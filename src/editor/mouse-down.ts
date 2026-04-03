@@ -28,8 +28,8 @@ import type { EditorContext } from './context.ts';
 import { getEntitySnapshot } from './utils.ts';
 import { isInlineEditing } from './inline-edit.ts';
 
-/** 既存矢印のポイントハンドル or セグメントへのヒットを判定し、ドラッグを開始する。ヒットした場合 true を返す */
-function tryStartArrowHitDrag(
+/** 既存矢印のポイントハンドル or セグメントへのヒットを判定し、選択・ドラッグを開始する。ヒットした場合 true を返す */
+function tryHandleArrowHit(
   ec: EditorContext,
   m: { px: number; py: number; gx: number; gy: number },
   shift: boolean,
@@ -121,7 +121,7 @@ export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
 
   // Arrow mode: 既存矢印ヒット → 選択/移動、空白 → 新規描画
   if (state.arrowMode && e.button === 0) {
-    if (tryStartArrowHitDrag(ec, m, shift)) return;
+    if (tryHandleArrowHit(ec, m, shift)) return;
     flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
     state.drag = { type: 'drawArrow', startPoint: { gx: m.gx, gy: m.gy } };
     // mousedown 時点で始点にプレビューを設定し、即座に視覚フィードバックを提供
@@ -421,7 +421,7 @@ export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
   }
 
   // Check arrow hit (select/move) — 矢印はFreeStrokeより背面に描画される
-  if (tryStartArrowHitDrag(ec, m, shift)) return;
+  if (tryHandleArrowHit(ec, m, shift)) return;
 
   function startStickyNoteDrag(note: StickyNote): void {
     flags.activeStickyNoteId = note.id;
