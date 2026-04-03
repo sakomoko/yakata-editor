@@ -5,6 +5,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- キーボードショートカット（R/P/A/Space/Delete/Backspace）がUIボタンにフォーカスがあると動作しない問題を修正
+
 ### Added
 
 - FreeTextのテキスト折り返し表示（HTMLオーバーレイ方式、ボックス幅に合わせて自動折り返し）

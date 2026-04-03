@@ -51,6 +51,7 @@ import TabBar from './TabBar.tsx';
 import ProjectListModal from './ProjectListModal.tsx';
 import ShortcutHelpDialog from './ShortcutHelpDialog.tsx';
 import { modKeyCombo } from './platform.ts';
+import { isTextInput } from './dom-utils.ts';
 
 const darkTheme = createTheme({
   palette: {
@@ -251,8 +252,7 @@ export default function App() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.isComposing) return;
-      const tag = (document.activeElement as HTMLElement)?.tagName;
-      if (e.key === '?' && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') {
+      if (e.key === '?' && !isTextInput(document.activeElement)) {
         e.preventDefault();
         setShortcutHelpOpen((prev) => !prev);
       }
