@@ -66,6 +66,72 @@ const CHECKBOX_SIZE_RATIO = 0.85;
 const CHECKBOX_LEFT_PADDING = 4;
 const LINE_PADDING = 4;
 
+/** テキスト計測用のオフスクリーンCanvas（遅延初期化） */
+let _measureCtx: CanvasRenderingContext2D | null = null;
+
+function getMeasureCtx(): CanvasRenderingContext2D | null {
+  if (_measureCtx) return _measureCtx;
+  if (typeof document === 'undefined') return null;
+  try {
+    const c = document.createElement('canvas');
+    _measureCtx = c.getContext('2d');
+    return _measureCtx;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * テキストが指定幅で折り返されるときの行数を推定する。
+ * CSSの折り返しに近い挙動を再現するため、文字単位で幅を計測する。
+ * Canvas非対応環境では文字幅を概算で推定する。
+ */
+export function estimateWrappedLineCount(
+  text: string,
+  fontSize: number,
+  fontFamily: string,
+  maxWidth: number,
+): number {
+  if (!text || maxWidth <= 0) return 1;
+
+  const ctx = getMeasureCtx();
+  const font = `${fontSize}px ${fontFamily}`;
+
+  // テキスト全体の幅を計測（canvasがない場合は概算）
+  let totalWidth: number;
+  if (ctx) {
+    ctx.font = font;
+    totalWidth = ctx.measureText(text).width;
+  } else {
+    // Fallback: 日本語混在テキストの平均文字幅 ≈ fontSize * 0.7
+    totalWidth = text.length * fontSize * 0.7;
+  }
+  if (totalWidth <= maxWidth) return 1;
+
+  // 文字単位の折り返しシミュレーション
+  let lines = 1;
+  let currentWidth = 0;
+
+  for (let i = 0; i < text.length; i++) {
+    let charWidth: number;
+    if (ctx) {
+      charWidth = ctx.measureText(text[i]).width;
+    } else {
+      // CJK文字は幅広、Latin/数字は狭め
+      const code = text.charCodeAt(i);
+      charWidth = code > 0x2e80 ? fontSize : fontSize * 0.5;
+    }
+    if (currentWidth + charWidth > maxWidth && currentWidth > 0) {
+      lines++;
+      currentWidth = charWidth;
+    } else {
+      currentWidth += charWidth;
+    }
+  }
+
+  return lines;
+}
+
 export function drawStickyNote(
   ctx: CanvasRenderingContext2D,
   note: StickyNote,
@@ -137,28 +203,48 @@ export function hitStickyNoteCheckbox(note: StickyNote, px: number, py: number):
   }
 
   const lines = note.label.split('\n');
-  const lineHeight = note.fontSize * 1.3;
+  const fontSize = note.fontSize;
+  const lineHeight = fontSize * 1.3;
+  const contentWidth = rect.w - LINE_PADDING * 2;
   let curY = rect.y + LINE_PADDING;
 
+  /** 行テキストの折り返し高さを返す */
+  const wrappedHeight = (text: string, fs: number, availWidth: number, lh: number): number =>
+    lh * estimateWrappedLineCount(text, fs, STICKY_NOTE_FONT_FAMILY, availWidth);
+
   for (let i = 0; i < lines.length; i++) {
+    if (curY > py) return -1;
+
     const parsed = parseStickyNoteLine(lines[i]);
 
     if (parsed.type === 'heading') {
-      curY += Math.round(note.fontSize * 1.3) * 1.3;
+      const headingFontSize = Math.round(fontSize * 1.3);
+      curY += wrappedHeight(parsed.text, headingFontSize, contentWidth, headingFontSize * 1.3);
       continue;
     }
 
     if (parsed.type === 'checkbox') {
-      const cbSize = note.fontSize * CHECKBOX_SIZE_RATIO;
+      const cbSize = fontSize * CHECKBOX_SIZE_RATIO;
       const cbX = rect.x + CHECKBOX_LEFT_PADDING;
       const cbY = curY + (lineHeight - cbSize) / 2;
 
       if (px >= cbX && px <= cbX + cbSize + 4 && py >= cbY && py <= cbY + cbSize) {
         return i;
       }
+
+      const textAvailWidth = contentWidth - CHECKBOX_LEFT_PADDING - cbSize - fontSize * 0.3;
+      curY += wrappedHeight(parsed.text, fontSize, textAvailWidth, lineHeight);
+      continue;
     }
 
-    curY += lineHeight;
+    if (parsed.type === 'bullet') {
+      const dotSize = Math.round(fontSize * 0.3);
+      const textAvailWidth = contentWidth - CHECKBOX_LEFT_PADDING - dotSize - fontSize * 0.3;
+      curY += wrappedHeight(parsed.text, fontSize, textAvailWidth, lineHeight);
+      continue;
+    }
+
+    curY += wrappedHeight(parsed.text, fontSize, contentWidth, lineHeight);
   }
   return -1;
 }

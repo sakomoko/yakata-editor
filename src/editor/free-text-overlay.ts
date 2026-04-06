@@ -7,11 +7,11 @@ const overlayMap = new Map<string, HTMLDivElement>();
 
 /** 全FreeTextオーバーレイを現在の状態に合わせて更新する。render() の最後に呼ぶ。 */
 export function updateFreeTextOverlays(ec: EditorContext): void {
-  const { state, viewport, canvas } = ec;
+  const { state, viewport, container } = ec;
 
   if (state.freeTexts.length === 0 && overlayMap.size === 0) return;
 
-  const canvasRect = canvas.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
   const activeIds = new Set(state.freeTexts.map((ft) => ft.id));
 
   // 削除されたFreeTextのオーバーレイを除去
@@ -26,43 +26,43 @@ export function updateFreeTextOverlays(ec: EditorContext): void {
     let el = overlayMap.get(ft.id);
     if (!el) {
       el = document.createElement('div');
-      el.style.position = 'fixed';
+      el.style.position = 'absolute';
       el.style.pointerEvents = 'none';
       el.style.overflow = 'hidden';
       el.style.boxSizing = 'border-box';
       el.style.fontFamily = 'sans-serif';
-      document.body.appendChild(el);
+      container.appendChild(el);
       overlayMap.set(ft.id, el);
     }
 
     // zLayerに応じたz-index (back: 50, front: 150 — Canvasと付箋の間)
     el.style.zIndex = ft.zLayer === 'back' ? '50' : '150';
 
-    // ワールド座標 → スクリーン座標
+    // ワールド座標 → コンテナ内相対座標
     const worldX = ft.gx * GRID;
     const worldY = ft.gy * GRID;
     const worldW = ft.w * GRID;
     const worldH = ft.h * GRID;
 
-    const screenX = (worldX - viewport.panX) * viewport.zoom + canvasRect.left;
-    const screenY = (worldY - viewport.panY) * viewport.zoom + canvasRect.top;
+    const localX = (worldX - viewport.panX) * viewport.zoom;
+    const localY = (worldY - viewport.panY) * viewport.zoom;
     const screenW = worldW * viewport.zoom;
     const screenH = worldH * viewport.zoom;
 
-    // Canvas可視範囲外なら非表示
+    // コンテナ可視範囲外なら非表示
     if (
-      screenX + screenW < canvasRect.left ||
-      screenX > canvasRect.right ||
-      screenY + screenH < canvasRect.top ||
-      screenY > canvasRect.bottom
+      localX + screenW < 0 ||
+      localX > containerRect.width ||
+      localY + screenH < 0 ||
+      localY > containerRect.height
     ) {
       el.style.display = 'none';
       continue;
     }
 
     el.style.display = '';
-    el.style.left = `${screenX}px`;
-    el.style.top = `${screenY}px`;
+    el.style.left = `${localX}px`;
+    el.style.top = `${localY}px`;
     el.style.width = `${screenW}px`;
     el.style.height = `${screenH}px`;
 
