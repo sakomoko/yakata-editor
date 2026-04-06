@@ -26,7 +26,9 @@ export default function PngExportDialog({ open, defaultFilename, onClose, onExpo
       setFilename(defaultFilename);
       setIncludeStickyNotes(true);
     }
-  }, [open, defaultFilename]);
+    // defaultFilename は open 時の初期値として使うだけなので依存配列に含めない
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   return (
     <Dialog open={open} onClose={onClose}>
