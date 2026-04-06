@@ -8,6 +8,7 @@ import {
   computeStickyNoteResize,
   findStickyNotesInArea,
   scaleStickyNoteFontSize,
+  estimateWrappedLineCount,
 } from './sticky-note.ts';
 import type { StickyNote } from './types.ts';
 import { GRID } from './grid.ts';
@@ -134,6 +135,63 @@ describe('hitStickyNoteCheckbox', () => {
     // curY after heading + checkbox line = 4 + 20.8 + 15.6 = 40.4
     // Clicking at center of normal text line
     expect(hitStickyNoteCheckbox(note, 10, 48)).toBe(-1);
+  });
+});
+
+describe('estimateWrappedLineCount', () => {
+  const fontFamily = 'sans-serif';
+
+  it('returns 1 for empty text', () => {
+    expect(estimateWrappedLineCount('', 12, fontFamily, 100)).toBe(1);
+  });
+
+  it('returns 1 for short text that fits', () => {
+    expect(estimateWrappedLineCount('短い', 12, fontFamily, 200)).toBe(1);
+  });
+
+  it('returns multiple lines for long text', () => {
+    // fontSize=12, CJK文字幅≈12 (fallback計算), maxWidth=50
+    // 10文字 × 12 = 120 → 120/50 = 3行程度
+    const longText = 'あいうえおかきくけこ';
+    const result = estimateWrappedLineCount(longText, 12, fontFamily, 50);
+    expect(result).toBeGreaterThan(1);
+  });
+
+  it('returns 1 when maxWidth is zero or negative', () => {
+    expect(estimateWrappedLineCount('テスト', 12, fontFamily, 0)).toBe(1);
+    expect(estimateWrappedLineCount('テスト', 12, fontFamily, -10)).toBe(1);
+  });
+});
+
+describe('hitStickyNoteCheckbox with text wrapping', () => {
+  it('correctly detects second checkbox when first has long text', () => {
+    // 幅3グリッドの狭い付箋で、最初のチェックボックスに長いテキスト
+    const note: StickyNote = {
+      id: 'wrap-test',
+      gx: 0,
+      gy: 0,
+      w: 3,
+      h: 10,
+      label: '- [ ] これは非常に長いタスクの説明文で折り返しが発生する\n- [ ] 短いタスク',
+      fontSize: 12,
+      color: 'yellow',
+    };
+
+    // 2行目のチェックボックスは、1行目の折り返し分だけ下にずれる
+    // 折り返しを考慮しない場合は lineHeight (15.6px) 1行分の位置
+    // 折り返しを考慮する場合はそれ以上下になる
+    const lineHeight = 12 * 1.3; // 15.6
+
+    // 1行分の位置（折り返し無視）→ 2番目のチェックボックスの旧位置
+    const oldSecondCbY = 4 + lineHeight + (lineHeight - 12 * 0.85) / 2;
+
+    // 折り返しが発生しているので、旧位置では2番目のチェックボックスに当たらないはず
+    expect(hitStickyNoteCheckbox(note, 6, oldSecondCbY + 5)).toBe(-1);
+
+    // 重要なのは、1番目のチェックボックス（行0）は常に正しくヒットすること
+    const cbSize = 12 * 0.85;
+    const firstCbY = 4 + (lineHeight - cbSize) / 2;
+    expect(hitStickyNoteCheckbox(note, 6, firstCbY + cbSize / 2)).toBe(0);
   });
 });
 

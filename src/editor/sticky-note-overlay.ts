@@ -1,5 +1,12 @@
 import { GRID } from '../grid.ts';
-import { STICKY_NOTE_COLORS, STICKY_NOTE_FONT_FAMILY, parseStickyNoteLine } from '../sticky-note.ts';
+import {
+  STICKY_NOTE_COLORS,
+  STICKY_NOTE_FONT_FAMILY,
+  parseStickyNoteLine,
+  toggleStickyNoteCheckbox,
+} from '../sticky-note.ts';
+import { findStickyNoteById } from '../lookup.ts';
+import { selectSingle } from '../selection.ts';
 import type { StickyNote } from '../types.ts';
 import type { EditorContext } from './context.ts';
 import { escapeHtml } from './utils.ts';
@@ -9,12 +16,12 @@ const overlayMap = new Map<string, HTMLDivElement>();
 
 /** 全付箋オーバーレイを現在の状態に合わせて更新する。render() の最後に呼ぶ。 */
 export function updateStickyNoteOverlays(ec: EditorContext): void {
-  const { state, viewport, canvas } = ec;
+  const { state, viewport, container } = ec;
 
   // 付箋もオーバーレイも無ければ何もしない（getBoundingClientRect の不要な呼び出しを避ける）
   if (state.stickyNotes.length === 0 && overlayMap.size === 0) return;
 
-  const canvasRect = canvas.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
 
   const activeIds = new Set(state.stickyNotes.map((n) => n.id));
 
@@ -30,41 +37,46 @@ export function updateStickyNoteOverlays(ec: EditorContext): void {
     let el = overlayMap.get(note.id);
     if (!el) {
       el = document.createElement('div');
-      el.style.position = 'fixed';
+      el.style.position = 'absolute';
       el.style.pointerEvents = 'none';
       el.style.overflow = 'hidden';
       el.style.boxSizing = 'border-box';
       el.style.fontFamily = STICKY_NOTE_FONT_FAMILY;
       el.style.zIndex = '100';
-      document.body.appendChild(el);
+      container.appendChild(el);
       overlayMap.set(note.id, el);
+
+      el.dataset.noteId = note.id;
+
+      // チェックボックスのクリックイベント委譲（ecをクロージャで閉じ込める）
+      el.addEventListener('pointerdown', (e) => handleCheckboxClick(e, ec));
     }
 
-    // ワールド座標 → スクリーン座標
+    // ワールド座標 → コンテナ内相対座標
     const worldX = note.gx * GRID;
     const worldY = note.gy * GRID;
     const worldW = note.w * GRID;
     const worldH = note.h * GRID;
 
-    const screenX = (worldX - viewport.panX) * viewport.zoom + canvasRect.left;
-    const screenY = (worldY - viewport.panY) * viewport.zoom + canvasRect.top;
+    const localX = (worldX - viewport.panX) * viewport.zoom;
+    const localY = (worldY - viewport.panY) * viewport.zoom;
     const screenW = worldW * viewport.zoom;
     const screenH = worldH * viewport.zoom;
 
-    // Canvas可視範囲外なら非表示
+    // コンテナ可視範囲外なら非表示
     if (
-      screenX + screenW < canvasRect.left ||
-      screenX > canvasRect.right ||
-      screenY + screenH < canvasRect.top ||
-      screenY > canvasRect.bottom
+      localX + screenW < 0 ||
+      localX > containerRect.width ||
+      localY + screenH < 0 ||
+      localY > containerRect.height
     ) {
       el.style.display = 'none';
       continue;
     }
 
     el.style.display = '';
-    el.style.left = `${screenX}px`;
-    el.style.top = `${screenY}px`;
+    el.style.left = `${localX}px`;
+    el.style.top = `${localY}px`;
     el.style.width = `${screenW}px`;
     el.style.height = `${screenH}px`;
     el.style.padding = `${4 * viewport.zoom}px`;
@@ -88,6 +100,31 @@ export function destroyStickyNoteOverlays(): void {
   overlayMap.clear();
 }
 
+/** チェックボックスクリックのイベントハンドラ（イベント委譲） */
+function handleCheckboxClick(e: PointerEvent, ec: EditorContext): void {
+  const target = e.target as HTMLElement;
+  const cbEl = target.closest('[data-cb-line]') as HTMLElement | null;
+  if (!cbEl) return;
+
+  const lineIndex = parseInt(cbEl.dataset.cbLine!, 10);
+  const noteId = (cbEl.closest('[data-note-id]') as HTMLElement | null)?.dataset.noteId;
+  if (!noteId || isNaN(lineIndex)) return;
+
+  const note = findStickyNoteById(ec.state.stickyNotes, noteId);
+  if (!note) return;
+
+  // Canvas側のmousedownイベントを発火させない
+  e.stopPropagation();
+  e.preventDefault();
+
+  ec.commitChange(() => {
+    note.label = toggleStickyNoteCheckbox(note, lineIndex);
+  });
+  ec.flags.activeStickyNoteId = noteId;
+  selectSingle(ec.state.selection, noteId);
+  ec.render();
+}
+
 function renderMarkdown(
   note: StickyNote,
   fontSize: number,
@@ -97,8 +134,8 @@ function renderMarkdown(
   const lineHeight = 1.3;
   const parts: string[] = [];
 
-  for (const line of lines) {
-    const parsed = parseStickyNoteLine(line);
+  for (let i = 0; i < lines.length; i++) {
+    const parsed = parseStickyNoteLine(lines[i]);
     switch (parsed.type) {
       case 'heading': {
         const size = Math.round(fontSize * 1.3);
@@ -111,14 +148,14 @@ function renderMarkdown(
         const cbSize = Math.round(fontSize * 0.85);
         const checked = parsed.checked;
         const checkboxStyle = checked
-          ? `width:${cbSize}px;height:${cbSize}px;background:${accentColor};border:1px solid #555;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;font-size:${cbSize * 0.7}px`
-          : `width:${cbSize}px;height:${cbSize}px;border:1px solid #555;border-radius:2px;display:inline-flex;flex-shrink:0`;
+          ? `width:${cbSize}px;height:${cbSize}px;background:${accentColor};border:1px solid #555;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;font-size:${cbSize * 0.7}px;pointer-events:auto;cursor:pointer`
+          : `width:${cbSize}px;height:${cbSize}px;border:1px solid #555;border-radius:2px;display:inline-flex;flex-shrink:0;pointer-events:auto;cursor:pointer`;
         const textStyle = checked
           ? `color:#888;text-decoration:line-through`
           : `color:#333`;
         parts.push(
-          `<div style="display:flex;align-items:center;gap:${fontSize * 0.3}px;font-size:${fontSize}px;line-height:${lineHeight}">` +
-            `<span style="${checkboxStyle}">${checked ? '✓' : ''}</span>` +
+          `<div data-cb-line="${i}" style="display:flex;align-items:flex-start;gap:${fontSize * 0.3}px;font-size:${fontSize}px;line-height:${lineHeight};pointer-events:auto;cursor:pointer">` +
+            `<span style="${checkboxStyle};margin-top:${(fontSize * lineHeight - cbSize) / 2}px">${checked ? '✓' : ''}</span>` +
             `<span style="${textStyle}">${escapeHtml(parsed.text)}</span>` +
             `</div>`,
         );
