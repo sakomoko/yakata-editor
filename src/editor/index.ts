@@ -5,6 +5,7 @@ import type {
   EditorCallbacks,
   EditorAPI,
   EditorContext,
+  PngExportOptions,
   RoomEditData,
   MarkerEditData,
   ContextMenuRequest,
@@ -136,7 +137,7 @@ export function initEditor(
     newProject: () => newProject(ec),
     loadProject: (data) => loadProjectData(ec, data),
     saveProject: (suggestedFilename?: string) => saveProject(ec, suggestedFilename),
-    exportAsPng: (options?) => exportAsPng(ec, options),
+    exportAsPng: (options?: PngExportOptions) => exportAsPng(ec, options),
     resize: resizeCanvas,
     destroy() {
       destroyGestures();

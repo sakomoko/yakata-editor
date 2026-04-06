@@ -496,6 +496,11 @@ export default function App() {
   };
 
   // Build tabs array for TabBar (memoized)
+  const defaultPngFilename = useMemo(() => {
+    const name = projectIndex.find((m) => m.id === tabState.activeTabId)?.name;
+    return name ? sanitizeFilename(name) : '間取り図';
+  }, [projectIndex, tabState.activeTabId]);
+
   const tabs = useMemo(
     () =>
       tabState.openTabs
@@ -873,12 +878,7 @@ export default function App() {
       {/* PNG export options dialog */}
       <PngExportDialog
         open={pngExportDialogOpen}
-        defaultFilename={(() => {
-          const name = projectIndex.find(
-            (m) => m.id === tabState.activeTabId,
-          )?.name;
-          return name ? sanitizeFilename(name) : '間取り図';
-        })()}
+        defaultFilename={defaultPngFilename}
         onClose={() => setPngExportDialogOpen(false)}
         onExport={(options) => {
           setPngExportDialogOpen(false);

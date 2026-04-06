@@ -23,6 +23,7 @@ export default function PngExportDialog({ open, defaultFilename, onClose, onExpo
   useEffect(() => {
     if (open) {
       setFilename(defaultFilename);
+      setIncludeStickyNotes(true);
     }
   }, [open, defaultFilename]);
 
