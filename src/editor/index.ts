@@ -136,7 +136,7 @@ export function initEditor(
     newProject: () => newProject(ec),
     loadProject: (data) => loadProjectData(ec, data),
     saveProject: (suggestedFilename?: string) => saveProject(ec, suggestedFilename),
-    exportAsPng: () => exportAsPng(ec),
+    exportAsPng: (options?) => exportAsPng(ec, options),
     resize: resizeCanvas,
     destroy() {
       destroyGestures();

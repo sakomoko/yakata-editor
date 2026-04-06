@@ -523,8 +523,8 @@ export function loadFromFile(file: File): Promise<StorageData> {
   });
 }
 
-export function exportPng(canvas: HTMLCanvasElement): void {
-  triggerDownload(canvas.toDataURL('image/png'), '間取り図.png');
+export function exportPng(canvas: HTMLCanvasElement, filename?: string): void {
+  triggerDownload(canvas.toDataURL('image/png'), filename || '間取り図.png');
 }
 
 function triggerDownload(url: string, filename: string): void {
