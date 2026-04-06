@@ -83,7 +83,8 @@ function getMeasureCtx(): CanvasRenderingContext2D | null {
 
 /**
  * テキストが指定幅で折り返されるときの行数を推定する。
- * CSSの折り返しに近い挙動を再現するため、文字単位で幅を計測する。
+ * 文字単位で幅を計測するため、CJK文字主体のテキストでは正確だが、
+ * ラテン文字の場合はCSSのword-breakルールと乖離する可能性がある。
  * Canvas非対応環境では文字幅を概算で推定する。
  */
 export function estimateWrappedLineCount(

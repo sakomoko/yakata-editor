@@ -14,12 +14,8 @@ import { escapeHtml } from './utils.ts';
 /** 付箋ID → overlay div のマップ */
 const overlayMap = new Map<string, HTMLDivElement>();
 
-/** EditorContext の参照（チェックボックスクリック時に使用） */
-let _ec: EditorContext | null = null;
-
 /** 全付箋オーバーレイを現在の状態に合わせて更新する。render() の最後に呼ぶ。 */
 export function updateStickyNoteOverlays(ec: EditorContext): void {
-  _ec = ec;
   const { state, viewport, container } = ec;
 
   // 付箋もオーバーレイも無ければ何もしない（getBoundingClientRect の不要な呼び出しを避ける）
@@ -52,8 +48,8 @@ export function updateStickyNoteOverlays(ec: EditorContext): void {
 
       el.dataset.noteId = note.id;
 
-      // チェックボックスのクリックイベント委譲
-      el.addEventListener('pointerdown', handleCheckboxClick);
+      // チェックボックスのクリックイベント委譲（ecをクロージャで閉じ込める）
+      el.addEventListener('pointerdown', (e) => handleCheckboxClick(e, ec));
     }
 
     // ワールド座標 → コンテナ内相対座標
@@ -102,32 +98,31 @@ export function destroyStickyNoteOverlays(): void {
     el.remove();
   }
   overlayMap.clear();
-  _ec = null;
 }
 
 /** チェックボックスクリックのイベントハンドラ（イベント委譲） */
-function handleCheckboxClick(e: PointerEvent): void {
+function handleCheckboxClick(e: PointerEvent, ec: EditorContext): void {
   const target = e.target as HTMLElement;
   const cbEl = target.closest('[data-cb-line]') as HTMLElement | null;
-  if (!cbEl || !_ec) return;
+  if (!cbEl) return;
 
   const lineIndex = parseInt(cbEl.dataset.cbLine!, 10);
   const noteId = (cbEl.closest('[data-note-id]') as HTMLElement | null)?.dataset.noteId;
   if (!noteId || isNaN(lineIndex)) return;
 
-  const note = findStickyNoteById(_ec.state.stickyNotes, noteId);
+  const note = findStickyNoteById(ec.state.stickyNotes, noteId);
   if (!note) return;
 
   // Canvas側のmousedownイベントを発火させない
   e.stopPropagation();
   e.preventDefault();
 
-  _ec.commitChange(() => {
+  ec.commitChange(() => {
     note.label = toggleStickyNoteCheckbox(note, lineIndex);
   });
-  _ec.flags.activeStickyNoteId = noteId;
-  selectSingle(_ec.state.selection, noteId);
-  _ec.render();
+  ec.flags.activeStickyNoteId = noteId;
+  selectSingle(ec.state.selection, noteId);
+  ec.render();
 }
 
 function renderMarkdown(
