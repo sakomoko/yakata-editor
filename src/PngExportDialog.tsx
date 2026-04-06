@@ -8,6 +8,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import TextField from '@mui/material/TextField';
 import type { PngExportOptions } from './editor/context.ts';
+import { sanitizeFilename } from './persistence.ts';
 
 interface Props {
   open: boolean;
@@ -32,6 +33,7 @@ export default function PngExportDialog({ open, defaultFilename, onClose, onExpo
       <DialogTitle>PNG出力オプション</DialogTitle>
       <DialogContent>
         <TextField
+          autoFocus
           label="ファイル名"
           value={filename}
           onChange={(e) => setFilename(e.target.value)}
@@ -55,7 +57,7 @@ export default function PngExportDialog({ open, defaultFilename, onClose, onExpo
         <Button onClick={onClose}>キャンセル</Button>
         <Button
           onClick={() => {
-            const base = (filename.trim() || '間取り図').replace(/\.png$/i, '');
+            const base = sanitizeFilename(filename.trim() || '間取り図').replace(/\.png$/i, '');
             onExport({ includeStickyNotes, filename: `${base}.png` });
           }}
           variant="contained"

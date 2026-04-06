@@ -485,7 +485,7 @@ describe('exportAsPng', () => {
     expect(stickyNotesDuringRender).toEqual([]);
   });
 
-  it('includeStickyNotes: true のとき、render中にstickyNotes��保持される', () => {
+  it('includeStickyNotes: true のとき、render中にstickyNotesが保持される', () => {
     const ec = createExportEc();
     const note = createStickyNote(10, 10, 'テスト付箋');
     ec.state.stickyNotes = [note];
