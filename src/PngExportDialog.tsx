@@ -55,8 +55,8 @@ export default function PngExportDialog({ open, defaultFilename, onClose, onExpo
         <Button onClick={onClose}>キャンセル</Button>
         <Button
           onClick={() => {
-            const name = filename.trim() || '間取り図';
-            onExport({ includeStickyNotes, filename: `${name}.png` });
+            const base = (filename.trim() || '間取り図').replace(/\.png$/i, '');
+            onExport({ includeStickyNotes, filename: `${base}.png` });
           }}
           variant="contained"
         >
