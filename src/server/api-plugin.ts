@@ -103,6 +103,10 @@ export function yakataApiPlugin(): Plugin {
         }
 
         if (method === 'POST') {
+          if (process.platform !== 'darwin') {
+            sendJson(res, 200, { cancelled: true });
+            return;
+          }
           if (osascriptRunning) {
             sendJson(res, 200, { cancelled: true });
             return;

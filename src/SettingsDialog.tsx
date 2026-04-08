@@ -22,7 +22,10 @@ export default function SettingsDialog({ open, onClose }: Props) {
   const [browsing, setBrowsing] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setBrowsing(false);
+      return;
+    }
     setError('');
     setSaving(false);
     const ac = new AbortController();
@@ -91,6 +94,11 @@ export default function SettingsDialog({ open, onClose }: Props) {
               setError('');
               try {
                 const res = await fetch('/api/settings', { method: 'POST' });
+                if (!res.ok) {
+                  setError('フォルダ選択に失敗しました');
+                  setBrowsing(false);
+                  return;
+                }
                 const json = (await res.json()) as { path?: string; cancelled?: boolean };
                 if (json.path) setDataDir(json.path);
               } catch {

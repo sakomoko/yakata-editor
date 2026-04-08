@@ -1,5 +1,6 @@
 /// <reference types="node" />
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { writeAtomic } from './project-store-fs.ts';
 
@@ -28,7 +29,7 @@ export function saveConfig(rootDir: string, config: AppConfig): void {
 }
 
 export function resolveTilde(p: string): string {
-  return p.startsWith('~/') ? path.join(process.env.HOME ?? '', p.slice(1)) : p;
+  return p.startsWith('~/') ? path.join(os.homedir(), p.slice(1)) : p;
 }
 
 export function getEffectiveDataDir(rootDir: string, config: AppConfig): string {
