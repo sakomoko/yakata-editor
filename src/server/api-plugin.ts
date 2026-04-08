@@ -66,7 +66,13 @@ export function yakataApiPlugin(): Plugin {
         if (method === 'PUT') {
           readBody(req)
             .then((body) => {
-              const parsed = JSON.parse(body) as Record<string, unknown>;
+              let parsed: Record<string, unknown>;
+              try {
+                parsed = JSON.parse(body) as Record<string, unknown>;
+              } catch {
+                sendJson(res, 400, { error: 'Invalid JSON' });
+                return;
+              }
               const newDataDir = typeof parsed.dataDir === 'string' ? parsed.dataDir.trim() : '';
 
               if (!newDataDir) {

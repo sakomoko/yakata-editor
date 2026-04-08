@@ -56,6 +56,7 @@ export default function SettingsDialog({ open, onClose }: Props) {
         body: JSON.stringify({ dataDir }),
       });
       if (!res.ok) {
+        if (!mountedRef.current) return;
         const json = (await res.json()) as { error?: string };
         setError(json.error ?? '保存に失敗しました');
         setSaving(false);
@@ -63,6 +64,7 @@ export default function SettingsDialog({ open, onClose }: Props) {
       }
       window.location.reload();
     } catch {
+      if (!mountedRef.current) return;
       setError('サーバーとの通信に失敗しました');
       setSaving(false);
     }
@@ -137,7 +139,7 @@ export default function SettingsDialog({ open, onClose }: Props) {
         <Button onClick={onClose} size="small">
           キャンセル
         </Button>
-        <Button onClick={handleSave} variant="contained" size="small" disabled={saving}>
+        <Button onClick={handleSave} variant="contained" size="small" disabled={saving || !dataDir.trim()}>
           {saving ? '保存中…' : '保存'}
         </Button>
       </DialogActions>
