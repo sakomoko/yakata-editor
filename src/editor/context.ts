@@ -41,6 +41,11 @@ export interface EditorCallbacks {
   onArrowModeChange?: (arrowMode: boolean) => void;
 }
 
+export interface PngExportOptions {
+  includeStickyNotes?: boolean;
+  filename?: string;
+}
+
 export interface EditorAPI {
   undo: () => void;
   newProject: () => void;
@@ -52,7 +57,7 @@ export interface EditorAPI {
     stickyNotes?: StickyNote[];
   }) => void;
   saveProject: (suggestedFilename?: string) => Promise<void>;
-  exportAsPng: () => void;
+  exportAsPng: (options?: PngExportOptions) => void;
   resize: () => void;
   destroy: () => void;
   getState: () => {

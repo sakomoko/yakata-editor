@@ -50,6 +50,7 @@ import type { ContextMenuItem } from './context-menu.ts';
 import TabBar from './TabBar.tsx';
 import ProjectListModal from './ProjectListModal.tsx';
 import ShortcutHelpDialog from './ShortcutHelpDialog.tsx';
+import PngExportDialog from './PngExportDialog.tsx';
 import { modKeyCombo } from './platform.ts';
 import { isTextInput } from './dom-utils.ts';
 
@@ -125,6 +126,7 @@ export default function App() {
   const tabStateRef = useRef<TabState>({ openTabs: [], activeTabId: '' });
   const [projectListOpen, setProjectListOpen] = useState(false);
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
+  const [pngExportDialogOpen, setPngExportDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const deleteTargetIdRef = useRef<string | null>(null);
   const [deleteTargetName, setDeleteTargetName] = useState('');
@@ -494,6 +496,11 @@ export default function App() {
   };
 
   // Build tabs array for TabBar (memoized)
+  const defaultPngFilename = useMemo(() => {
+    const name = projectIndex.find((m) => m.id === tabState.activeTabId)?.name;
+    return name ? sanitizeFilename(name) : '間取り図';
+  }, [projectIndex, tabState.activeTabId]);
+
   const tabs = useMemo(
     () =>
       tabState.openTabs
@@ -635,7 +642,7 @@ export default function App() {
             color="inherit"
             sx={toolbarButtonSx}
             startIcon={<ImageIcon />}
-            onClick={() => editorRef.current?.exportAsPng()}
+            onClick={() => setPngExportDialogOpen(true)}
           >
             PNG出力
           </Button>
@@ -867,6 +874,17 @@ export default function App() {
 
       {/* Shortcut help dialog */}
       <ShortcutHelpDialog open={shortcutHelpOpen} onClose={() => setShortcutHelpOpen(false)} />
+
+      {/* PNG export options dialog */}
+      <PngExportDialog
+        open={pngExportDialogOpen}
+        defaultFilename={defaultPngFilename}
+        onClose={() => setPngExportDialogOpen(false)}
+        onExport={(options) => {
+          setPngExportDialogOpen(false);
+          editorRef.current?.exportAsPng(options);
+        }}
+      />
 
       {/* Delete confirmation dialog */}
       <Dialog

@@ -11,7 +11,7 @@ import { drawFreeTextForExport } from '../free-text.ts';
 import { computeRoomsBoundingBox, calcAutoFontSize } from '../room.ts';
 import { syncAllPairedOpenings } from '../adjacency.ts';
 import { findRoomById } from '../lookup.ts';
-import type { EditorContext } from './context.ts';
+import type { EditorContext, PngExportOptions } from './context.ts';
 import { getEntitySnapshot } from './utils.ts';
 
 export function commitChange(ec: EditorContext, fn: () => void): void {
@@ -136,14 +136,20 @@ export async function saveProject(ec: EditorContext, suggestedFilename?: string)
   await saveAsJson(getEntitySnapshot(ec.state), suggestedFilename);
 }
 
-export function exportAsPng(ec: EditorContext): void {
+export function exportAsPng(ec: EditorContext, options?: PngExportOptions): void {
   const { canvas, state, viewport, flags } = ec;
+  const includeStickyNotes = options?.includeStickyNotes ?? true;
   const prevSelection = new Set(state.selection);
   clearSelection(state.selection);
   const savedActiveFreeTextId = flags.activeFreeTextId;
   const savedActiveStickyNoteId = flags.activeStickyNoteId;
   flags.activeFreeTextId = undefined;
   flags.activeStickyNoteId = undefined;
+
+  const savedStickyNotes = state.stickyNotes;
+  if (!includeStickyNotes) {
+    state.stickyNotes = [];
+  }
 
   const savedViewport = { ...viewport };
   const savedW = canvas.width;
@@ -250,8 +256,9 @@ export function exportAsPng(ec: EditorContext): void {
       exportCtx.setTransform(1, 0, 0, 1, 0, 0);
     }
 
-    exportPng(canvas);
+    exportPng(canvas, options?.filename);
   } finally {
+    state.stickyNotes = savedStickyNotes;
     canvas.width = savedW;
     canvas.height = savedH;
     Object.assign(viewport, savedViewport);

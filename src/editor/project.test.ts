@@ -6,12 +6,19 @@ import {
   commitChange,
   undo,
   redo,
+  exportAsPng,
 } from './project.ts';
 import { createRoom } from '../room.ts';
 import { createFreeText } from '../free-text.ts';
 import { createFreeStroke } from '../free-stroke.ts';
+import { createStickyNote } from '../sticky-note.ts';
 import type { EditorContext } from './context.ts';
 import type { ViewportState } from '../viewport.ts';
+
+vi.mock('../persistence.ts', () => ({
+  exportPng: vi.fn(),
+  saveAsJson: vi.fn(),
+}));
 
 function createMockEc(): EditorContext {
   const viewport: ViewportState = { zoom: 1, panX: 0, panY: 0 };
@@ -399,5 +406,119 @@ describe('undo / redo 統合テスト', () => {
     // render は呼ばれない（何も変わらない）
     expect((ec.render as ReturnType<typeof vi.fn>).mock.calls.length).toBe(renderCallCount);
     expect(ec.state.rooms).toHaveLength(1);
+  });
+});
+
+describe('exportAsPng', () => {
+  function createExportEc(): EditorContext {
+    const mockCtx2d = new Proxy(
+      {},
+      { get: (_t, _p) => vi.fn() },
+    );
+    const canvas = {
+      width: 800,
+      height: 600,
+      getContext: vi.fn(() => mockCtx2d),
+      toDataURL: vi.fn(() => 'data:image/png;base64,'),
+    };
+    const viewport: ViewportState = { zoom: 1, panX: 0, panY: 0 };
+    return {
+      canvas: canvas as unknown as HTMLCanvasElement,
+      ctx: {} as CanvasRenderingContext2D,
+      container: {} as HTMLElement,
+      state: {
+        rooms: [],
+        freeTexts: [],
+        freeStrokes: [],
+        arrows: [],
+        stickyNotes: [],
+        selection: new Set<string>(),
+        history: [],
+        redoHistory: [],
+        drag: null,
+        mouse: { px: 0, py: 0, gx: 0, gy: 0 },
+        paintMode: false,
+        paintColor: '#000000',
+        paintLineWidth: 2,
+        paintOpacity: 1,
+        arrowMode: false,
+        arrowColor: '#cc0000',
+        arrowLineWidth: 2,
+      },
+      viewport,
+      callbacks: {
+        onStatusChange: vi.fn(),
+        onRoomEdit: vi.fn(),
+        onMarkerEdit: vi.fn(),
+        onFreeTextEdit: vi.fn(),
+        onContextMenu: vi.fn(),
+        onAutoSave: vi.fn(),
+        onViewportChange: vi.fn(),
+      },
+      flags: {
+        isPanning: false,
+        activeInteriorObjectId: undefined,
+        activeFreeTextId: undefined,
+        activeStickyNoteId: undefined,
+        snapIndicator: null,
+        savedRedo: null,
+        drawArrowPreview: null,
+      },
+      render: vi.fn(),
+      commitChange: vi.fn((fn: () => void) => fn()),
+      mousePos: vi.fn(),
+    } as unknown as EditorContext;
+  }
+
+  it('includeStickyNotes: false のとき、render中にstickyNotesが空になる', () => {
+    const ec = createExportEc();
+    const note = createStickyNote(10, 10, 'テスト付箋');
+    ec.state.stickyNotes = [note];
+
+    let stickyNotesDuringRender: unknown[] | undefined;
+    (ec.render as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+      stickyNotesDuringRender = [...ec.state.stickyNotes];
+    });
+
+    exportAsPng(ec, { includeStickyNotes: false });
+
+    expect(stickyNotesDuringRender).toEqual([]);
+  });
+
+  it('includeStickyNotes: true のとき、render中にstickyNotesが保持される', () => {
+    const ec = createExportEc();
+    const note = createStickyNote(10, 10, 'テスト付箋');
+    ec.state.stickyNotes = [note];
+
+    let stickyNotesDuringRender: unknown[] | undefined;
+    (ec.render as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+      stickyNotesDuringRender = [...ec.state.stickyNotes];
+    });
+
+    exportAsPng(ec, { includeStickyNotes: true });
+
+    expect(stickyNotesDuringRender).toHaveLength(1);
+  });
+
+  it('エクスポート後にstickyNotesが復元される', () => {
+    const ec = createExportEc();
+    const note = createStickyNote(10, 10, 'テスト付箋');
+    ec.state.stickyNotes = [note];
+
+    exportAsPng(ec, { includeStickyNotes: false });
+
+    expect(ec.state.stickyNotes).toHaveLength(1);
+    expect(ec.state.stickyNotes[0].id).toBe(note.id);
+  });
+
+  it('filenameオプションがexportPngに渡される', async () => {
+    const ec = createExportEc();
+    ec.state.rooms = [createRoom(0, 0, 5, 5, 'Room')];
+
+    const { exportPng } = await import('../persistence.ts');
+
+    exportAsPng(ec, { filename: 'テスト.png' });
+
+    expect(exportPng).toHaveBeenCalledWith(ec.canvas, 'テスト.png');
   });
 });
