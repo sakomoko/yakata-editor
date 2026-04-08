@@ -21,15 +21,15 @@ export default function SettingsDialog({ open, onClose }: Props) {
   const [saving, setSaving] = useState(false);
   const [browsing, setBrowsing] = useState(false);
   // ダイアログが閉じられた後の非同期処理による stale setState を防ぐ
-  const mountedRef = useRef(false);
+  const dialogOpenRef = useRef(false);
 
   useEffect(() => {
     if (!open) {
-      mountedRef.current = false;
+      dialogOpenRef.current = false;
       setBrowsing(false);
       return;
     }
-    mountedRef.current = true;
+    dialogOpenRef.current = true;
     setError('');
     setSaving(false);
     const ac = new AbortController();
@@ -46,6 +46,27 @@ export default function SettingsDialog({ open, onClose }: Props) {
     return () => ac.abort();
   }, [open]);
 
+  const handleBrowse = async () => {
+    setBrowsing(true);
+    setError('');
+    try {
+      const res = await fetch('/api/settings', { method: 'POST' });
+      if (!dialogOpenRef.current) return;
+      if (!res.ok) {
+        setError('フォルダ選択に失敗しました');
+        return;
+      }
+      const json = (await res.json()) as { path?: string; cancelled?: boolean };
+      if (!dialogOpenRef.current) return;
+      if (json.path) setDataDir(json.path);
+    } catch {
+      if (!dialogOpenRef.current) return;
+      setError('フォルダ選択に失敗しました');
+    } finally {
+      if (dialogOpenRef.current) setBrowsing(false);
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setError('');
@@ -56,7 +77,7 @@ export default function SettingsDialog({ open, onClose }: Props) {
         body: JSON.stringify({ dataDir }),
       });
       if (!res.ok) {
-        if (!mountedRef.current) return;
+        if (!dialogOpenRef.current) return;
         const json = (await res.json()) as { error?: string };
         setError(json.error ?? '保存に失敗しました');
         setSaving(false);
@@ -64,7 +85,7 @@ export default function SettingsDialog({ open, onClose }: Props) {
       }
       window.location.reload();
     } catch {
-      if (!mountedRef.current) return;
+      if (!dialogOpenRef.current) return;
       setError('サーバーとの通信に失敗しました');
       setSaving(false);
     }
@@ -89,32 +110,14 @@ export default function SettingsDialog({ open, onClose }: Props) {
             value={dataDir}
             onChange={(e) => setDataDir(e.target.value)}
             placeholder="/path/to/data"
+            autoFocus
           />
           <Button
             variant="outlined"
             size="small"
             startIcon={<FolderOpenIcon />}
             disabled={browsing}
-            onClick={async () => {
-              setBrowsing(true);
-              setError('');
-              try {
-                const res = await fetch('/api/settings', { method: 'POST' });
-                if (!mountedRef.current) return;
-                if (!res.ok) {
-                  setError('フォルダ選択に失敗しました');
-                  return;
-                }
-                const json = (await res.json()) as { path?: string; cancelled?: boolean };
-                if (!mountedRef.current) return;
-                if (json.path) setDataDir(json.path);
-              } catch {
-                if (!mountedRef.current) return;
-                setError('フォルダ選択に失敗しました');
-              } finally {
-                if (mountedRef.current) setBrowsing(false);
-              }
-            }}
+            onClick={handleBrowse}
             sx={{ whiteSpace: 'nowrap' }}
           >
             {browsing ? '選択中…' : '参照'}
