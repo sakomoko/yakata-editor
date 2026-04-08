@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { resolveTilde, getEffectiveDataDir, loadConfig, saveConfig } from './config.ts';
+import { resolveTilde, resolveDataDir, getEffectiveDataDir, loadConfig, saveConfig } from './config.ts';
 
 describe('config', () => {
   let tmpDir: string;
@@ -37,6 +37,24 @@ describe('config', () => {
     });
   });
 
+  describe('resolveDataDir', () => {
+    it('resolves tilde paths', () => {
+      expect(resolveDataDir(tmpDir, '~/foo')).toBe(path.join(os.homedir(), 'foo'));
+    });
+
+    it('returns absolute paths unchanged', () => {
+      expect(resolveDataDir(tmpDir, '/absolute/path')).toBe('/absolute/path');
+    });
+
+    it('resolves relative paths against rootDir', () => {
+      expect(resolveDataDir(tmpDir, 'data')).toBe(path.join(tmpDir, 'data'));
+    });
+
+    it('resolves relative paths with subdirectories against rootDir', () => {
+      expect(resolveDataDir(tmpDir, 'sub/dir')).toBe(path.join(tmpDir, 'sub', 'dir'));
+    });
+  });
+
   describe('getEffectiveDataDir', () => {
     it('returns configured directory when it exists', () => {
       const dataDir = path.join(tmpDir, 'custom-data');
@@ -59,6 +77,14 @@ describe('config', () => {
       // This test uses homedir which should exist
       const result = getEffectiveDataDir(tmpDir, { dataDir: '~' });
       expect(result).toBe(os.homedir());
+    });
+
+    it('resolves relative path against rootDir', () => {
+      // Create a relative-style directory under tmpDir
+      const relDir = path.join(tmpDir, 'mydata');
+      fs.mkdirSync(relDir);
+      const result = getEffectiveDataDir(tmpDir, { dataDir: 'mydata' });
+      expect(result).toBe(relDir);
     });
   });
 

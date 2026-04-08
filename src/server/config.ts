@@ -33,9 +33,15 @@ export function resolveTilde(p: string): string {
   return p.startsWith('~/') ? path.join(os.homedir(), p.slice(1)) : p;
 }
 
+/** チルダ展開後、相対パスの場合は rootDir を基準に絶対パスへ解決する */
+export function resolveDataDir(rootDir: string, rawPath: string): string {
+  const tildeResolved = resolveTilde(rawPath);
+  return path.isAbsolute(tildeResolved) ? tildeResolved : path.resolve(rootDir, tildeResolved);
+}
+
 export function getEffectiveDataDir(rootDir: string, config: AppConfig): string {
   if (config.dataDir) {
-    const resolved = resolveTilde(config.dataDir);
+    const resolved = resolveDataDir(rootDir, config.dataDir);
     try {
       const stat = fs.statSync(resolved);
       if (stat.isDirectory()) {

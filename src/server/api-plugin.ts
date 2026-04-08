@@ -6,7 +6,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { UUID_RE } from '../shared/project-utils.ts';
 import { setDataDir } from './project-store-fs.ts';
-import { loadConfig, saveConfig, getEffectiveDataDir, resolveTilde } from './config.ts';
+import { loadConfig, saveConfig, getEffectiveDataDir, resolveDataDir } from './config.ts';
 
 const MAX_BODY_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -49,6 +49,8 @@ export function yakataApiPlugin(): Plugin {
       let osascriptRunning = false;
 
       // Settings API
+      // Note: Projects API と異なり ssrLoadModule を使わないため HMR 非対応。
+      // このファイルを変更した場合は Vite の再起動が必要。
       server.middlewares.use((req: IncomingMessage, res: ServerResponse, next: () => void) => {
         const url = req.url ?? '';
         const method = req.method ?? 'GET';
@@ -84,7 +86,8 @@ export function yakataApiPlugin(): Plugin {
                 return;
               }
 
-              const resolved = resolveTilde(newDataDir);
+              // 相対パスは root 基準で解決（cwd 依存を防ぐ）
+              const resolved = resolveDataDir(root, newDataDir);
 
               // ディレクトリ存在 & 書き込み権限チェック
               try {
