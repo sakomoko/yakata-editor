@@ -18,6 +18,7 @@ interface Props {
 export default function SettingsDialog({ open, onClose }: Props) {
   const [dataDir, setDataDir] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [browsing, setBrowsing] = useState(false);
   // ダイアログが閉じられた後の非同期処理による stale setState を防ぐ
@@ -32,16 +33,21 @@ export default function SettingsDialog({ open, onClose }: Props) {
     dialogOpenRef.current = true;
     setError('');
     setSaving(false);
+    setLoading(true);
     const ac = new AbortController();
     fetch('/api/settings', { signal: ac.signal })
       .then((res) => {
         if (!res.ok) throw new Error('Failed to load settings');
         return res.json();
       })
-      .then((json: { dataDir: string }) => setDataDir(json.dataDir))
+      .then((json: { dataDir: string }) => {
+        setDataDir(json.dataDir);
+        setLoading(false);
+      })
       .catch((e: unknown) => {
         if (e instanceof DOMException && e.name === 'AbortError') return;
         setError('設定の読み込みに失敗しました');
+        setLoading(false);
       });
     return () => ac.abort();
   }, [open]);
@@ -49,8 +55,11 @@ export default function SettingsDialog({ open, onClose }: Props) {
   const handleBrowse = async () => {
     setBrowsing(true);
     setError('');
+    // osascriptのタイムアウト(60s)に合わせてクライアント側にもタイムアウトを設ける
+    const ac = new AbortController();
+    const timerId = setTimeout(() => ac.abort(), 65000);
     try {
-      const res = await fetch('/api/settings', { method: 'POST' });
+      const res = await fetch('/api/settings', { method: 'POST', signal: ac.signal });
       if (!dialogOpenRef.current) return;
       if (!res.ok) {
         setError('フォルダ選択に失敗しました');
@@ -59,10 +68,15 @@ export default function SettingsDialog({ open, onClose }: Props) {
       const json = (await res.json()) as { path?: string; cancelled?: boolean };
       if (!dialogOpenRef.current) return;
       if (json.path) setDataDir(json.path);
-    } catch {
+    } catch (e: unknown) {
       if (!dialogOpenRef.current) return;
-      setError('フォルダ選択に失敗しました');
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        setError('フォルダ選択がタイムアウトしました');
+      } else {
+        setError('フォルダ選択に失敗しました');
+      }
     } finally {
+      clearTimeout(timerId);
       if (dialogOpenRef.current) setBrowsing(false);
     }
   };
@@ -110,6 +124,7 @@ export default function SettingsDialog({ open, onClose }: Props) {
             value={dataDir}
             onChange={(e) => setDataDir(e.target.value)}
             placeholder="/path/to/data"
+            disabled={loading}
             autoFocus
           />
           <Button
@@ -142,7 +157,7 @@ export default function SettingsDialog({ open, onClose }: Props) {
         <Button onClick={onClose} size="small">
           キャンセル
         </Button>
-        <Button onClick={handleSave} variant="contained" size="small" disabled={saving || !dataDir.trim()}>
+        <Button onClick={handleSave} variant="contained" size="small" disabled={loading || saving || !dataDir.trim()}>
           {saving ? '保存中…' : '保存'}
         </Button>
       </DialogActions>
