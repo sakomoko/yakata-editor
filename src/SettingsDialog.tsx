@@ -131,7 +131,7 @@ export default function SettingsDialog({ open, onClose }: Props) {
             variant="outlined"
             size="small"
             startIcon={<FolderOpenIcon />}
-            disabled={browsing}
+            disabled={browsing || loading}
             onClick={handleBrowse}
             sx={{ whiteSpace: 'nowrap' }}
           >
