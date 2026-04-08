@@ -431,7 +431,13 @@ const WARNING_UNRECOGNIZED_FORMAT =
 export function parseStorageData(parsed: unknown): StorageData {
   // 旧形式: 配列（rooms only）
   if (Array.isArray(parsed)) {
-    return { rooms: ensureIds(parsed), freeTexts: [], freeStrokes: [], arrows: [], stickyNotes: [] };
+    return {
+      rooms: ensureIds(parsed),
+      freeTexts: [],
+      freeStrokes: [],
+      arrows: [],
+      stickyNotes: [],
+    };
   }
   // 新形式: { rooms, freeTexts, freeStrokes, arrows }
   if (parsed && typeof parsed === 'object') {
@@ -466,6 +472,7 @@ export function parseStorageData(parsed: unknown): StorageData {
 
 /** ファイル名に使えない文字・制御文字を除去し、既に.json拡張子がついていれば除去する */
 export function sanitizeFilename(name: string): string {
+  // eslint-disable-next-line no-control-regex -- ファイル名から制御文字を意図的に除去
   const sanitized = name.trim().replace(/[/\\:*?"<>|\x00-\x1f\x7f]/g, '_');
   return sanitized.endsWith('.json') ? sanitized.slice(0, -5) : sanitized;
 }

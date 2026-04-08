@@ -51,6 +51,8 @@ import TabBar from './TabBar.tsx';
 import ProjectListModal from './ProjectListModal.tsx';
 import ShortcutHelpDialog from './ShortcutHelpDialog.tsx';
 import PngExportDialog from './PngExportDialog.tsx';
+import SettingsDialog from './SettingsDialog.tsx';
+import SettingsIcon from '@mui/icons-material/Settings';
 import { modKeyCombo } from './platform.ts';
 import { isTextInput } from './dom-utils.ts';
 
@@ -127,6 +129,7 @@ export default function App() {
   const [projectListOpen, setProjectListOpen] = useState(false);
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
   const [pngExportDialogOpen, setPngExportDialogOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const deleteTargetIdRef = useRef<string | null>(null);
   const [deleteTargetName, setDeleteTargetName] = useState('');
@@ -617,9 +620,7 @@ export default function App() {
             sx={toolbarButtonSx}
             startIcon={<SaveIcon />}
             onClick={() => {
-              const name = projectIndex.find(
-                (m) => m.id === tabStateRef.current.activeTabId,
-              )?.name;
+              const name = projectIndex.find((m) => m.id === tabStateRef.current.activeTabId)?.name;
               const filename = name ? `${sanitizeFilename(name)}.json` : undefined;
               editorRef.current?.saveProject(filename).catch(console.error);
             }}
@@ -816,6 +817,22 @@ export default function App() {
           )}
         </Box>
 
+        {import.meta.env.DEV && (
+          <Button
+            size="small"
+            variant="contained"
+            color="inherit"
+            onClick={() => setSettingsOpen(true)}
+            startIcon={<SettingsIcon />}
+            sx={{
+              ...toolbarButtonSx,
+              ml: 'auto',
+            }}
+            title="設定"
+          >
+            設定
+          </Button>
+        )}
         <Button
           size="small"
           variant="contained"
@@ -824,7 +841,8 @@ export default function App() {
           startIcon={<HelpOutlineIcon />}
           sx={{
             ...toolbarButtonSx,
-            ml: 'auto',
+            // DEVモードでは設定ボタンが ml:'auto' を持つため、ここでは不要
+            ...(import.meta.env.DEV ? {} : { ml: 'auto' }),
           }}
           title="ショートカットキー一覧 (?)"
         >
@@ -885,6 +903,11 @@ export default function App() {
           editorRef.current?.exportAsPng(options);
         }}
       />
+
+      {/* Settings dialog (dev only) */}
+      {import.meta.env.DEV && (
+        <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      )}
 
       {/* Delete confirmation dialog */}
       <Dialog

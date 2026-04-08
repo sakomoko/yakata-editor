@@ -29,12 +29,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
   }
 
   // R キーで部屋モード（ペイント・アロー解除）
-  if (
-    e.key.toLowerCase() === 'r' &&
-    !e.metaKey &&
-    !e.ctrlKey &&
-    !textInputFocused
-  ) {
+  if (e.key.toLowerCase() === 'r' && !e.metaKey && !e.ctrlKey && !textInputFocused) {
     if (!state.paintMode && !state.arrowMode) return;
     e.preventDefault();
     switchToRoomMode(ec);
@@ -42,12 +37,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
   }
 
   // P キーでペイントモードトグル
-  if (
-    e.key.toLowerCase() === 'p' &&
-    !e.metaKey &&
-    !e.ctrlKey &&
-    !textInputFocused
-  ) {
+  if (e.key.toLowerCase() === 'p' && !e.metaKey && !e.ctrlKey && !textInputFocused) {
     e.preventDefault();
     state.paintMode = !state.paintMode;
     if (state.paintMode) {
@@ -64,12 +54,7 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
   }
 
   // A キーでアローモードトグル
-  if (
-    e.key.toLowerCase() === 'a' &&
-    !e.metaKey &&
-    !e.ctrlKey &&
-    !textInputFocused
-  ) {
+  if (e.key.toLowerCase() === 'a' && !e.metaKey && !e.ctrlKey && !textInputFocused) {
     e.preventDefault();
     state.arrowMode = !state.arrowMode;
     if (state.arrowMode) {

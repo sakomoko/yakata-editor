@@ -80,8 +80,9 @@ Canvas 再描画 + App.tsx → project-store.ts → localStorage 保存
 
 ### サーバーサイド（開発時のみ）
 
-- **server/api-plugin.ts** — Viteプラグイン。`configureServer` フックでREST APIミドルウェアを登録。ルーティング・リクエスト解析を担当し、ハンドラロジックは `ssrLoadModule` で `api-handler.ts` を動的ロード（HMR対応）
+- **server/api-plugin.ts** — Viteプラグイン。`configureServer` フックでREST APIミドルウェアを登録。ルーティング・リクエスト解析を担当し、ハンドラロジックは `ssrLoadModule` で `api-handler.ts` を動的ロード（HMR対応）。設定API（`/api/settings`）も提供し、データ保存先ディレクトリの取得・変更・フォルダ選択（macOS `osascript`）に対応
 - **server/api-handler.ts** — REST APIハンドラ本体。`handleApi()` で `GET/POST/PUT/DELETE /api/projects` を処理。`ssrLoadModule` 経由で読み込まれるためファイル変更が即時反映される
+- **server/config.ts** — アプリケーション設定の読み書き。`config.json`（プロジェクトルート）にデータ保存先ディレクトリ等の設定を永続化。チルダ展開（`resolveTilde`）・ディレクトリ存在チェック・デフォルトフォールバック機能を提供
 - **server/project-store-fs.ts** — ファイルベースのプロジェクトストレージ。`data/index.json`（メタデータ）と `data/projects/{id}.json`（プロジェクトデータ）をatomic write（一時ファイル→rename）で読み書き。`persistence.ts` のバリデーション関数を再利用
 
 ### CLIツール
@@ -114,10 +115,12 @@ main.ts
   │   ├─ RoomDialog.tsx, MarkerDialog.tsx → LabelFontSizeDialog.tsx
   │   ├─ ContextMenu.tsx → context-menu.ts
   │   ├─ ShortcutHelpDialog.tsx → platform.ts
+  │   ├─ SettingsDialog.tsx (DEVモードのみ)
   │   └─ persistence.ts
   └─ style.css
 
 server/api-plugin.ts (Viteプラグイン)
+  ├─ server/config.ts → server/project-store-fs.ts (writeAtomic)
   └─ [ssrLoadModule] server/api-handler.ts → persistence.ts, shared/project-utils.ts, server/project-store-fs.ts
 
 cli/describe.ts → persistence.ts, adjacency.ts
@@ -192,6 +195,9 @@ cli/validate.ts → persistence.ts
 | `GET` | `/api/projects/:id` | プロジェクトデータ取得（`{ meta, data }`） |
 | `PUT` | `/api/projects/:id` | プロジェクトデータ保存（body: `ProjectData`） |
 | `DELETE` | `/api/projects/:id` | プロジェクト削除 |
+| `GET` | `/api/settings` | 現在のデータ保存先ディレクトリを取得 |
+| `PUT` | `/api/settings` | データ保存先ディレクトリを変更（body: `{ dataDir: string }`） |
+| `POST` | `/api/settings` | macOSフォルダ選択ダイアログを開き選択パスを返す |
 
 **同期フロー:**
 - ブラウザ起動時: `syncAllToServer()` で全localStorageプロジェクトをサーバーに送信

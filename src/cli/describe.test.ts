@@ -145,7 +145,13 @@ describe('describeInterior', () => {
 
 describe('describeProject', () => {
   it('describes an empty project', () => {
-    const project: ProjectFile = { rooms: [], freeTexts: [], freeStrokes: [], arrows: [], stickyNotes: [] };
+    const project: ProjectFile = {
+      rooms: [],
+      freeTexts: [],
+      freeStrokes: [],
+      arrows: [],
+      stickyNotes: [],
+    };
     const result = describeProject(project);
     expect(result).toContain('# プロジェクト構造');
     expect(result).toContain('## 部屋一覧 (0部屋)');
