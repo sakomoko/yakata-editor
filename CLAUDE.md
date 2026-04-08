@@ -36,6 +36,10 @@ Canvas上でのマウス操作 → editor/ のイベントハンドラ → state
 テストファイルは `src/` 内に `*.test.ts` として配置。Vitestを使用。
 DOMに依存しないロジック層（history, selection, room計算）がテスト対象。
 
+## コミット前チェック
+
+コミット前に `npm run typecheck` と `npm run lint` を実行し、エラーがないことを確認する。エラーがある場合はコミットせず、先に修正する。
+
 ## GitHub CLI (`gh`) 利用ルール
 
 - `gh pr create` でPR本文を渡すときは **`Write` ツールで `.pr-body.md` を作成** → `--body-file .pr-body.md` → 完了後 `rm .pr-body.md`。Bashでのヒアドキュメント・`$()`・`/tmp` 書き込みは権限チェックでブロックされるため禁止
