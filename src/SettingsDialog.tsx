@@ -77,7 +77,7 @@ export default function SettingsDialog({ open, onClose }: Props) {
       }
     } finally {
       clearTimeout(timerId);
-      if (dialogOpenRef.current) setBrowsing(false);
+      setBrowsing(false);
     }
   };
 
@@ -97,6 +97,8 @@ export default function SettingsDialog({ open, onClose }: Props) {
         setSaving(false);
         return;
       }
+      // リロードキャンセル時（onbeforeunload等）に備えてリセット
+      setSaving(false);
       window.location.reload();
     } catch {
       if (!dialogOpenRef.current) return;
