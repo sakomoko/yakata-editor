@@ -306,7 +306,7 @@ describe('undo / redo 統合テスト', () => {
         onRoomEdit: vi.fn(),
         onMarkerEdit: vi.fn(),
         onFreeTextEdit: vi.fn(),
-          onContextMenu: vi.fn(),
+        onContextMenu: vi.fn(),
         onAutoSave: vi.fn(),
         onViewportChange: vi.fn(),
       },

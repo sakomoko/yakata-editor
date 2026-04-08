@@ -279,11 +279,7 @@ export function computeStickyNoteResize(
   return computeBoxResize(dir, orig, gx, gy);
 }
 
-export function scaleStickyNoteFontSize(
-  origFontSize: number,
-  origH: number,
-  newH: number,
-): number {
+export function scaleStickyNoteFontSize(origFontSize: number, origH: number, newH: number): number {
   return scaleProportionalFontSize(origFontSize, origH, newH);
 }
 

@@ -275,7 +275,8 @@ export function startInlineEdit(
         for (const btn of colorContainer.children) {
           const el = btn as HTMLElement;
           const key = el.dataset.color as StickyNoteColor;
-          el.style.outline = key === newColor ? `2px solid ${STICKY_NOTE_COLORS[key].border}` : 'none';
+          el.style.outline =
+            key === newColor ? `2px solid ${STICKY_NOTE_COLORS[key].border}` : 'none';
           el.style.outlineOffset = '1px';
         }
         const target = ec.state.stickyNotes.find((n) => n.id === noteId);
@@ -410,8 +411,7 @@ export function startFreeTextInlineEdit(
       const target = ec.state.freeTexts.find((f) => f.id === ftId);
       if (target) target.fontSize = origFontSize;
     },
-    hasChanged: (newLabel, newFontSize) =>
-      newLabel !== origLabel || newFontSize !== origFontSize,
+    hasChanged: (newLabel, newFontSize) => newLabel !== origLabel || newFontSize !== origFontSize,
     restoreOriginals: () => {
       const target = ec.state.freeTexts.find((f) => f.id === ftId);
       if (!target) return;

@@ -125,11 +125,7 @@ function handleCheckboxClick(e: PointerEvent, ec: EditorContext): void {
   ec.render();
 }
 
-function renderMarkdown(
-  note: StickyNote,
-  fontSize: number,
-  accentColor: string,
-): string {
+function renderMarkdown(note: StickyNote, fontSize: number, accentColor: string): string {
   const lines = note.label.split('\n');
   const lineHeight = 1.3;
   const parts: string[] = [];
@@ -150,9 +146,7 @@ function renderMarkdown(
         const checkboxStyle = checked
           ? `width:${cbSize}px;height:${cbSize}px;background:${accentColor};border:1px solid #555;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;font-size:${cbSize * 0.7}px;pointer-events:auto;cursor:pointer`
           : `width:${cbSize}px;height:${cbSize}px;border:1px solid #555;border-radius:2px;display:inline-flex;flex-shrink:0;pointer-events:auto;cursor:pointer`;
-        const textStyle = checked
-          ? `color:#888;text-decoration:line-through`
-          : `color:#333`;
+        const textStyle = checked ? `color:#888;text-decoration:line-through` : `color:#333`;
         parts.push(
           `<div data-cb-line="${i}" style="display:flex;align-items:flex-start;gap:${fontSize * 0.3}px;font-size:${fontSize}px;line-height:${lineHeight};pointer-events:auto;cursor:pointer">` +
             `<span style="${checkboxStyle};margin-top:${(fontSize * lineHeight - cbSize) / 2}px">${checked ? '✓' : ''}</span>` +

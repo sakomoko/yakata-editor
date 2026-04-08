@@ -50,14 +50,10 @@ export function drawFreeText(
     ctx.strokeRect(px, py, pw, ph);
     ctx.restore();
   }
-
 }
 
 /** PNG export用: Canvas上にword-wrapしたテキストを描画する */
-export function drawFreeTextForExport(
-  ctx: CanvasRenderingContext2D,
-  ft: FreeText,
-): void {
+export function drawFreeTextForExport(ctx: CanvasRenderingContext2D, ft: FreeText): void {
   const px = ft.gx * GRID;
   const py = ft.gy * GRID;
   const pw = ft.w * GRID;
@@ -96,11 +92,7 @@ export function drawFreeTextForExport(
 }
 
 /** テキストを指定幅で折り返す（文字単位） */
-function wrapText(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  maxWidth: number,
-): string[] {
+function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
   if (maxWidth <= 0) return [text];
   const result: string[] = [];
   let remaining = text;
