@@ -52,7 +52,8 @@ export function yakataApiPlugin(): Plugin {
         const url = req.url ?? '';
         const method = req.method ?? 'GET';
 
-        if (!url.startsWith('/api/settings')) {
+        const settingsPath = url.replace(/\?.*$/, '');
+        if (settingsPath !== '/api/settings') {
           next();
           return;
         }

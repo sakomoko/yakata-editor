@@ -103,7 +103,6 @@ export default function SettingsDialog({ open, onClose }: Props) {
                 if (!mountedRef.current) return;
                 if (!res.ok) {
                   setError('フォルダ選択に失敗しました');
-                  setBrowsing(false);
                   return;
                 }
                 const json = (await res.json()) as { path?: string; cancelled?: boolean };
@@ -112,8 +111,9 @@ export default function SettingsDialog({ open, onClose }: Props) {
               } catch {
                 if (!mountedRef.current) return;
                 setError('フォルダ選択に失敗しました');
+              } finally {
+                if (mountedRef.current) setBrowsing(false);
               }
-              setBrowsing(false);
             }}
             sx={{ whiteSpace: 'nowrap' }}
           >
