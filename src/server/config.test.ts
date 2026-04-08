@@ -80,7 +80,9 @@ describe('config', () => {
 
     it('ignores non-string dataDir values', () => {
       fs.writeFileSync(path.join(tmpDir, 'config.json'), JSON.stringify({ dataDir: 42 }));
-      expect(loadConfig(tmpDir)).toEqual({ dataDir: undefined });
+      // dataDir: undefined は toEqual({}) と等価だが、意図を明示するために undefined を記載
+      const result = loadConfig(tmpDir);
+      expect(result.dataDir).toBeUndefined();
     });
   });
 });

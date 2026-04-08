@@ -3,6 +3,7 @@ import type { Plugin, ViteDevServer } from 'vite';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import * as child_process from 'node:child_process';
 import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { UUID_RE } from '../shared/project-utils.ts';
 import { setDataDir } from './project-store-fs.ts';
 import { loadConfig, saveConfig, getEffectiveDataDir, resolveTilde } from './config.ts';
@@ -60,7 +61,9 @@ export function yakataApiPlugin(): Plugin {
 
         if (method === 'GET') {
           const current = loadConfig(root);
-          sendJson(res, 200, { dataDir: getEffectiveDataDir(root, current) });
+          // ユーザーが入力した値（チルダ表記等）をそのまま返す。
+          // 未設定の場合はデフォルトの data/ パスを返す。
+          sendJson(res, 200, { dataDir: current.dataDir ?? path.join(root, 'data') });
           return;
         }
 
