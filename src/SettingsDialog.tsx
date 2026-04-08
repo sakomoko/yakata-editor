@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -20,12 +20,16 @@ export default function SettingsDialog({ open, onClose }: Props) {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [browsing, setBrowsing] = useState(false);
+  // ダイアログが閉じられた後の非同期処理による stale setState を防ぐ
+  const mountedRef = useRef(false);
 
   useEffect(() => {
     if (!open) {
+      mountedRef.current = false;
       setBrowsing(false);
       return;
     }
+    mountedRef.current = true;
     setError('');
     setSaving(false);
     const ac = new AbortController();
@@ -94,14 +98,17 @@ export default function SettingsDialog({ open, onClose }: Props) {
               setError('');
               try {
                 const res = await fetch('/api/settings', { method: 'POST' });
+                if (!mountedRef.current) return;
                 if (!res.ok) {
                   setError('フォルダ選択に失敗しました');
                   setBrowsing(false);
                   return;
                 }
                 const json = (await res.json()) as { path?: string; cancelled?: boolean };
+                if (!mountedRef.current) return;
                 if (json.path) setDataDir(json.path);
               } catch {
+                if (!mountedRef.current) return;
                 setError('フォルダ選択に失敗しました');
               }
               setBrowsing(false);
@@ -121,6 +128,9 @@ export default function SettingsDialog({ open, onClose }: Props) {
         </Typography>
         <Typography variant="caption" sx={{ color: '#aaa', display: 'block' }}>
           ※ 既存データは自動的には移動されません。必要に応じて手動でコピーしてください。
+        </Typography>
+        <Typography variant="caption" sx={{ color: '#f9a825', display: 'block', mt: 0.5 }}>
+          ※ 保存するとページがリロードされます。未保存の編集内容は失われます。
         </Typography>
       </DialogContent>
       <DialogActions>

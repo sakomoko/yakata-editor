@@ -841,6 +841,7 @@ export default function App() {
           startIcon={<HelpOutlineIcon />}
           sx={{
             ...toolbarButtonSx,
+            // DEVモードでは設定ボタンが ml:'auto' を持つため、ここでは不要
             ...(!import.meta.env.DEV && { ml: 'auto' }),
           }}
           title="ショートカットキー一覧 (?)"

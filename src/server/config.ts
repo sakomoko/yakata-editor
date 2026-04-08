@@ -29,6 +29,7 @@ export function saveConfig(rootDir: string, config: AppConfig): void {
 }
 
 export function resolveTilde(p: string): string {
+  if (p === '~') return os.homedir();
   return p.startsWith('~/') ? path.join(os.homedir(), p.slice(1)) : p;
 }
 
