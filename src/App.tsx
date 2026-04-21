@@ -579,6 +579,7 @@ export default function App() {
           px: 1,
           gap: 0.75,
           borderTop: '1px solid #444',
+          overflowX: 'auto',
         }}
       >
         {/* Status (left) */}
@@ -945,6 +946,8 @@ const toolbarButtonSx = {
   py: '2px',
   minWidth: 0,
   lineHeight: 1.6,
+  whiteSpace: 'nowrap',
+  flexShrink: 0,
   boxShadow: 'none',
   '&:hover': { bgcolor: '#555', color: '#fff', boxShadow: 'none' },
 } as const;
