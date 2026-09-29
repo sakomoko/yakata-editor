@@ -496,3 +496,72 @@ describe('sanitizeFilename', () => {
     expect(sanitizeFilename('')).toBe('');
   });
 });
+
+describe('annotation フラグの復元', () => {
+  const camera = {
+    id: 'cam1',
+    type: 'camera',
+    x: 0,
+    y: 0,
+    w: 1,
+    h: 1,
+    angle: 0,
+    fovAngle: Math.PI / 6,
+    fovRange: 5,
+    fovColor: 'rgba(0,150,255,0.15)',
+    fovStrokeColor: 'rgba(0,150,255,0.4)',
+  };
+
+  it('全エンティティで annotation: true を保持する', () => {
+    const result = parseStorageData({
+      rooms: [
+        {
+          id: 'r1',
+          x: 0,
+          y: 0,
+          w: 5,
+          h: 5,
+          label: 'ホール',
+          interiorObjects: [{ ...camera, annotation: true }],
+        },
+      ],
+      freeTexts: [{ id: 'ft1', gx: 0, gy: 0, w: 3, h: 2, label: 'メモ', annotation: true }],
+      freeStrokes: [
+        {
+          id: 's1',
+          points: [{ px: 0, py: 0 }],
+          color: '#ff0000',
+          lineWidth: 2,
+          opacity: 1,
+          annotation: true,
+        },
+      ],
+      arrows: [
+        {
+          id: 'a1',
+          points: [
+            { gx: 0, gy: 0 },
+            { gx: 1, gy: 1 },
+          ],
+          color: '#cc0000',
+          lineWidth: 2,
+          annotation: true,
+        },
+      ],
+      stickyNotes: [],
+    });
+    expect(result.rooms[0].interiorObjects?.[0].annotation).toBe(true);
+    expect(result.freeTexts[0].annotation).toBe(true);
+    expect(result.freeStrokes[0].annotation).toBe(true);
+    expect(result.arrows[0].annotation).toBe(true);
+  });
+
+  it('true 以外の値や未設定ではプロパティを持たない', () => {
+    const [ft] = ensureFreeTextIds([
+      { gx: 0, gy: 0, w: 3, h: 2, label: 'メモ', annotation: 'yes' },
+    ]);
+    const [cam] = ensureInteriorObjectIds([camera]);
+    expect('annotation' in ft).toBe(false);
+    expect('annotation' in cam).toBe(false);
+  });
+});

@@ -8,6 +8,7 @@ import { getStrokeBounds } from '../free-stroke.ts';
 import { getArrowBounds } from '../arrow.ts';
 import { drawStickyNoteText } from '../sticky-note.ts';
 import { drawFreeTextForExport } from '../free-text.ts';
+import { filterVisible } from '../annotation.ts';
 import { computeRoomsBoundingBox, calcAutoFontSize } from '../room.ts';
 import { syncAllPairedOpenings } from '../adjacency.ts';
 import { findRoomById } from '../lookup.ts';
@@ -151,6 +152,11 @@ export function exportAsPng(ec: EditorContext, options?: PngExportOptions): void
     state.stickyNotes = [];
   }
 
+  // 注釈は表示フラグ経由で除外する（render・バウンディングボックス計算の両方に効く）
+  const savedShowAnnotations = state.showAnnotations;
+  state.showAnnotations = options?.includeAnnotations ?? true;
+  const show = state.showAnnotations;
+
   const savedViewport = { ...viewport };
   const savedW = canvas.width;
   const savedH = canvas.height;
@@ -166,7 +172,7 @@ export function exportAsPng(ec: EditorContext, options?: PngExportOptions): void
     let minX = bbox.x === Infinity ? Infinity : bbox.x;
     let minY = bbox.y === Infinity ? Infinity : bbox.y;
 
-    for (const ft of state.freeTexts) {
+    for (const ft of filterVisible(state.freeTexts, show)) {
       const ftX = ft.gx * GRID;
       const ftY = ft.gy * GRID;
       const ftR = ftX + ft.w * GRID;
@@ -177,7 +183,7 @@ export function exportAsPng(ec: EditorContext, options?: PngExportOptions): void
       if (ftB > maxY) maxY = ftB;
     }
 
-    for (const stroke of state.freeStrokes) {
+    for (const stroke of filterVisible(state.freeStrokes, show)) {
       const bounds = getStrokeBounds(stroke);
       if (bounds) {
         if (bounds.x < minX) minX = bounds.x;
@@ -187,7 +193,7 @@ export function exportAsPng(ec: EditorContext, options?: PngExportOptions): void
       }
     }
 
-    for (const arrow of state.arrows) {
+    for (const arrow of filterVisible(state.arrows, show)) {
       const ab = getArrowBounds(arrow);
       const abMinX = ab.minGx * GRID;
       const abMinY = ab.minGy * GRID;
@@ -238,7 +244,8 @@ export function exportAsPng(ec: EditorContext, options?: PngExportOptions): void
     // PNGエクスポート時、テキストをCanvas上に描画する。
     // 通常はHTMLオーバーレイで表示されるが、Canvas→PNG変換ではDOMが含まれないため。
     const exportCtx = canvas.getContext('2d');
-    if (exportCtx && (state.freeTexts.length > 0 || state.stickyNotes.length > 0)) {
+    const exportFreeTexts = filterVisible(state.freeTexts, show);
+    if (exportCtx && (exportFreeTexts.length > 0 || state.stickyNotes.length > 0)) {
       exportCtx.setTransform(
         viewport.zoom,
         0,
@@ -247,7 +254,7 @@ export function exportAsPng(ec: EditorContext, options?: PngExportOptions): void
         -viewport.panX * viewport.zoom,
         -viewport.panY * viewport.zoom,
       );
-      for (const ft of state.freeTexts) {
+      for (const ft of exportFreeTexts) {
         drawFreeTextForExport(exportCtx, ft);
       }
       for (const note of state.stickyNotes) {
@@ -259,6 +266,7 @@ export function exportAsPng(ec: EditorContext, options?: PngExportOptions): void
     exportPng(canvas, options?.filename);
   } finally {
     state.stickyNotes = savedStickyNotes;
+    state.showAnnotations = savedShowAnnotations;
     canvas.width = savedW;
     canvas.height = savedH;
     Object.assign(viewport, savedViewport);

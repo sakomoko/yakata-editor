@@ -5,7 +5,7 @@ import { bringToFront, sendToBack, bringForward, sendBackward } from '../z-order
 import type { EditorContext } from './context.ts';
 import { commitChange, undo, redo, deleteSelectedEntities } from './project.ts';
 import { copySelection, pasteClipboard, duplicateSelection } from './clipboard.ts';
-import { getEntitySnapshot, switchToRoomMode } from './utils.ts';
+import { getEntitySnapshot, switchToRoomMode, setShowAnnotations } from './utils.ts';
 import { isInlineEditing } from './inline-edit.ts';
 import { isTextInput } from '../dom-utils.ts';
 
@@ -67,6 +67,13 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     canvas.style.cursor = state.arrowMode ? 'crosshair' : 'default';
     ec.render();
     ec.callbacks.onArrowModeChange?.(state.arrowMode);
+    return;
+  }
+
+  // H キーで注釈の表示/非表示トグル
+  if (e.key.toLowerCase() === 'h' && !e.metaKey && !e.ctrlKey && !textInputFocused) {
+    e.preventDefault();
+    setShowAnnotations(ec, !state.showAnnotations);
     return;
   }
 

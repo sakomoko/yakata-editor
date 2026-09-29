@@ -1,4 +1,5 @@
 import type { Room, SecurityCamera, CameraColorPreset } from './types.ts';
+import { isVisible } from './annotation.ts';
 import { GRID, HANDLE_SIZE, HANDLE_HIT } from './grid.ts';
 import { findInteriorObjectById, findRoomById } from './lookup.ts';
 
@@ -93,11 +94,13 @@ export function drawCameraFovOverlay(
   ctx: CanvasRenderingContext2D,
   rooms: Room[],
   zoom: number,
+  showAnnotations = true,
 ): void {
   for (const room of rooms) {
     if (!room.interiorObjects?.length) continue;
     for (const obj of room.interiorObjects) {
       if (obj.type !== 'camera') continue;
+      if (!isVisible(obj, showAnnotations)) continue;
       const { cx, cy } = cameraCenter(room, obj);
       const rangePx = obj.fovRange * GRID;
 
@@ -223,6 +226,7 @@ export function hitCameraHandleInRooms(
   py: number,
   zoom: number,
   activeId?: string,
+  showAnnotations = true,
 ): { room: Room; cam: SecurityCamera; hit: CameraHandleHit } | null {
   for (let i = rooms.length - 1; i >= 0; i--) {
     const room = rooms[i];
@@ -231,6 +235,7 @@ export function hitCameraHandleInRooms(
       const obj = room.interiorObjects[j];
       if (obj.type !== 'camera') continue;
       if (activeId && obj.id !== activeId) continue;
+      if (!isVisible(obj, showAnnotations)) continue;
       const hit = hitCameraHandle(room, obj, px, py, zoom);
       if (hit) return { room, cam: obj, hit };
     }

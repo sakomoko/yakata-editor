@@ -20,11 +20,13 @@ interface Props {
 export default function PngExportDialog({ open, defaultFilename, onClose, onExport }: Props) {
   const [filename, setFilename] = useState('');
   const [includeStickyNotes, setIncludeStickyNotes] = useState(true);
+  const [includeAnnotations, setIncludeAnnotations] = useState(false);
 
   useEffect(() => {
     if (open) {
       setFilename(defaultFilename);
       setIncludeStickyNotes(true);
+      setIncludeAnnotations(false);
     }
   }, [open]);
 
@@ -52,13 +54,23 @@ export default function PngExportDialog({ open, defaultFilename, onClose, onExpo
           label="付箋メモを含める"
           sx={{ mt: 1, display: 'block' }}
         />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={includeAnnotations}
+              onChange={(e) => setIncludeAnnotations(e.target.checked)}
+            />
+          }
+          label="注釈を含める"
+          sx={{ display: 'block' }}
+        />
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>キャンセル</Button>
         <Button
           onClick={() => {
             const base = sanitizeFilename(filename.trim() || '間取り図').replace(/\.png$/i, '');
-            onExport({ includeStickyNotes, filename: `${base}.png` });
+            onExport({ includeStickyNotes, includeAnnotations, filename: `${base}.png` });
           }}
           variant="contained"
         >

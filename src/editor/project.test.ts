@@ -444,6 +444,7 @@ describe('exportAsPng', () => {
         arrowMode: false,
         arrowColor: '#cc0000',
         arrowLineWidth: 2,
+        showAnnotations: true,
       },
       viewport,
       callbacks: {
@@ -509,6 +510,35 @@ describe('exportAsPng', () => {
 
     expect(ec.state.stickyNotes).toHaveLength(1);
     expect(ec.state.stickyNotes[0].id).toBe(note.id);
+  });
+
+  it('includeAnnotations: false のとき、render中は注釈が非表示になり、終了後に復元される', () => {
+    const ec = createExportEc();
+
+    let showDuringRender: boolean | undefined;
+    (ec.render as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+      showDuringRender = ec.state.showAnnotations;
+    });
+
+    exportAsPng(ec, { includeAnnotations: false });
+
+    expect(showDuringRender).toBe(false);
+    expect(ec.state.showAnnotations).toBe(true);
+  });
+
+  it('includeAnnotations: true のとき、エディタで非表示でも注釈を出力する', () => {
+    const ec = createExportEc();
+    ec.state.showAnnotations = false;
+
+    let showDuringRender: boolean | undefined;
+    (ec.render as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+      showDuringRender = ec.state.showAnnotations;
+    });
+
+    exportAsPng(ec, { includeAnnotations: true });
+
+    expect(showDuringRender).toBe(true);
+    expect(ec.state.showAnnotations).toBe(false);
   });
 
   it('filenameオプションがexportPngに渡される', async () => {
