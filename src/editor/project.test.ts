@@ -541,6 +541,21 @@ describe('exportAsPng', () => {
     expect(ec.state.showAnnotations).toBe(false);
   });
 
+  it('render中はアクティブな部屋内オブジェクトがクリアされ、終了後に復元される', () => {
+    const ec = createExportEc();
+    ec.flags.activeInteriorObjectId = 'cam1';
+
+    let activeDuringRender: string | undefined = 'unset';
+    (ec.render as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+      activeDuringRender = ec.flags.activeInteriorObjectId;
+    });
+
+    exportAsPng(ec);
+
+    expect(activeDuringRender).toBeUndefined();
+    expect(ec.flags.activeInteriorObjectId).toBe('cam1');
+  });
+
   it('filenameオプションがexportPngに渡される', async () => {
     const ec = createExportEc();
     ec.state.rooms = [createRoom(0, 0, 5, 5, 'Room')];

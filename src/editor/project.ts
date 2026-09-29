@@ -144,8 +144,11 @@ export function exportAsPng(ec: EditorContext, options?: PngExportOptions): void
   clearSelection(state.selection);
   const savedActiveFreeTextId = flags.activeFreeTextId;
   const savedActiveStickyNoteId = flags.activeStickyNoteId;
+  const savedActiveInteriorObjectId = flags.activeInteriorObjectId;
   flags.activeFreeTextId = undefined;
   flags.activeStickyNoteId = undefined;
+  // カメラのFOVハンドルは部屋の選択状態に関係なく描画されるため、これもクリアする
+  flags.activeInteriorObjectId = undefined;
 
   const savedStickyNotes = state.stickyNotes;
   if (!includeStickyNotes) {
@@ -273,6 +276,7 @@ export function exportAsPng(ec: EditorContext, options?: PngExportOptions): void
     for (const id of prevSelection) state.selection.add(id);
     flags.activeFreeTextId = savedActiveFreeTextId;
     flags.activeStickyNoteId = savedActiveStickyNoteId;
+    flags.activeInteriorObjectId = savedActiveInteriorObjectId;
     ec.render();
   }
 }

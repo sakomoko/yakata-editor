@@ -57,8 +57,9 @@ export function releaseHiddenAnnotations(ec: EditorContext): void {
   }
 }
 
-/** 注釈の表示/非表示を切り替える */
+/** 注釈の表示/非表示を切り替える。ドラッグ中は操作対象が消えてしまうため無視する */
 export function setShowAnnotations(ec: EditorContext, on: boolean): void {
+  if (ec.state.drag) return;
   ec.state.showAnnotations = on;
   releaseHiddenAnnotations(ec);
   ec.render();

@@ -19,6 +19,7 @@ import { findStickyNotesInArea } from '../sticky-note.ts';
 import { simplifyPoints } from '../free-stroke.ts';
 import { syncPairedOpening, syncAllPairedOpenings } from '../adjacency.ts';
 import type { EditorContext } from './context.ts';
+import { filterVisible } from '../annotation.ts';
 import { getEntitySnapshot } from './utils.ts';
 
 export function onMouseUp(ec: EditorContext, e: PointerEvent): void {
@@ -190,7 +191,10 @@ export function onMouseUp(ec: EditorContext, e: PointerEvent): void {
     const m = ec.mousePos(e);
     const area = normalizeArea(state.drag.start, m);
     const contained = findRoomsInArea(state.rooms, area);
-    const containedFt = findFreeTextsInArea(state.freeTexts, area);
+    const containedFt = findFreeTextsInArea(
+      filterVisible(state.freeTexts, state.showAnnotations),
+      area,
+    );
     const containedNotes = findStickyNotesInArea(state.stickyNotes, area);
     if (contained.length > 0 || containedFt.length > 0 || containedNotes.length > 0) {
       // 範囲選択: 包含された部屋・FreeText・StickyNoteを選択
