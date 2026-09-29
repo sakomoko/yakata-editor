@@ -237,6 +237,19 @@ describe('hitCameraHandle', () => {
 });
 
 describe('hitCameraHandleInRooms', () => {
+  it('注釈の非表示中は注釈カメラのハンドルをヒットしない', () => {
+    const cam = makeCam({ id: 'cam-1', annotation: true });
+    const room: Room = { ...makeRoom(), interiorObjects: [cam] };
+    const handles = getCameraHandlePositions(room, cam);
+
+    expect(
+      hitCameraHandleInRooms([room], handles.rotate.x, handles.rotate.y, 1, undefined, false),
+    ).toBeNull();
+    expect(
+      hitCameraHandleInRooms([room], handles.rotate.x, handles.rotate.y, 1, undefined, true),
+    ).not.toBeNull();
+  });
+
   it('detects handle hit across multiple rooms', () => {
     const cam1 = makeCam({ id: 'cam-1' });
     const cam2 = makeCam({ id: 'cam-2', x: 1, y: 1 });

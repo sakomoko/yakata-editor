@@ -477,12 +477,8 @@ export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
   }
 
   // Check front-layer FreeText hit
-  const frontFtHit = hitFreeText(
-    filterVisible(state.freeTexts, state.showAnnotations),
-    m.px,
-    m.py,
-    'front',
-  );
+  const visibleFreeTexts = filterVisible(state.freeTexts, state.showAnnotations);
+  const frontFtHit = hitFreeText(visibleFreeTexts, m.px, m.py, 'front');
   if (frontFtHit) {
     startFreeTextDrag(frontFtHit);
     return;
@@ -523,12 +519,7 @@ export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
   }
 
   // Check back-layer FreeText hit
-  const backFtHit = hitFreeText(
-    filterVisible(state.freeTexts, state.showAnnotations),
-    m.px,
-    m.py,
-    'back',
-  );
+  const backFtHit = hitFreeText(visibleFreeTexts, m.px, m.py, 'back');
   if (backFtHit) {
     startFreeTextDrag(backFtHit);
     return;

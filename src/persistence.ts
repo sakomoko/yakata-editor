@@ -39,7 +39,8 @@ const VALID_CAMERA_COLORS = new Set(
   Object.values(CAMERA_COLOR_PRESETS).flatMap((c) => [c.fovColor, c.fovStrokeColor]),
 );
 
-/** 保存データの annotation: true を引き継ぐ（それ以外の値は捨てる） */
+/** 保存データの annotation: true を引き継ぐ（それ以外の値は捨てる）。
+ * src は呼び出し元の filter で必須フィールドを検証済みのオブジェクトであること */
 function withAnnotation<T extends Annotatable>(src: unknown, dst: T): T {
   if ((src as Record<string, unknown>).annotation === true) dst.annotation = true;
   return dst;

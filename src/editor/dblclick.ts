@@ -82,9 +82,10 @@ export async function onDblClick(ec: EditorContext, e: MouseEvent): Promise<void
   }
 
   // FreeText double-click → inline edit (front layer first, then back)
+  const visibleFreeTexts = filterVisible(ec.state.freeTexts, ec.state.showAnnotations);
   const ftHit =
-    hitFreeText(filterVisible(ec.state.freeTexts, ec.state.showAnnotations), m.px, m.py, 'front') ||
-    hitFreeText(filterVisible(ec.state.freeTexts, ec.state.showAnnotations), m.px, m.py, 'back');
+    hitFreeText(visibleFreeTexts, m.px, m.py, 'front') ||
+    hitFreeText(visibleFreeTexts, m.px, m.py, 'back');
   if (ftHit) {
     startFreeTextInlineEdit(ec, ftHit);
     return;
