@@ -50,9 +50,12 @@ jobs:
 
             Use the repository's CLAUDE.md for guidance on style and conventions. Be constructive and helpful in your feedback.
 
-            Use `gh pr comment` with your Bash tool to leave your review as a comment on the PR.
+            To post your review as a comment on the PR:
+            1. Write the full review body to `.claude-review.md` with the Write tool.
+            2. Run exactly `gh pr comment ${{ github.event.pull_request.number }} --body-file .claude-review.md` with your Bash tool.
+            Do not pass the body inline with `--body`, and do not use command substitution (`$(...)`), heredocs, pipes, or `&&` in Bash commands. Such commands are blocked by the allowed-tools list and the review will be lost.
 
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://docs.claude.com/en/docs/claude-code/cli-reference for available options
-          claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
+          claude_args: '--allowed-tools "Write,Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
 
