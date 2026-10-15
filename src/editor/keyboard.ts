@@ -70,8 +70,8 @@ export function onKeyDown(ec: EditorContext, e: KeyboardEvent): void {
     return;
   }
 
-  // H キーで注釈の表示/非表示トグル
-  if (e.key.toLowerCase() === 'h' && !e.metaKey && !e.ctrlKey && !textInputFocused) {
+  // H キーで注釈の表示/非表示トグル（長押しのキーリピートで点滅しないよう repeat は無視）
+  if (e.key.toLowerCase() === 'h' && !e.repeat && !e.metaKey && !e.ctrlKey && !textInputFocused) {
     e.preventDefault();
     setShowAnnotations(ec, !state.showAnnotations);
     return;

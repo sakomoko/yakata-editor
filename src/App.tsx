@@ -121,6 +121,8 @@ export default function App() {
   const [arrowMode, setArrowMode] = useState(false);
   const [arrowColor, setArrowColor] = useState('#cc0000');
   const [arrowLineWidth, setArrowLineWidth] = useState(2);
+  // 注釈の表示状態の正はエディタ側（EditorState.showAnnotations）。ここはボタン表示用の写しで、
+  // 変更は必ず editorRef.current.setShowAnnotations() 経由で行い、onShowAnnotationsChange で同期する
   const [showAnnotations, setShowAnnotations] = useState(true);
 
   // Multi-project state

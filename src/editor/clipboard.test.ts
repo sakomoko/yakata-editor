@@ -695,6 +695,19 @@ describe('mirror vertical', () => {
 });
 
 describe('duplicateSelection', () => {
+  it('注釈の非表示中に複製した注釈は選択に残さない', () => {
+    const memo = makeFreeText({ annotation: true });
+    const label = makeFreeText({ gx: 10 });
+    const ec = makeEc([], [memo, label], [], new Set([memo.id, label.id]));
+    ec.state.showAnnotations = false;
+    duplicateSelection(ec);
+
+    const [, , dupMemo, dupLabel] = ec.state.freeTexts;
+    expect(dupMemo.annotation).toBe(true);
+    expect(ec.state.selection.has(dupMemo.id)).toBe(false);
+    expect(ec.state.selection.has(dupLabel.id)).toBe(true);
+  });
+
   it('creates a copy offset by 1 grid', () => {
     const room = makeRoom({ x: 5, y: 5, w: 4, h: 3 });
     const ec = makeEc([room], [], [], new Set([room.id]));

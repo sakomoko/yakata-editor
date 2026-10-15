@@ -54,6 +54,38 @@ describe('describeWallObject', () => {
 });
 
 describe('describeInterior', () => {
+  it('注釈のカメラには [注釈] タグを付ける', () => {
+    const obj: RoomInteriorObject = {
+      id: 'c1',
+      type: 'camera',
+      x: 1,
+      y: 2,
+      w: 1,
+      h: 1,
+      angle: 0,
+      fovAngle: Math.PI / 6,
+      fovRange: 5,
+      fovColor: 'rgba(0,150,255,0.15)',
+      fovStrokeColor: 'rgba(0,150,255,0.4)',
+      annotation: true,
+    };
+    expect(describeInterior(obj)).toMatch(/防犯カメラ .* \[注釈\]$/);
+  });
+
+  it('注釈でなければタグを付けない', () => {
+    const obj: RoomInteriorObject = {
+      id: 's1',
+      type: 'stairs',
+      stairsType: 'straight',
+      direction: 'n',
+      x: 1,
+      y: 2,
+      w: 3,
+      h: 4,
+    };
+    expect(describeInterior(obj)).not.toContain('[注釈]');
+  });
+
   it('describes straight stairs', () => {
     const obj: RoomInteriorObject = {
       id: 's1',
@@ -316,6 +348,20 @@ describe('describeProject', () => {
 });
 
 describe('describeArrow', () => {
+  it('注釈には [注釈] タグを付ける', () => {
+    const arrow: Arrow = {
+      id: 'a1',
+      points: [
+        { gx: 1, gy: 2 },
+        { gx: 3, gy: 4 },
+      ],
+      color: '#ff0000',
+      lineWidth: 2,
+      annotation: true,
+    };
+    expect(describeArrow(arrow, 0)).toBe('矢印1: (1, 2) → (3, 4) [#ff0000, 2px] [注釈]');
+  });
+
   it('formats arrow with label', () => {
     const arrow: Arrow = {
       id: 'a1',
