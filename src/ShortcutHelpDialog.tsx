@@ -47,6 +47,7 @@ const shortcuts: { category: string; items: { keys: string; description: string 
       { keys: 'R', description: '部屋モード（デフォルト）' },
       { keys: 'P', description: 'ペイントモード切替' },
       { keys: 'A', description: 'アローモード切替' },
+      { keys: 'H', description: '注釈の表示/非表示切替' },
     ],
   },
   {

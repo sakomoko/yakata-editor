@@ -10,7 +10,7 @@ import type {
   MarkerEditData,
   ContextMenuRequest,
 } from './context.ts';
-import { createMousePos, switchToRoomMode } from './utils.ts';
+import { createMousePos, switchToRoomMode, setShowAnnotations } from './utils.ts';
 import { render } from './render.ts';
 import {
   commitChange as commitChangeFn,
@@ -60,6 +60,7 @@ export function initEditor(
     arrowMode: false,
     arrowColor: '#cc0000',
     arrowLineWidth: 2,
+    showAnnotations: true,
   };
 
   const viewport = initialData?.viewport
@@ -217,6 +218,7 @@ export function initEditor(
       arrowColor: state.arrowColor,
       arrowLineWidth: state.arrowLineWidth,
     }),
+    setShowAnnotations: (show: boolean) => setShowAnnotations(ec, show),
     loadProjectState: (data: ProjectData) => {
       cancelInlineEdit();
       destroyFreeTextOverlays();

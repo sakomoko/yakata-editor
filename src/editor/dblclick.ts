@@ -8,6 +8,7 @@ import { hitArrowInList, hitArrowPoint, hitArrowSegment } from '../arrow.ts';
 import { GRID } from '../grid.ts';
 import { selectSingle } from '../selection.ts';
 import type { EditorContext } from './context.ts';
+import { filterVisible } from '../annotation.ts';
 import { applyRoomEdit, commitChange } from './project.ts';
 import { editMarkerViaDialog } from './marker-edit.ts';
 
@@ -52,7 +53,11 @@ export async function onDblClick(ec: EditorContext, e: MouseEvent): Promise<void
       }
     }
     // 非選択矢印のダブルクリック → ラベル編集
-    const hitA = hitArrowInList(state.arrows, arrowGx, arrowGy);
+    const hitA = hitArrowInList(
+      filterVisible(state.arrows, state.showAnnotations),
+      arrowGx,
+      arrowGy,
+    );
     if (hitA) {
       selectSingle(state.selection, hitA.id);
       const arrowId = hitA.id;
@@ -77,15 +82,16 @@ export async function onDblClick(ec: EditorContext, e: MouseEvent): Promise<void
   }
 
   // FreeText double-click → inline edit (front layer first, then back)
+  const visibleFreeTexts = filterVisible(ec.state.freeTexts, ec.state.showAnnotations);
   const ftHit =
-    hitFreeText(ec.state.freeTexts, m.px, m.py, 'front') ||
-    hitFreeText(ec.state.freeTexts, m.px, m.py, 'back');
+    hitFreeText(visibleFreeTexts, m.px, m.py, 'front') ||
+    hitFreeText(visibleFreeTexts, m.px, m.py, 'back');
   if (ftHit) {
     startFreeTextInlineEdit(ec, ftHit);
     return;
   }
 
-  const intHit = hitInteriorObjectInRooms(ec.state.rooms, m.px, m.py);
+  const intHit = hitInteriorObjectInRooms(ec.state.rooms, m.px, m.py, ec.state.showAnnotations);
   if (intHit && intHit.obj.type === 'marker') {
     await editMarkerViaDialog(ec, intHit.room, intHit.obj);
     return;

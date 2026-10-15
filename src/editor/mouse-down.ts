@@ -25,6 +25,7 @@ import { hitArrowInList, hitArrowPoint } from '../arrow.ts';
 import { expandWithLinked } from '../link.ts';
 import { hitVertexHandle, edgeResizeCursor } from '../polygon.ts';
 import type { EditorContext } from './context.ts';
+import { filterVisible } from '../annotation.ts';
 import { getEntitySnapshot } from './utils.ts';
 import { isInlineEditing } from './inline-edit.ts';
 
@@ -52,7 +53,11 @@ function tryHandleArrowHit(
     }
   }
   // セグメントヒット → 選択して移動
-  const arrowHit = hitArrowInList(state.arrows, arrowGx, arrowGy);
+  const arrowHit = hitArrowInList(
+    filterVisible(state.arrows, state.showAnnotations),
+    arrowGx,
+    arrowGy,
+  );
   if (arrowHit) {
     if (shift) {
       toggleSelection(state.selection, arrowHit.id);
@@ -229,6 +234,7 @@ export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
     m.py,
     viewport.zoom,
     flags.activeInteriorObjectId,
+    state.showAnnotations,
   );
   if (camHandleHit) {
     flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
@@ -250,7 +256,13 @@ export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
   }
 
   // Check interior object handle hit (resize)
-  const intHandleHit = hitInteriorObjectHandleInRooms(selectedRooms, m.px, m.py, viewport.zoom);
+  const intHandleHit = hitInteriorObjectHandleInRooms(
+    selectedRooms,
+    m.px,
+    m.py,
+    viewport.zoom,
+    state.showAnnotations,
+  );
   if (intHandleHit) {
     flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
     flags.activeInteriorObjectId = intHandleHit.obj.id;
@@ -355,7 +367,7 @@ export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
   }
 
   // Check interior object hit (move)
-  const intHit = hitInteriorObjectInRooms(state.rooms, m.px, m.py);
+  const intHit = hitInteriorObjectInRooms(state.rooms, m.px, m.py, state.showAnnotations);
   if (intHit) {
     flags.savedRedo = saveUndoPoint(state.history, state.redoHistory, getEntitySnapshot(state));
     selectSingle(state.selection, intHit.room.id);
@@ -400,7 +412,12 @@ export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
 
   // Check free stroke hit (select/move) — FreeStrokeは最前面レイヤーなので矢印より先にヒット判定
   const strokeHitTolerance = STROKE_HIT_TOLERANCE_PX / viewport.zoom;
-  const strokeHit = hitFreeStrokeInList(state.freeStrokes, m.px, m.py, strokeHitTolerance);
+  const strokeHit = hitFreeStrokeInList(
+    filterVisible(state.freeStrokes, state.showAnnotations),
+    m.px,
+    m.py,
+    strokeHitTolerance,
+  );
   if (strokeHit) {
     if (shift) {
       toggleSelection(state.selection, strokeHit.id);
@@ -460,7 +477,8 @@ export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
   }
 
   // Check front-layer FreeText hit
-  const frontFtHit = hitFreeText(state.freeTexts, m.px, m.py, 'front');
+  const visibleFreeTexts = filterVisible(state.freeTexts, state.showAnnotations);
+  const frontFtHit = hitFreeText(visibleFreeTexts, m.px, m.py, 'front');
   if (frontFtHit) {
     startFreeTextDrag(frontFtHit);
     return;
@@ -501,7 +519,7 @@ export function onMouseDown(ec: EditorContext, e: PointerEvent): void {
   }
 
   // Check back-layer FreeText hit
-  const backFtHit = hitFreeText(state.freeTexts, m.px, m.py, 'back');
+  const backFtHit = hitFreeText(visibleFreeTexts, m.px, m.py, 'back');
   if (backFtHit) {
     startFreeTextDrag(backFtHit);
     return;

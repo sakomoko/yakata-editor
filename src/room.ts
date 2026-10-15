@@ -54,6 +54,7 @@ export function drawRoom(
   zoom = 1,
   activeWallObjectId?: string,
   activeInteriorObjectId?: string,
+  showAnnotations = true,
 ): void {
   if (isPolygonRoom(room)) {
     drawPolygonRoom(
@@ -64,6 +65,7 @@ export function drawRoom(
       zoom,
       activeWallObjectId,
       activeInteriorObjectId,
+      showAnnotations,
     );
     return;
   }
@@ -89,7 +91,7 @@ export function drawRoom(
   }
 
   // Interior objects drawn before wall objects (wall objects appear on top)
-  drawInteriorObjects(ctx, room, isSelected, zoom, activeInteriorObjectId);
+  drawInteriorObjects(ctx, room, isSelected, zoom, activeInteriorObjectId, showAnnotations);
 
   drawWallObjects(ctx, room, isSelected, zoom, activeWallObjectId);
 
@@ -114,6 +116,7 @@ function drawPolygonRoom(
   zoom: number,
   activeWallObjectId?: string,
   activeInteriorObjectId?: string,
+  showAnnotations = true,
 ): void {
   const verts = getRoomVertices(room);
 
@@ -147,7 +150,7 @@ function drawPolygonRoom(
   }
 
   // Interior objects (BBベースclamp)
-  drawInteriorObjects(ctx, room, isSelected, zoom, activeInteriorObjectId);
+  drawInteriorObjects(ctx, room, isSelected, zoom, activeInteriorObjectId, showAnnotations);
 
   // Wall objects
   drawWallObjects(ctx, room, isSelected, zoom, activeWallObjectId);

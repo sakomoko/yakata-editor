@@ -29,7 +29,13 @@ export type WallObject = WallWindow | WallDoor | WallOpening;
 export type CardinalDirection = 'n' | 'e' | 's' | 'w';
 export type StairsDirection = CardinalDirection;
 
-export interface InteriorObjectBase {
+/** 注釈フラグを持てるオブジェクト。注釈は非表示切替・PNG出力除外の対象になる */
+export interface Annotatable {
+  /** true のとき注釈（作業用メモ）扱い。未設定は通常オブジェクト */
+  annotation?: boolean;
+}
+
+export interface InteriorObjectBase extends Annotatable {
   id: string;
   x: number;
   y: number;
@@ -101,7 +107,7 @@ export interface Room {
   vertices?: [GridPoint, GridPoint, GridPoint, GridPoint];
 }
 
-export interface FreeText {
+export interface FreeText extends Annotatable {
   id: string;
   gx: number;
   gy: number;
@@ -125,7 +131,7 @@ export interface StickyNote {
   color: StickyNoteColor;
 }
 
-export interface FreeStroke {
+export interface FreeStroke extends Annotatable {
   id: string;
   /** ピクセル座標の点列（ワールド座標系） */
   points: { px: number; py: number }[];
@@ -134,7 +140,7 @@ export interface FreeStroke {
   opacity: number;
 }
 
-export interface Arrow {
+export interface Arrow extends Annotatable {
   id: string;
   /** ウェイポイント（グリッド座標、最低2点） */
   points: GridPoint[];
@@ -346,6 +352,8 @@ export interface EditorState {
   arrowMode: boolean;
   arrowColor: string;
   arrowLineWidth: number;
+  /** 注釈オブジェクトを表示するか（表示状態のみ。Undo/保存の対象外） */
+  showAnnotations: boolean;
 }
 
 export interface ProjectMeta {

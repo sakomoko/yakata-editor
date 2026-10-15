@@ -20,6 +20,8 @@ import BrushIcon from '@mui/icons-material/Brush';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import CropSquareIcon from '@mui/icons-material/CropSquare';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import {
   initEditor,
   type EditorAPI,
@@ -119,6 +121,9 @@ export default function App() {
   const [arrowMode, setArrowMode] = useState(false);
   const [arrowColor, setArrowColor] = useState('#cc0000');
   const [arrowLineWidth, setArrowLineWidth] = useState(2);
+  // 注釈の表示状態の正はエディタ側（EditorState.showAnnotations）。ここはボタン表示用の写しで、
+  // 変更は必ず editorRef.current.setShowAnnotations() 経由で行い、onShowAnnotationsChange で同期する
+  const [showAnnotations, setShowAnnotations] = useState(true);
 
   // Multi-project state
   // tabState: React state (レンダリング用), tabStateRef: ref (コールバック内での最新値参照用)
@@ -340,6 +345,7 @@ export default function App() {
         onViewportChange: () => debouncedSaveCurrentProject(),
         onPaintModeChange: (mode: boolean) => setPaintMode(mode),
         onArrowModeChange: (mode: boolean) => setArrowMode(mode),
+        onShowAnnotationsChange: (show: boolean) => setShowAnnotations(show),
       },
       activeResult?.data ?? undefined,
     );
@@ -816,6 +822,20 @@ export default function App() {
               </select>
             </>
           )}
+          <Divider orientation="vertical" flexItem sx={{ borderColor: '#555', mx: 0.5 }} />
+          <Button
+            size="small"
+            variant="contained"
+            color="inherit"
+            sx={toolbarButtonSx}
+            startIcon={showAnnotations ? <VisibilityIcon /> : <VisibilityOffIcon />}
+            title={showAnnotations ? '注釈を非表示にする (H)' : '注釈を表示する (H)'}
+            onClick={() => {
+              editorRef.current?.setShowAnnotations(!showAnnotations);
+            }}
+          >
+            注釈 (H)
+          </Button>
         </Box>
 
         {import.meta.env.DEV && (

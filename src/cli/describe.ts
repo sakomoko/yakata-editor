@@ -67,20 +67,26 @@ export function describeWallObject(obj: WallObject): string {
   return `${sideLabel(obj.side)}: ${typeLabel} (${parts.join(', ')})`;
 }
 
+const ANNOTATION_TAG = ' [注釈]';
+
+function annotationTag(obj: { annotation?: boolean }): string {
+  return obj.annotation ? ANNOTATION_TAG : '';
+}
+
 /** @internal Exported for testing */
 export function describeInterior(obj: RoomInteriorObject): string {
   if (obj.type === 'stairs') {
     const kind = obj.stairsType === 'straight' ? '直線階段' : '折り返し階段';
     const dirMap: Record<string, string> = { n: '北', e: '東', s: '南', w: '西' };
-    return `${kind} (${obj.x}, ${obj.y}) ${obj.w}×${obj.h} 方向: ${dirMap[obj.direction]}`;
+    return `${kind} (${obj.x}, ${obj.y}) ${obj.w}×${obj.h} 方向: ${dirMap[obj.direction]}${annotationTag(obj)}`;
   }
   if (obj.type === 'marker') {
     const label = obj.label ? ` "${obj.label}"` : '';
-    return `マーカー(${obj.markerKind})${label} (${obj.x}, ${obj.y}) ${obj.w}×${obj.h}`;
+    return `マーカー(${obj.markerKind})${label} (${obj.x}, ${obj.y}) ${obj.w}×${obj.h}${annotationTag(obj)}`;
   }
   if (obj.type === 'camera') {
     const angleDeg = Math.round((obj.angle * 180) / Math.PI);
-    return `防犯カメラ (${obj.x}, ${obj.y}) 角度: ${angleDeg}° 視野: ${obj.fovRange}グリッド`;
+    return `防犯カメラ (${obj.x}, ${obj.y}) 角度: ${angleDeg}° 視野: ${obj.fovRange}グリッド${annotationTag(obj)}`;
   }
   return `不明なオブジェクト`;
 }
@@ -94,7 +100,7 @@ export function describeArrow(arrow: Arrow, index: number): string {
       : arrow.points.map((p) => `(${p.gx}, ${p.gy})`).join(' → ');
   const meta = `[${arrow.color}, ${arrow.lineWidth}px]`;
   const label = arrow.label ? ` ラベル: ${arrow.label}` : '';
-  return `矢印${index + 1}: ${route} ${meta}${label}`;
+  return `矢印${index + 1}: ${route} ${meta}${label}${annotationTag(arrow)}`;
 }
 
 /** @internal Exported for testing */
@@ -162,7 +168,9 @@ export function describeProject(project: ProjectFile): string {
     lines.push('');
     lines.push(`## フリーテキスト (${freeTexts.length}個)`);
     for (const ft of freeTexts) {
-      lines.push(`- "${ft.label}" at (${ft.gx}, ${ft.gy}) サイズ: ${ft.w}×${ft.h}`);
+      lines.push(
+        `- "${ft.label}" at (${ft.gx}, ${ft.gy}) サイズ: ${ft.w}×${ft.h}${annotationTag(ft)}`,
+      );
     }
   }
 
@@ -171,7 +179,7 @@ export function describeProject(project: ProjectFile): string {
     lines.push(`## フリーストローク (${freeStrokes.length}本)`);
     for (const stroke of freeStrokes) {
       lines.push(
-        `- ${stroke.color} (lineWidth: ${stroke.lineWidth}, opacity: ${stroke.opacity}) ${stroke.points.length}点`,
+        `- ${stroke.color} (lineWidth: ${stroke.lineWidth}, opacity: ${stroke.opacity}) ${stroke.points.length}点${annotationTag(stroke)}`,
       );
     }
   }

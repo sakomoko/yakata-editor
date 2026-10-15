@@ -57,6 +57,7 @@ Canvas 再描画 + App.tsx → project-store.ts → localStorage 保存
 
 ### 機能モジュール
 
+- **annotation.ts** — 注釈フラグのユーティリティ。表示判定（`isVisible`）、非表示注釈を除いたリスト取得（`filterVisible`）、フラグ設定/解除（`setAnnotation`）、非表示注釈IDの収集（`collectHiddenIds` — 非表示切替時の選択解除に使用）。描画（`render.ts`・`drawRoom`・`drawCameraFovOverlay`）とヒット判定（トップレベルは呼び出し側で `filterVisible`、部屋内オブジェクトは `showAnnotations` 引数）の両方に適用する
 - **snap.ts** — 頂点スナップ計算。他部屋の頂点・辺への近接スナップ（`findVertexSnap`）。頂点優先・辺フォールバックのアルゴリズム。`polygon.ts` の `getRoomVertices` / `projectPointOnSegment` を利用
 - **polygon.ts** — 四角形（非直角）部屋のユーティリティ。点の包含判定（`pointInQuad`）、重心計算（`quadCentroid`）、AABB更新（`updateRoomBBFromVertices`）、辺の端点取得（`quadEdgeEndpoints`）、辺の長さ計算（`quadEdgeLength`）、頂点ハンドル計算（`getVertexHandles`）、頂点ハンドルのヒット判定（`hitVertexHandle`）。25テスト追加
 - **room.ts** — 部屋の生成（`createRoom`）、Canvas描画（`drawRoom`）、ヒット判定（`hitRoom`, `hitHandle`）、リサイズハンドル計算（`getHandles`）、矩形包含判定（`findRoomsInArea`）、ドラッグ矩形の正規化（`normalizeArea`）、範囲選択プレビュー描画（`drawAreaSelectPreview`）、グループBB計算（`computeGroupBoundingBox`）・ハンドル（`getGroupHandles`, `hitGroupHandle`）・アンカー計算（`getAnchorForDir`）・スケーリング（`computeGroupScale`, `applyGroupScale`）・BB描画（`drawGroupBoundingBox`）。四角形部屋の描画・ヒット判定分岐あり（`vertices`設定時は`polygon.ts`の関数を使用）
@@ -155,6 +156,7 @@ cli/validate.ts → persistence.ts
 - `mouse: MouseCoord` — 現在のマウス座標
 - `paintMode: boolean` — ペイントモードON/OFF
 - `paintColor: string` / `paintLineWidth: number` / `paintOpacity: number` — 現在の描画設定
+- `showAnnotations: boolean` — 注釈の表示/非表示（`editor/utils.ts` の `setShowAnnotations` で切替。非表示にすると `releaseHiddenAnnotations` で該当オブジェクトを選択・アクティブ状態から外す）。PNG出力時は `includeAnnotations` に合わせて一時的に上書きする
 
 状態変更は `commitChange()` を通じて行い、Undo履歴の保存・Canvas再描画・`onAutoSave` コールバック呼び出しをまとめて実行する。
 

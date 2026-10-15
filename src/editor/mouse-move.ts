@@ -61,6 +61,7 @@ import { hitArrowInList, constrainToAxis } from '../arrow.ts';
 import { findArrowById, findFreeStrokeById } from '../lookup.ts';
 import { syncPairedOpening } from '../adjacency.ts';
 import type { EditorContext } from './context.ts';
+import { filterVisible } from '../annotation.ts';
 import { updateStatus } from './render.ts';
 
 import type { MouseCoord } from '../types.ts';
@@ -69,13 +70,21 @@ import type { MouseCoord } from '../types.ts';
 function resolveDefaultCursor(ec: EditorContext, m: MouseCoord): string {
   const { state, viewport } = ec;
   if (state.paintMode || state.arrowMode) return 'crosshair';
-  if (hitArrowInList(state.arrows, m.px / GRID, m.py / GRID)) return 'grab';
-  if (hitFreeStrokeInList(state.freeStrokes, m.px, m.py, STROKE_HIT_TOLERANCE_PX / viewport.zoom))
+  if (hitArrowInList(filterVisible(state.arrows, state.showAnnotations), m.px / GRID, m.py / GRID))
+    return 'grab';
+  if (
+    hitFreeStrokeInList(
+      filterVisible(state.freeStrokes, state.showAnnotations),
+      m.px,
+      m.py,
+      STROKE_HIT_TOLERANCE_PX / viewport.zoom,
+    )
+  )
     return 'grab';
   if (hitWallObjectInRooms(state.rooms, m.px, m.py, viewport.zoom, true)) return 'grab';
-  if (hitInteriorObjectInRooms(state.rooms, m.px, m.py)) return 'grab';
+  if (hitInteriorObjectInRooms(state.rooms, m.px, m.py, state.showAnnotations)) return 'grab';
   if (hitStickyNote(state.stickyNotes, m.px, m.py)) return 'grab';
-  if (hitFreeText(state.freeTexts, m.px, m.py)) return 'grab';
+  if (hitFreeText(filterVisible(state.freeTexts, state.showAnnotations), m.px, m.py)) return 'grab';
   if (hitRoom(state.rooms, m.px, m.py)) return 'move';
   return 'crosshair';
 }
@@ -144,6 +153,7 @@ export function onMouseMove(ec: EditorContext, e: PointerEvent): void {
         m.py,
         viewport.zoom,
         flags.activeInteriorObjectId,
+        state.showAnnotations,
       );
       if (camHandleHover) {
         canvas.style.cursor = 'grab';
@@ -155,6 +165,7 @@ export function onMouseMove(ec: EditorContext, e: PointerEvent): void {
         m.px,
         m.py,
         viewport.zoom,
+        state.showAnnotations,
       );
       if (intHandleHover) {
         canvas.style.cursor = intHandleHover.dir + '-resize';

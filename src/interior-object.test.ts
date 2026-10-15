@@ -102,6 +102,16 @@ describe('hitInteriorObject', () => {
     const room = makeRoom();
     expect(hitInteriorObject(room, 0, 0)).toBeNull();
   });
+
+  it('注釈の非表示中は注釈オブジェクトをヒットしない', () => {
+    const room = makeRoom();
+    const stairs = { ...createStraightStairs(1, 1, 2, 3), annotation: true };
+    room.interiorObjects = [stairs];
+    const px = (room.x + 2) * GRID;
+    const py = (room.y + 2) * GRID;
+    expect(hitInteriorObject(room, px, py, false)).toBeNull();
+    expect(hitInteriorObject(room, px, py, true)).toBe(stairs);
+  });
 });
 
 describe('hitInteriorObjectInRooms', () => {

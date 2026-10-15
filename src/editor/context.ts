@@ -39,10 +39,13 @@ export interface EditorCallbacks {
   onViewportChange: () => void;
   onPaintModeChange?: (paintMode: boolean) => void;
   onArrowModeChange?: (arrowMode: boolean) => void;
+  onShowAnnotationsChange?: (show: boolean) => void;
 }
 
 export interface PngExportOptions {
   includeStickyNotes?: boolean;
+  /** 注釈オブジェクトを含めるか。デフォルト true */
+  includeAnnotations?: boolean;
   filename?: string;
 }
 
@@ -90,6 +93,7 @@ export interface EditorAPI {
     arrowColor: string;
     arrowLineWidth: number;
   };
+  setShowAnnotations: (show: boolean) => void;
 }
 
 export interface EditorContext {

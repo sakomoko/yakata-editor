@@ -52,7 +52,11 @@ type CardinalDirection = 'n' | 'e' | 's' | 'w';
 type StairsDirection = CardinalDirection;  // 後方互換エイリアス
 type MarkerKind = 'body' | 'pin' | 'text';
 
-interface InteriorObjectBase {
+interface Annotatable {
+  annotation?: boolean; // true のとき注釈（作業用メモ）扱い。未設定は通常オブジェクト
+}
+
+interface InteriorObjectBase extends Annotatable {
   id: string;        // UUID
   x: number;         // 部屋左上からの相対グリッド座標 X
   y: number;         // 部屋左上からの相対グリッド座標 Y
@@ -119,7 +123,7 @@ type RoomInteriorObject = StraightStairs | FoldingStairs | Marker | SecurityCame
 部屋に紐付かない自由配置テキスト。グリッド座標で自由に配置でき、front/backの2レイヤーで描画順を制御する。
 
 ```typescript
-interface FreeText {
+interface FreeText extends Annotatable {
   id: string;              // UUID
   gx: number;              // グリッド座標 X
   gy: number;              // グリッド座標 Y
@@ -141,12 +145,16 @@ interface FreeText {
 
 デフォルトサイズは3×2グリッド。部屋の境界制約なし。移動はグリッドスナップ、リサイズは最小1×1グリッド。
 
+### 注釈フラグ（Annotatable）
+
+`FreeText`・`FreeStroke`・`Arrow`・`InteriorObjectBase`（階段・マーカー・カメラ）は `Annotatable` を継承し、`annotation?: boolean` を持てる。`true` のオブジェクトは `EditorState.showAnnotations` が `false` のとき描画・ヒット判定から除外され、PNG出力でも `includeAnnotations: false` 指定時に除外される。解除時はプロパティごと削除する（`setAnnotation`）。永続化では `annotation === true` のときのみ復元する。
+
 ## FreeStroke
 
 フリーペイントのストロークデータ。ピクセル座標（ワールド座標系）で点列を保持し、常に最前面レイヤーに描画される。
 
 ```typescript
-interface FreeStroke {
+interface FreeStroke extends Annotatable {
   id: string;              // UUID
   points: { px: number; py: number }[];  // ピクセル座標の点列
   color: string;           // 色（hex形式、例: '#ff0000'）
@@ -318,6 +326,7 @@ interface EditorState {
   arrowMode: boolean;      // アローモードON/OFF
   arrowColor: string;      // 現在の矢印色（hex）
   arrowLineWidth: number;  // 現在の矢印太さ（px）
+  showAnnotations: boolean; // 注釈を表示するか（表示状態のみ。Undo/保存の対象外）
 }
 ```
 

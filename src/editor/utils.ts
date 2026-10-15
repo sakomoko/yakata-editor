@@ -3,6 +3,7 @@ import { GRID } from '../grid.ts';
 import { screenToWorld } from '../viewport.ts';
 import type { ViewportState } from '../viewport.ts';
 import type { EditorContext } from './context.ts';
+import { collectHiddenIds } from '../annotation.ts';
 
 export function escapeHtml(text: string): string {
   return text
@@ -40,6 +41,29 @@ export function switchToRoomMode(ec: EditorContext): void {
   ec.render();
   if (wasPaint) ec.callbacks.onPaintModeChange?.(false);
   if (wasArrow) ec.callbacks.onArrowModeChange?.(false);
+}
+
+/** 非表示になった注釈を選択・アクティブ状態から外す。見えないオブジェクトを操作させないため */
+export function releaseHiddenAnnotations(ec: EditorContext): void {
+  const { state, flags } = ec;
+  const hidden = collectHiddenIds(state);
+  if (hidden.size === 0) return;
+  for (const id of hidden) state.selection.delete(id);
+  if (flags.activeInteriorObjectId && hidden.has(flags.activeInteriorObjectId)) {
+    flags.activeInteriorObjectId = undefined;
+  }
+  if (flags.activeFreeTextId && hidden.has(flags.activeFreeTextId)) {
+    flags.activeFreeTextId = undefined;
+  }
+}
+
+/** 注釈の表示/非表示を切り替える。ドラッグ中は操作対象が消えてしまうため無視する */
+export function setShowAnnotations(ec: EditorContext, on: boolean): void {
+  if (ec.state.drag) return;
+  ec.state.showAnnotations = on;
+  releaseHiddenAnnotations(ec);
+  ec.render();
+  ec.callbacks.onShowAnnotationsChange?.(on);
 }
 
 /** CJK文字を2カラム換算した表示幅をグリッド単位で返す */

@@ -35,6 +35,15 @@ export function updateFreeTextOverlays(ec: EditorContext): void {
       overlayMap.set(ft.id, el);
     }
 
+    // 非表示中の注釈は隠す
+    if (ft.annotation && !state.showAnnotations) {
+      el.style.display = 'none';
+      continue;
+    }
+
+    // 注釈は点線枠で区別する（HTMLオーバーレイなのでPNG出力には含まれない）
+    el.style.outline = ft.annotation ? `${Math.max(1, viewport.zoom)}px dashed #9c27b0` : '';
+
     // zLayerに応じたz-index (back: 50, front: 150 — Canvasと付箋の間)
     el.style.zIndex = ft.zLayer === 'back' ? '50' : '150';
 

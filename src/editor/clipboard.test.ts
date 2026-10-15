@@ -88,6 +88,7 @@ function makeEc(
       arrowMode: false,
       arrowColor: '#cc0000',
       arrowLineWidth: 2,
+      showAnnotations: true,
     },
     viewport: { zoom: 1, panX: 0, panY: 0 },
     callbacks: {
@@ -199,6 +200,29 @@ describe('copySelection', () => {
 });
 
 describe('pasteClipboard', () => {
+  it('annotation フラグを引き継ぐ', () => {
+    const ft = makeFreeText({ annotation: true });
+    const ec = makeEc([], [ft], [], new Set([ft.id]));
+    copySelection(ec);
+    pasteClipboard(ec, 'none');
+
+    expect(ec.state.freeTexts).toHaveLength(2);
+    expect(ec.state.freeTexts[1].annotation).toBe(true);
+  });
+
+  it('注釈の非表示中に貼り付けた注釈は選択に残さない', () => {
+    const memo = makeFreeText({ annotation: true });
+    const label = makeFreeText({ gx: 10 });
+    const ec = makeEc([], [memo, label], [], new Set([memo.id, label.id]));
+    copySelection(ec);
+    ec.state.showAnnotations = false;
+    pasteClipboard(ec, 'none');
+
+    const [, , pastedMemo, pastedLabel] = ec.state.freeTexts;
+    expect(ec.state.selection.has(pastedMemo.id)).toBe(false);
+    expect(ec.state.selection.has(pastedLabel.id)).toBe(true);
+  });
+
   it('pastes at cursor position with offset', () => {
     const room = makeRoom({ x: 2, y: 3, w: 4, h: 3 });
     const ec = makeEc([room], [], [], new Set([room.id]));
@@ -671,6 +695,19 @@ describe('mirror vertical', () => {
 });
 
 describe('duplicateSelection', () => {
+  it('注釈の非表示中に複製した注釈は選択に残さない', () => {
+    const memo = makeFreeText({ annotation: true });
+    const label = makeFreeText({ gx: 10 });
+    const ec = makeEc([], [memo, label], [], new Set([memo.id, label.id]));
+    ec.state.showAnnotations = false;
+    duplicateSelection(ec);
+
+    const [, , dupMemo, dupLabel] = ec.state.freeTexts;
+    expect(dupMemo.annotation).toBe(true);
+    expect(ec.state.selection.has(dupMemo.id)).toBe(false);
+    expect(ec.state.selection.has(dupLabel.id)).toBe(true);
+  });
+
   it('creates a copy offset by 1 grid', () => {
     const room = makeRoom({ x: 5, y: 5, w: 4, h: 3 });
     const ec = makeEc([room], [], [], new Set([room.id]));

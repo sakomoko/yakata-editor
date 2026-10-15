@@ -8,6 +8,7 @@ import type {
   MarkerKind,
   ResizeDirection,
 } from './types.ts';
+import { isVisible } from './annotation.ts';
 import { GRID, HANDLE_SIZE, HANDLE_HIT, FONT_SIZE_MIN, FONT_SIZE_MAX } from './grid.ts';
 import { drawCameraIcon } from './camera.ts';
 import { isPolygonRoom, getRoomVertices, getQuadCentroid, pointInQuad } from './polygon.ts';
@@ -111,10 +112,12 @@ export function drawInteriorObjects(
   isSelected: boolean,
   zoom = 1,
   activeId?: string,
+  showAnnotations = true,
 ): void {
   if (!room.interiorObjects?.length) return;
 
   for (const obj of room.interiorObjects) {
+    if (!isVisible(obj, showAnnotations)) continue;
     const isActive = obj.id === activeId;
     const style = getInteriorObjectStyle(isSelected, isActive, zoom);
     const rect = interiorObjectToPixelRect(room, obj);
@@ -641,10 +644,16 @@ export function drawInteriorObjectHandles(
   }
 }
 
-export function hitInteriorObject(room: Room, px: number, py: number): RoomInteriorObject | null {
+export function hitInteriorObject(
+  room: Room,
+  px: number,
+  py: number,
+  showAnnotations = true,
+): RoomInteriorObject | null {
   if (!room.interiorObjects?.length) return null;
   for (let i = room.interiorObjects.length - 1; i >= 0; i--) {
     const obj = room.interiorObjects[i];
+    if (!isVisible(obj, showAnnotations)) continue;
     const rect = interiorObjectToPixelRect(room, obj);
     if (px >= rect.x && px <= rect.x + rect.w && py >= rect.y && py <= rect.y + rect.h) {
       return obj;
@@ -657,10 +666,11 @@ export function hitInteriorObjectInRooms(
   rooms: Room[],
   px: number,
   py: number,
+  showAnnotations = true,
 ): { room: Room; obj: RoomInteriorObject } | null {
   for (let i = rooms.length - 1; i >= 0; i--) {
     const room = rooms[i];
-    const obj = hitInteriorObject(room, px, py);
+    const obj = hitInteriorObject(room, px, py, showAnnotations);
     if (obj) return { room, obj };
   }
   return null;
@@ -677,12 +687,14 @@ export function hitInteriorObjectHandle(
   px: number,
   py: number,
   zoom: number,
+  showAnnotations = true,
 ): { obj: RoomInteriorObject; dir: ResizeDirection } | null {
   if (!room.interiorObjects?.length) return null;
   const tolerance = HANDLE_HIT / zoom;
 
   for (let i = room.interiorObjects.length - 1; i >= 0; i--) {
     const obj = room.interiorObjects[i];
+    if (!isVisible(obj, showAnnotations)) continue;
     const rect = interiorObjectToPixelRect(room, obj);
     const handles: { x: number; y: number; dir: ResizeDirection }[] = [
       { x: rect.x, y: rect.y, dir: 'nw' },
@@ -704,10 +716,11 @@ export function hitInteriorObjectHandleInRooms(
   px: number,
   py: number,
   zoom: number,
+  showAnnotations = true,
 ): InteriorHandleHit | null {
   for (let i = rooms.length - 1; i >= 0; i--) {
     const room = rooms[i];
-    const hit = hitInteriorObjectHandle(room, px, py, zoom);
+    const hit = hitInteriorObjectHandle(room, px, py, zoom, showAnnotations);
     if (hit) return { room, ...hit };
   }
   return null;

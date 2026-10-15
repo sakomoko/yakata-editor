@@ -1,4 +1,5 @@
 import type {
+  Annotatable,
   Room,
   Arrow,
   EntitySnapshot,
@@ -37,6 +38,18 @@ const VALID_MARKER_KINDS = new Set(['body', 'pin', 'text']);
 const VALID_CAMERA_COLORS = new Set(
   Object.values(CAMERA_COLOR_PRESETS).flatMap((c) => [c.fovColor, c.fovStrokeColor]),
 );
+
+/** 保存データの annotation: true を引き継ぐ（それ以外の値は捨てる） */
+function withAnnotation<T extends Annotatable>(src: unknown, dst: T): T {
+  if (
+    typeof src === 'object' &&
+    src !== null &&
+    (src as Record<string, unknown>).annotation === true
+  ) {
+    dst.annotation = true;
+  }
+  return dst;
+}
 
 function restorePairedWithEntry(value: unknown): { roomId: string; objectId: string } | undefined {
   if (
@@ -124,98 +137,100 @@ export function ensureInteriorObjectIds(objects: unknown[]): RoomInteriorObject[
         VALID_INTERIOR_OBJECT_TYPES.has(obj.type as string)
       );
     })
-    .map((o): RoomInteriorObject => {
-      const obj = o as Record<string, unknown>;
-      const id = typeof obj.id === 'string' ? obj.id : crypto.randomUUID();
-      const x = obj.x as number;
-      const y = obj.y as number;
-      const w = obj.w as number;
-      const h = obj.h as number;
+    .map((o) => withAnnotation(o, toInteriorObject(o)));
+}
 
-      if (obj.type === 'stairs') {
-        const direction = VALID_STAIRS_DIRECTIONS.has(obj.direction as string)
-          ? (obj.direction as StairsDirection)
-          : 'n';
-        const stairsType: 'straight' | 'folding' = VALID_STAIRS_TYPES.has(obj.stairsType as string)
-          ? (obj.stairsType as 'straight' | 'folding')
-          : 'straight';
-        if (stairsType === 'folding') {
-          return {
-            id,
-            type: 'stairs',
-            stairsType: 'folding',
-            direction,
-            x,
-            y,
-            w,
-            h,
-          } satisfies FoldingStairs;
-        }
-        return {
-          id,
-          type: 'stairs',
-          stairsType: 'straight',
-          direction,
-          x,
-          y,
-          w,
-          h,
-        } satisfies StraightStairs;
-      }
+function toInteriorObject(o: unknown): RoomInteriorObject {
+  const obj = o as Record<string, unknown>;
+  const id = typeof obj.id === 'string' ? obj.id : crypto.randomUUID();
+  const x = obj.x as number;
+  const y = obj.y as number;
+  const w = obj.w as number;
+  const h = obj.h as number;
 
-      if (obj.type === 'marker') {
-        const direction = VALID_STAIRS_DIRECTIONS.has(obj.direction as string)
-          ? (obj.direction as StairsDirection)
-          : 'e';
-        const markerKind = VALID_MARKER_KINDS.has(obj.markerKind as string)
-          ? (obj.markerKind as MarkerKind)
-          : 'body';
-        const result: Marker = { id, type: 'marker', markerKind, direction, x, y, w, h };
-        if (typeof obj.label === 'string' && obj.label) result.label = obj.label;
-        if (typeof obj.fontSize === 'number' && Number.isFinite(obj.fontSize)) {
-          result.fontSize = Math.max(FONT_SIZE_MIN, Math.min(FONT_SIZE_MAX, obj.fontSize));
-        }
-        return result;
-      }
+  if (obj.type === 'stairs') {
+    const direction = VALID_STAIRS_DIRECTIONS.has(obj.direction as string)
+      ? (obj.direction as StairsDirection)
+      : 'n';
+    const stairsType: 'straight' | 'folding' = VALID_STAIRS_TYPES.has(obj.stairsType as string)
+      ? (obj.stairsType as 'straight' | 'folding')
+      : 'straight';
+    if (stairsType === 'folding') {
+      return {
+        id,
+        type: 'stairs',
+        stairsType: 'folding',
+        direction,
+        x,
+        y,
+        w,
+        h,
+      } satisfies FoldingStairs;
+    }
+    return {
+      id,
+      type: 'stairs',
+      stairsType: 'straight',
+      direction,
+      x,
+      y,
+      w,
+      h,
+    } satisfies StraightStairs;
+  }
 
-      if (obj.type === 'camera') {
-        const defaults = CAMERA_COLOR_PRESETS.blue;
-        const angle = typeof obj.angle === 'number' && Number.isFinite(obj.angle) ? obj.angle : 0;
-        const fovAngle =
-          typeof obj.fovAngle === 'number' && Number.isFinite(obj.fovAngle)
-            ? Math.max(Math.PI / 36, Math.min(Math.PI / 2, obj.fovAngle))
-            : Math.PI / 6;
-        // NaN/Infinity → デフォルト値5にフォールバック、有限の範囲外値 → [1, 20]にクランプ
-        const fovRange =
-          typeof obj.fovRange === 'number' && Number.isFinite(obj.fovRange)
-            ? Math.max(1, Math.min(20, obj.fovRange))
-            : 5;
-        const fovColor =
-          typeof obj.fovColor === 'string' && VALID_CAMERA_COLORS.has(obj.fovColor)
-            ? obj.fovColor
-            : defaults.fovColor;
-        const fovStrokeColor =
-          typeof obj.fovStrokeColor === 'string' && VALID_CAMERA_COLORS.has(obj.fovStrokeColor)
-            ? obj.fovStrokeColor
-            : defaults.fovStrokeColor;
-        return {
-          id,
-          type: 'camera',
-          x,
-          y,
-          w,
-          h,
-          angle,
-          fovAngle,
-          fovRange,
-          fovColor,
-          fovStrokeColor,
-        } satisfies SecurityCamera;
-      }
+  if (obj.type === 'marker') {
+    const direction = VALID_STAIRS_DIRECTIONS.has(obj.direction as string)
+      ? (obj.direction as StairsDirection)
+      : 'e';
+    const markerKind = VALID_MARKER_KINDS.has(obj.markerKind as string)
+      ? (obj.markerKind as MarkerKind)
+      : 'body';
+    const result: Marker = { id, type: 'marker', markerKind, direction, x, y, w, h };
+    if (typeof obj.label === 'string' && obj.label) result.label = obj.label;
+    if (typeof obj.fontSize === 'number' && Number.isFinite(obj.fontSize)) {
+      result.fontSize = Math.max(FONT_SIZE_MIN, Math.min(FONT_SIZE_MAX, obj.fontSize));
+    }
+    return result;
+  }
 
-      // Fallback (shouldn't reach here due to filter, but TypeScript needs it)
-      return { id, type: 'stairs', stairsType: 'straight', direction: 'n', x, y, w, h };
-    });
+  if (obj.type === 'camera') {
+    const defaults = CAMERA_COLOR_PRESETS.blue;
+    const angle = typeof obj.angle === 'number' && Number.isFinite(obj.angle) ? obj.angle : 0;
+    const fovAngle =
+      typeof obj.fovAngle === 'number' && Number.isFinite(obj.fovAngle)
+        ? Math.max(Math.PI / 36, Math.min(Math.PI / 2, obj.fovAngle))
+        : Math.PI / 6;
+    // NaN/Infinity → デフォルト値5にフォールバック、有限の範囲外値 → [1, 20]にクランプ
+    const fovRange =
+      typeof obj.fovRange === 'number' && Number.isFinite(obj.fovRange)
+        ? Math.max(1, Math.min(20, obj.fovRange))
+        : 5;
+    const fovColor =
+      typeof obj.fovColor === 'string' && VALID_CAMERA_COLORS.has(obj.fovColor)
+        ? obj.fovColor
+        : defaults.fovColor;
+    const fovStrokeColor =
+      typeof obj.fovStrokeColor === 'string' && VALID_CAMERA_COLORS.has(obj.fovStrokeColor)
+        ? obj.fovStrokeColor
+        : defaults.fovStrokeColor;
+    return {
+      id,
+      type: 'camera',
+      x,
+      y,
+      w,
+      h,
+      angle,
+      fovAngle,
+      fovRange,
+      fovColor,
+      fovStrokeColor,
+    } satisfies SecurityCamera;
+  }
+
+  // Fallback (shouldn't reach here due to filter, but TypeScript needs it)
+  return { id, type: 'stairs', stairsType: 'straight', direction: 'n', x, y, w, h };
 }
 
 const VALID_Z_LAYERS = new Set(['front', 'back']);
@@ -235,7 +250,7 @@ export function ensureFreeTextIds(objects: unknown[]): FreeText[] {
     })
     .map((o): FreeText => {
       const obj = o as Record<string, unknown>;
-      return {
+      return withAnnotation<FreeText>(o, {
         id: typeof obj.id === 'string' ? obj.id : crypto.randomUUID(),
         gx: obj.gx as number,
         gy: obj.gy as number,
@@ -249,7 +264,7 @@ export function ensureFreeTextIds(objects: unknown[]): FreeText[] {
         zLayer: VALID_Z_LAYERS.has(obj.zLayer as string)
           ? (obj.zLayer as 'front' | 'back')
           : 'front',
-      };
+      });
     });
 }
 
@@ -317,13 +332,13 @@ export function ensureFreeStrokeIds(objects: unknown[]): FreeStroke[] {
           px: (p as Record<string, unknown>).px as number,
           py: (p as Record<string, unknown>).py as number,
         }));
-      return {
+      return withAnnotation<FreeStroke>(o, {
         id: typeof obj.id === 'string' ? obj.id : crypto.randomUUID(),
         points,
         color: VALID_HEX_COLOR.test(obj.color as string) ? (obj.color as string) : '#ff0000',
         lineWidth: Math.max(0.5, Math.min(20, obj.lineWidth as number)),
         opacity: Math.max(0, Math.min(1, obj.opacity as number)),
-      };
+      });
     })
     .filter((s) => s.points.length > 0);
 }
@@ -365,7 +380,7 @@ export function ensureArrowIds(objects: unknown[]): Arrow[] {
     if (typeof obj.fontSize === 'number' && Number.isFinite(obj.fontSize)) {
       result.fontSize = Math.max(FONT_SIZE_MIN, Math.min(FONT_SIZE_MAX, obj.fontSize));
     }
-    return [result];
+    return [withAnnotation(obj, result)];
   });
 }
 

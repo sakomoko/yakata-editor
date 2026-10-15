@@ -18,6 +18,7 @@ import { drawArrow, drawArrowHandles, drawDragArrowPreview } from '../arrow.ts';
 import { drawLinkGroupIndicators } from '../link.ts';
 import type { SnapIndicator } from '../snap.ts';
 import type { EditorContext } from './context.ts';
+import { filterVisible } from '../annotation.ts';
 
 export function render(ec: EditorContext): void {
   const { ctx, canvas, state, viewport, flags } = ec;
@@ -42,8 +43,10 @@ export function render(ec: EditorContext): void {
   const viewMaxY = viewport.panY + canvas.height / viewport.zoom;
   drawGrid(ctx, viewMinX, viewMinY, viewMaxX, viewMaxY);
 
+  const show = state.showAnnotations;
+
   function drawFreeTextLayer(layer: 'front' | 'back'): void {
-    for (const ft of state.freeTexts) {
+    for (const ft of filterVisible(state.freeTexts, show)) {
       if (ft.zLayer !== layer) continue;
       drawFreeText(
         ctx,
@@ -75,6 +78,7 @@ export function render(ec: EditorContext): void {
       viewport.zoom,
       activeWallObjectId,
       activeIntObjId,
+      show,
     );
   }
 
@@ -96,7 +100,7 @@ export function render(ec: EditorContext): void {
   }
 
   // 3rd pass: camera FOV overlay (drawn after doors so it's visible above rooms)
-  drawCameraFovOverlay(ctx, state.rooms, viewport.zoom);
+  drawCameraFovOverlay(ctx, state.rooms, viewport.zoom, show);
 
   // Camera handles for active camera
   if (activeIntObjId) {
@@ -138,7 +142,7 @@ export function render(ec: EditorContext): void {
   }
 
   // Arrows
-  for (const arrow of state.arrows) {
+  for (const arrow of filterVisible(state.arrows, show)) {
     drawArrow(ctx, arrow, viewport.zoom);
     if (state.selection.has(arrow.id)) {
       drawArrowHandles(ctx, arrow, viewport.zoom);
@@ -158,7 +162,7 @@ export function render(ec: EditorContext): void {
   }
 
   // Free strokes (最前面レイヤー)
-  for (const stroke of state.freeStrokes) {
+  for (const stroke of filterVisible(state.freeStrokes, show)) {
     drawFreeStroke(ctx, stroke, viewport.zoom);
     if (state.selection.has(stroke.id)) {
       drawFreeStrokeBounds(ctx, stroke, viewport.zoom);
